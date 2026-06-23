@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — Cash Flow Statement
+// OlaFinancial — Cash Flow Statement
 // ============================================================
 
 const WPCashflow = (() => {

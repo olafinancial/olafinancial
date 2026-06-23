@@ -1,7 +1,7 @@
 {
-  "name": "wealthpath",
+  "name": "olafinancial",
   "version": "1.0.0",
-  "description": "WealthPath — Nigerian Personal Finance Platform",
+  "description": "OlaFinancial — Nigerian Personal Finance Platform",
   "type": "module",
   "main": "server/index.js",
   "scripts": {

@@ -1,8 +1,8 @@
 // ============================================================
-// WealthPath — Service Worker (Offline Cache)
+// OlaFinancial — Service Worker (Offline Cache)
 // ============================================================
 
-const CACHE_NAME   = 'wealthpath-v1';
+const CACHE_NAME   = 'olafinancial-v1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

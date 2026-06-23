@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — GET /api/admin/users
+// OlaFinancial — GET /api/admin/users
 // Auth: "secret" — requires SUPABASE_SECRET_KEY (service role)
 //
 // Returns a list of all registered users for admin dashboards.

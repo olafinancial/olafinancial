@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — Onboarding (5-step wizard)
+// OlaFinancial — Onboarding (5-step wizard)
 // ============================================================
 
 const WPOnboarding = (() => {
@@ -17,7 +17,7 @@ const WPOnboarding = (() => {
           <div class="onboarding-logo">
             <div class="sidebar-logo-icon">&#x26A1;</div>
             <div>
-              <div class="sidebar-logo-text">WealthPath</div>
+              <div class="sidebar-logo-text">Ola Financial</div>
               <div class="sidebar-logo-sub">Setup</div>
             </div>
           </div>
@@ -58,7 +58,7 @@ const WPOnboarding = (() => {
   function _step1(el) {
     const name = WPApp.state.profile?.full_name || '';
     el.innerHTML = `
-      <h2 class="onboarding-step-title">Welcome to WealthPath! &#x1F44B;</h2>
+      <h2 class="onboarding-step-title">Welcome to Ola Financial! &#x1F44B;</h2>
       <p class="onboarding-step-desc">Let's personalize your experience. This takes about 2 minutes.</p>
       <div class="form-group">
         <label for="ob-name">Your Full Name</label>
@@ -224,7 +224,7 @@ const WPOnboarding = (() => {
         dependents: _data.dependents, retirement_age: _data.retirement_age || 60,
         risk_tolerance: _data.risk_tolerance || 'moderate', onboarding_done: true,
       }, ['user_id']);
-      WPToast.success('Profile saved! Welcome to WealthPath.');
+      WPToast.success('Profile saved! Welcome to Ola Financial.');
       // Reload the full app shell
       document.getElementById('root').innerHTML = '';
       await WPApp.boot();

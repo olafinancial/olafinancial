@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — Emergency Fund Page
+// OlaFinancial — Emergency Fund Page
 // ============================================================
 
 const WPEmergencyFund = (() => {

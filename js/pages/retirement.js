@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — Retirement Planner (PENCOM + TVM)
+// OlaFinancial — Retirement Planner (PENCOM + TVM)
 // ============================================================
 
 const WPRetirement = (() => {

@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — POST /api/snapshot
+// OlaFinancial — POST /api/snapshot
 // Auth: "user" — requires a valid Supabase JWT
 //
 // Saves a monthly financial snapshot server-side.

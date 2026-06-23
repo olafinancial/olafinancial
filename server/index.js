@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — Node.js HTTP Server
+// OlaFinancial — Node.js HTTP Server
 // Uses @supabase/server withSupabase for auth-aware handlers
 // Run: npm run dev   (reads .env automatically via --env-file)
 // ============================================================
@@ -89,7 +89,7 @@ const server = createServer(async (req, res) => {
 })
 
 server.listen(PORT, () => {
-  console.log(`\n⚡ WealthPath server running`)
+  console.log(`\n⚡ Ola Financial server running`)
   console.log(`   http://localhost:${PORT}`)
   console.log(`   Supabase URL: ${process.env.SUPABASE_URL ?? "(not set)"}`)
   console.log(`   ENV: ${process.env.NODE_ENV ?? "development"}\n`)

@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — Charts Module (Chart.js wrappers)
+// OlaFinancial — Charts Module (Chart.js wrappers)
 // ============================================================
 
 const WPCharts = (() => {

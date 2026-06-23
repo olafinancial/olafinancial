@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — Balance Sheet Page
+// OlaFinancial — Balance Sheet Page
 // ============================================================
 
 const WPBalanceSheet = (() => {

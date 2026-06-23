@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — GET /api/profile
+// OlaFinancial — GET /api/profile
 // Auth: "user" — requires a valid Supabase JWT in Authorization header
 // The RLS-scoped client (ctx.supabase) ensures users only see
 // their own profile row, enforced at the database level.

@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — Debt Planner (Debt Avalanche Strategy)
+// OlaFinancial — Debt Planner (Debt Avalanche Strategy)
 // ============================================================
 
 const WPDebt = (() => {

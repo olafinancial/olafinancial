@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — Supabase Edge Function: /api/profile
+// OlaFinancial — Supabase Edge Function: /api/profile
 // Deploy: supabase functions deploy profile
 //
 // On Supabase Edge Functions, SUPABASE_URL, SUPABASE_ANON_KEY,

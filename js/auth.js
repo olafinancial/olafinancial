@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — Authentication Module
+// OlaFinancial — Authentication Module
 // ============================================================
 
 const WPAuth = (() => {
@@ -88,7 +88,7 @@ const WPAuth = (() => {
         <div class="sidebar-logo">
           <div class="sidebar-logo-icon">&#x26A1;</div>
           <div>
-            <div class="sidebar-logo-text">WealthPath</div>
+            <div class="sidebar-logo-text">Ola Financial</div>
             <div class="sidebar-logo-sub">Financial Health Platform</div>
           </div>
         </div>
@@ -118,7 +118,7 @@ const WPAuth = (() => {
       <div class="auth-form-pane">
         <div class="auth-form-inner">
           <h1 class="auth-form-title">Welcome back</h1>
-          <p class="auth-form-sub">Sign in to your WealthPath account</p>
+          <p class="auth-form-sub">Sign in to your Ola Financial account</p>
           <div id="auth-error" class="alert alert-danger" style="display:none"></div>
           <form id="login-form">
             <div class="form-group">
@@ -174,7 +174,7 @@ const WPAuth = (() => {
       <div class="auth-brand">
         <div class="sidebar-logo">
           <div class="sidebar-logo-icon">&#x26A1;</div>
-          <div><div class="sidebar-logo-text">WealthPath</div></div>
+          <div><div class="sidebar-logo-text">Ola Financial</div></div>
         </div>
         <div class="auth-brand-tagline">Build <span>wealth</span>. Plan your <span>future</span>.</div>
         <p class="auth-brand-sub">Nigeria's most comprehensive personal finance platform. Free forever.</p>
@@ -244,7 +244,7 @@ const WPAuth = (() => {
       <div class="onboarding-card">
         <div class="onboarding-logo">
           <div class="sidebar-logo-icon">&#x26A1;</div>
-          <span class="sidebar-logo-text">WealthPath</span>
+          <span class="sidebar-logo-text">Ola Financial</span>
         </div>
         <h2 class="onboarding-step-title">Reset Password</h2>
         <p class="onboarding-step-desc">Enter your email and we'll send a reset link.</p>

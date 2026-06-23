@@ -4,7 +4,7 @@
   "description": "Nigerian personal finance platform. Track net worth, plan retirement, eliminate debt.",
   "start_url": "https://olafinancial.org/",
   "scope": "https://olafinancial.org/",
-  "id": "olafinancial-wealthpath",
+  "id": "olafinancial",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#0D1117",

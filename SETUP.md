@@ -24,7 +24,7 @@
 2. Click **"New project"**.
 3. Fill in:
    - **Organization**: your personal org or create one
-   - **Name**: `wealthpath`
+   - **Name**: `olafinancial`
    - **Database Password**: create a strong password — **save it somewhere safe**
    - **Region**: **"West EU (Frankfurt)"** — closest to Nigeria with good latency
 4. Click **"Create new project"**. Wait ~2 minutes for provisioning.
@@ -91,7 +91,7 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
 
 1. Go to [github.com/new](https://github.com/new)
 2. Set:
-   - **Repository name**: `wealthpath`
+   - **Repository name**: `olafinancial`
    - **Visibility**: **Public** ✅ (required for free GitHub Pages)
    - Do **NOT** initialize with README
 3. Click **"Create repository"**
@@ -110,10 +110,10 @@ git init
 git add .
 
 # First commit
-git commit -m "feat: initial WealthPath MVP"
+git commit -m "feat: initial Ola Financial MVP"
 
 # Connect to your GitHub repo
-git remote add origin https://github.com/YOUR_GITHUB_USERNAME/wealthpath.git
+git remote add origin https://github.com/YOUR_GITHUB_USERNAME/olafinancial.git
 
 # Push to main branch
 git branch -M main
@@ -135,11 +135,11 @@ The workflow in `.github/workflows/deploy.yml` will automatically run.
 ### Step 4: Verify Deployment
 
 1. Go to your repo → **Actions** tab
-2. Look for **"Deploy WealthPath to GitHub Pages"** — wait for green ✅
+2. Look for **"Deploy Ola Financial to GitHub Pages"** — wait for green ✅
 3. Your live site:
 
 ```
-https://YOUR_GITHUB_USERNAME.github.io/wealthpath/
+https://YOUR_GITHUB_USERNAME.github.io/olafinancial/
 ```
 
 ---
@@ -151,7 +151,7 @@ After deploying, add your live URL to Supabase:
 1. Supabase → **Authentication → URL Configuration**
 2. Add to **"Redirect URLs"**:
    ```
-   https://YOUR_GITHUB_USERNAME.github.io/wealthpath/
+   https://YOUR_GITHUB_USERNAME.github.io/olafinancial/
    http://localhost:5500
    http://127.0.0.1:5500
    ```
@@ -181,11 +181,11 @@ npx -y serve . -p 5500
 
 ## Part 5 — Custom Domain (Optional)
 
-If you purchased `wealthpath.ng` or similar:
+If you purchased `olafinancial.org` or similar:
 
 ### 1. Add CNAME file to the project root
 ```bash
-echo "wealthpath.ng" > CNAME
+echo "olafinancial.org" > CNAME
 git add CNAME && git commit -m "chore: add custom domain" && git push
 ```
 
@@ -247,10 +247,10 @@ The Supabase database (schema, RLS, migrations) is **100% reusable** between web
 
 - **Row Level Security (RLS)** is enabled on all tables — users only see their own data
 - The `anon` key in `config.js` **cannot bypass RLS** — safe for public repos
-- Supabase Auth uses **bcrypt** — WealthPath never stores raw passwords
+- Supabase Auth uses **bcrypt** — Ola Financial never stores raw passwords
 - **NDPR compliance**: all user data lives in your own Supabase project
 - Enable **Email Confirmations** in Supabase → Auth → Settings for production use
 
 ---
 
-*WealthPath v1.0.0 — Built for Nigeria 🇳🇬*
+*Ola Financial v1.0.0 — Built for Nigeria 🇳🇬*

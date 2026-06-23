@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — App Bootstrap & State Management
+// OlaFinancial — App Bootstrap & State Management
 // ============================================================
 
 const WPApp = (() => {
@@ -72,7 +72,7 @@ const WPApp = (() => {
           <div class="sidebar-logo">
             <div class="sidebar-logo-icon">&#x26A1;</div>
             <div>
-              <div class="sidebar-logo-text">WealthPath</div>
+              <div class="sidebar-logo-text">Ola Financial</div>
               <div class="sidebar-logo-sub">Financial Health</div>
             </div>
           </div>

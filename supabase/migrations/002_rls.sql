@@ -1,5 +1,5 @@
 -- ============================================================
--- WealthPath — Row Level Security Policies
+-- OlaFinancial — Row Level Security Policies
 -- Migration 002
 -- Ensures users can ONLY access their own data
 -- ============================================================

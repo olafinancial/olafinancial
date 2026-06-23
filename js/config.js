@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — Configuration
+// OlaFinancial — Configuration
 // ============================================================
 // SETUP REQUIRED: Replace placeholder values before deploying.
 // See SETUP.md for step-by-step instructions.
@@ -75,7 +75,7 @@ const APP_CONFIG = {
 
   // ── DISCLAIMER ────────────────────────────────────────────
   disclaimer: `
-    <strong>Disclaimer:</strong> WealthPath provides financial calculations for informational 
+    <strong>Disclaimer:</strong> Ola Financial provides financial calculations for informational 
     and educational purposes only. It is not a licensed financial adviser under Nigerian law. 
     Tax figures are based on the Nigeria Tax Act 2025. Always verify with a qualified 
     Nigerian Chartered Accountant (ACA/ICAN) or financial planner before making financial decisions.

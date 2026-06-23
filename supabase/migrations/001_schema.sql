@@ -1,5 +1,5 @@
 -- ============================================================
--- WealthPath Financial HealthCheck Platform
+-- OlaFinancial Financial HealthCheck Platform
 -- Database Schema — Migration 001
 -- PostgreSQL / Supabase
 -- ============================================================

@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — Financial Math Utilities
+// OlaFinancial — Financial Math Utilities
 // Nigerian-specific calculations (Nigeria Tax Act 2025,
 // PENCOM pension, TVM, Debt Avalanche, NDIC alerts)
 // All monetary values in KOBO internally (₦1 = 100 kobo)

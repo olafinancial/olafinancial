@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — Supabase Edge Function: /api/snapshot
+// OlaFinancial — Supabase Edge Function: /api/snapshot
 // Deploy: supabase functions deploy snapshot
 // ============================================================
 

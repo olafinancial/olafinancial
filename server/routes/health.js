@@ -1,5 +1,5 @@
 // ============================================================
-// WealthPath — GET /api/health
+// OlaFinancial — GET /api/health
 // Auth: "publishable" — no JWT required, just a valid anon key
 // ============================================================
 
