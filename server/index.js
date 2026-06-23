@@ -40,6 +40,34 @@ const API_ROUTES = {
 }
 
 // ── REQUEST HANDLER ───────────────────────────────────────────
+async function toWebRequest(req) {
+  const url = new URL(req.url, `http://localhost:${PORT}`)
+  let body = undefined
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    const chunks = []
+    for await (const chunk of req) {
+      chunks.push(chunk)
+    }
+    body = Buffer.concat(chunks)
+  }
+
+  const headers = new Headers()
+  for (const [name, value] of Object.entries(req.headers)) {
+    if (Array.isArray(value)) {
+      for (const v of value) headers.append(name, v)
+    } else if (value !== undefined) {
+      headers.set(name, value)
+    }
+  }
+
+  return new Request(url, {
+    method: req.method,
+    headers,
+    body: body && body.length > 0 ? body : undefined,
+    duplex: body && body.length > 0 ? "half" : undefined,
+  })
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`)
   const key = `${req.method}  ${url.pathname}`
@@ -52,7 +80,8 @@ const server = createServer(async (req, res) => {
   // API routes
   if (API_ROUTES[key]) {
     try {
-      const response = await API_ROUTES[key](req, url)
+      const webReq = await toWebRequest(req)
+      const response = await API_ROUTES[key](webReq)
       const body = await response.text()
       res.writeHead(response.status, {
         "Content-Type": response.headers.get("content-type") ?? "application/json",
@@ -60,7 +89,7 @@ const server = createServer(async (req, res) => {
       })
       res.end(body)
     } catch (err) {
-      console.error("[API error]", key, err.message)
+      console.error("[API error]", key, err.stack || err.message)
       res.writeHead(500, { "Content-Type": "application/json" })
       res.end(JSON.stringify({ error: "Internal server error" }))
     }
