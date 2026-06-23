@@ -1,0 +1,21 @@
+{
+  "name": "wealthpath",
+  "version": "1.0.0",
+  "description": "WealthPath — Nigerian Personal Finance Platform",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "dev": "node --env-file=.env server/index.js",
+    "start": "node --env-file=.env server/index.js"
+  },
+  "keywords": [
+    "finance",
+    "nigeria",
+    "supabase"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/server": "^1.1.0"
+  }
+}

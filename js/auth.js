@@ -1,0 +1,281 @@
+// ============================================================
+// WealthPath — Authentication Module
+// ============================================================
+
+const WPAuth = (() => {
+
+  let _idleTimer = null;
+  const IDLE_TIMEOUT = 15 * 60 * 1000; // 15 minutes
+
+  function resetIdleTimer() {
+    clearTimeout(_idleTimer);
+    _idleTimer = setTimeout(() => {
+      WPToast.warning('Session expired. Please sign in again.');
+      signOut();
+    }, IDLE_TIMEOUT);
+  }
+
+  function startIdleWatcher() {
+    ['click','keydown','mousemove','scroll','touchstart'].forEach(evt =>
+      document.addEventListener(evt, resetIdleTimer, { passive: true })
+    );
+    resetIdleTimer();
+  }
+
+  function stopIdleWatcher() {
+    ['click','keydown','mousemove','scroll','touchstart'].forEach(evt =>
+      document.removeEventListener(evt, resetIdleTimer)
+    );
+    clearTimeout(_idleTimer);
+  }
+
+  // ── SIGN UP ───────────────────────────────────────────────
+  async function signUp(email, password, name) {
+    if (!validatePassword(password)) {
+      return { error: { message: 'Password must be at least 12 characters with uppercase, number, and symbol.' } };
+    }
+    const result = await WPDb.signUp(email, password);
+    if (!result.error && result.data.user) {
+      // Create profile stub
+      await WPDb.insert('user_profiles', {
+        user_id: result.data.user.id,
+        full_name: name,
+        onboarding_done: false,
+      }).catch(() => {});
+    }
+    return result;
+  }
+
+  // ── SIGN IN ───────────────────────────────────────────────
+  async function signIn(email, password) {
+    return WPDb.signIn(email, password);
+  }
+
+  // ── SIGN OUT ──────────────────────────────────────────────
+  async function signOut() {
+    stopIdleWatcher();
+    await WPDb.signOut();
+    WPApp.state.user    = null;
+    WPApp.state.profile = null;
+    WPRouter.navigate('/login');
+  }
+
+  // ── PASSWORD VALIDATION ───────────────────────────────────
+  function validatePassword(pw) {
+    return pw.length >= 12 &&
+           /[A-Z]/.test(pw) &&
+           /[0-9]/.test(pw) &&
+           /[^A-Za-z0-9]/.test(pw);
+  }
+
+  function passwordStrength(pw) {
+    let score = 0;
+    if (pw.length >= 12) score++;
+    if (pw.length >= 16) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    const labels = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Excellent'];
+    const colors = ['', 'danger', 'gold', 'gold', 'accent', 'accent'];
+    return { score, label: labels[score] || 'Weak', color: colors[score] || 'danger' };
+  }
+
+  // ── RENDER AUTH UI ────────────────────────────────────────
+  function renderLogin(container) {
+    container.innerHTML = `
+    <div class="auth-shell">
+      <div class="auth-brand">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon">&#x26A1;</div>
+          <div>
+            <div class="sidebar-logo-text">WealthPath</div>
+            <div class="sidebar-logo-sub">Financial Health Platform</div>
+          </div>
+        </div>
+        <div class="auth-brand-tagline">
+          Your financial <span>freedom</span> journey starts here.
+        </div>
+        <p class="auth-brand-sub">Track your net worth, crush debt, plan for retirement — all built for Nigeria.</p>
+        <div class="auth-features">
+          <div class="auth-feature">
+            <div class="auth-feature-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00C896" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <span>Nigeria Tax Act 2025 compliant tax calculations</span>
+          </div>
+          <div class="auth-feature">
+            <div class="auth-feature-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00C896" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <span>PENCOM pension planning & RSA tracking</span>
+          </div>
+          <div class="auth-feature">
+            <div class="auth-feature-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00C896" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <span>Debt Avalanche strategy to eliminate debt fast</span>
+          </div>
+          <div class="auth-feature">
+            <div class="auth-feature-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00C896" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <span>100% private — your data stays yours</span>
+          </div>
+        </div>
+      </div>
+      <div class="auth-form-pane">
+        <div class="auth-form-inner">
+          <h1 class="auth-form-title">Welcome back</h1>
+          <p class="auth-form-sub">Sign in to your WealthPath account</p>
+          <div id="auth-error" class="alert alert-danger" style="display:none"></div>
+          <form id="login-form">
+            <div class="form-group">
+              <label for="login-email">Email Address</label>
+              <input class="input" type="email" id="login-email" placeholder="you@example.com" required autocomplete="email">
+            </div>
+            <div class="form-group">
+              <label for="login-password">Password</label>
+              <input class="input" type="password" id="login-password" placeholder="Your password" required autocomplete="current-password">
+            </div>
+            <div style="text-align:right;margin-bottom:1.5rem">
+              <a id="forgot-link" style="font-size:0.82rem;color:var(--clr-accent);cursor:pointer">Forgot password?</a>
+            </div>
+            <button class="btn btn-primary" style="width:100%" type="submit" id="login-btn">
+              Sign In
+            </button>
+          </form>
+          <div class="auth-switch">Don't have an account? <a id="goto-signup">Create one free</a></div>
+        </div>
+      </div>
+    </div>`;
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn   = document.getElementById('login-btn');
+      const errEl = document.getElementById('auth-error');
+      btn.textContent = 'Signing in…';
+      btn.disabled = true;
+      errEl.style.display = 'none';
+
+      const { error } = await WPDb.signIn(
+        document.getElementById('login-email').value.trim(),
+        document.getElementById('login-password').value
+      );
+
+      if (error) {
+        errEl.textContent = error.message || 'Invalid credentials';
+        errEl.style.display = 'flex';
+        btn.textContent = 'Sign In';
+        btn.disabled = false;
+      } else {
+        await WPApp.boot();
+      }
+    });
+
+    document.getElementById('goto-signup').addEventListener('click', () => WPRouter.navigate('/signup'));
+    document.getElementById('forgot-link').addEventListener('click', () => renderForgot(container));
+  }
+
+  function renderSignup(container) {
+    container.innerHTML = `
+    <div class="auth-shell">
+      <div class="auth-brand">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon">&#x26A1;</div>
+          <div><div class="sidebar-logo-text">WealthPath</div></div>
+        </div>
+        <div class="auth-brand-tagline">Build <span>wealth</span>. Plan your <span>future</span>.</div>
+        <p class="auth-brand-sub">Nigeria's most comprehensive personal finance platform. Free forever.</p>
+      </div>
+      <div class="auth-form-pane">
+        <div class="auth-form-inner">
+          <h1 class="auth-form-title">Create your account</h1>
+          <p class="auth-form-sub">Free forever. No credit card needed.</p>
+          <div id="auth-error" class="alert alert-danger" style="display:none"></div>
+          <form id="signup-form">
+            <div class="form-group">
+              <label for="signup-name">Full Name</label>
+              <input class="input" type="text" id="signup-name" placeholder="Your full name" required autocomplete="name">
+            </div>
+            <div class="form-group">
+              <label for="signup-email">Email Address</label>
+              <input class="input" type="email" id="signup-email" placeholder="you@example.com" required autocomplete="email">
+            </div>
+            <div class="form-group">
+              <label for="signup-password">Password</label>
+              <input class="input" type="password" id="signup-password" placeholder="Min 12 chars, uppercase, number, symbol" required autocomplete="new-password">
+              <div id="pw-strength" class="input-hint"></div>
+            </div>
+            <p style="font-size:0.72rem;color:var(--clr-text-3);margin-bottom:1.25rem">By signing up you agree to our Terms of Service and Privacy Policy. Your data is encrypted and never shared.</p>
+            <button class="btn btn-primary" style="width:100%" type="submit" id="signup-btn">Create Account</button>
+          </form>
+          <div class="auth-switch">Already have an account? <a id="goto-login">Sign in</a></div>
+        </div>
+      </div>
+    </div>`;
+
+    document.getElementById('signup-password').addEventListener('input', (e) => {
+      const s = WPAuth.passwordStrength(e.target.value);
+      document.getElementById('pw-strength').innerHTML = s.score > 0
+        ? `<span class="text-${s.color}">${s.label}</span>` : '';
+    });
+
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('signup-btn');
+      const errEl = document.getElementById('auth-error');
+      btn.textContent = 'Creating account…'; btn.disabled = true;
+      errEl.style.display = 'none';
+
+      const { error } = await WPAuth.signUp(
+        document.getElementById('signup-email').value.trim(),
+        document.getElementById('signup-password').value,
+        document.getElementById('signup-name').value.trim()
+      );
+
+      if (error) {
+        errEl.textContent = error.message || 'Sign-up failed';
+        errEl.style.display = 'flex';
+        btn.textContent = 'Create Account'; btn.disabled = false;
+      } else {
+        WPToast.success('Account created! Redirecting to setup…');
+        await WPApp.boot();
+      }
+    });
+
+    document.getElementById('goto-login').addEventListener('click', () => WPRouter.navigate('/login'));
+  }
+
+  function renderForgot(container) {
+    container.innerHTML = `
+    <div class="onboarding-shell">
+      <div class="onboarding-card">
+        <div class="onboarding-logo">
+          <div class="sidebar-logo-icon">&#x26A1;</div>
+          <span class="sidebar-logo-text">WealthPath</span>
+        </div>
+        <h2 class="onboarding-step-title">Reset Password</h2>
+        <p class="onboarding-step-desc">Enter your email and we'll send a reset link.</p>
+        <div id="auth-error" class="alert alert-danger" style="display:none"></div>
+        <div id="auth-success" class="alert alert-success" style="display:none"></div>
+        <form id="forgot-form">
+          <div class="form-group">
+            <label for="forgot-email">Email Address</label>
+            <input class="input" type="email" id="forgot-email" placeholder="you@example.com" required>
+          </div>
+          <button class="btn btn-primary" style="width:100%" type="submit">Send Reset Link</button>
+        </form>
+        <div class="auth-switch" style="margin-top:1.5rem">
+          <a id="back-login" style="color:var(--clr-accent);cursor:pointer">&larr; Back to Sign In</a>
+        </div>
+      </div>
+    </div>`;
+
+    document.getElementById('forgot-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const { error } = await WPDb.resetPassword(document.getElementById('forgot-email').value.trim());
+      if (error) {
+        document.getElementById('auth-error').textContent = error.message;
+        document.getElementById('auth-error').style.display = 'flex';
+      } else {
+        document.getElementById('auth-success').textContent = 'Reset link sent! Check your inbox.';
+        document.getElementById('auth-success').style.display = 'flex';
+      }
+    });
+    document.getElementById('back-login').addEventListener('click', () => WPRouter.navigate('/login'));
+  }
+
+  return { signUp, signIn, signOut, validatePassword, passwordStrength, startIdleWatcher, stopIdleWatcher, renderLogin, renderSignup };
+})();
