@@ -80,8 +80,22 @@ const WPApp = (() => {
   }
 
   function _registerAuthRoutes() {
-    WPRouter.register('/login',  () => WPAuth.renderLogin(document.getElementById('auth-root')));
-    WPRouter.register('/signup', () => WPAuth.renderSignup(document.getElementById('auth-root')));
+    WPRouter.register('/login',  () => {
+      if (state.user) {
+        WPRouter.navigate('/dashboard', true);
+        return;
+      }
+      const container = document.getElementById('auth-root');
+      if (container) WPAuth.renderLogin(container);
+    });
+    WPRouter.register('/signup', () => {
+      if (state.user) {
+        WPRouter.navigate('/dashboard', true);
+        return;
+      }
+      const container = document.getElementById('auth-root');
+      if (container) WPAuth.renderSignup(container);
+    });
   }
 
   // ── APP SHELL (sidebar + content) ────────────────────────
