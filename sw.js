@@ -2,7 +2,7 @@
 // OlaFinancial — Service Worker (Offline Cache)
 // ============================================================
 
-const CACHE_NAME   = 'olafinancial-v1';
+const CACHE_NAME   = 'olafinancial-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
