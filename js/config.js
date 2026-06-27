@@ -57,14 +57,6 @@ const APP_CONFIG = {
     mmo:  150_000_000,    // ₦1,500,000 for Mobile Money Operators (PSBs)
   },
 
-  // ── INVESTMENT RETURN RATES ────────────────────────────────
-  // Ranges used in retirement / TVM calculations
-  returnRates: {
-    conservative: { min: 0.08, max: 0.10, mid: 0.09,  label: '8–10% (Treasury Bills, Fixed Deposit)' },
-    moderate:     { min: 0.11, max: 0.13, mid: 0.12,  label: '11–13% (Balanced: bonds + equities)' },
-    aggressive:   { min: 0.14, max: 0.18, mid: 0.16,  label: '14–18% (Equities, REITs, growth)' },
-  },
-
   // ── FINANCIAL RATIOS (benchmarks) ─────────────────────────
   benchmarks: {
     savingsRateMin:        0.20,  // ≥ 20% of net income

@@ -128,7 +128,6 @@ const WPOnboarding = (() => {
           <option value="moderate" ${(!_data.risk_tolerance||_data.risk_tolerance==='moderate')?'selected':''}>Moderate — Balanced growth and security</option>
           <option value="aggressive" ${_data.risk_tolerance==='aggressive'?'selected':''}>Aggressive — Maximum growth, higher risk</option>
         </select>
-        <div class="input-hint">Affects projected return rates: Conservative 8–10%, Moderate 11–13%, Aggressive 14–18%</div>
       </div>`;
   }
 
@@ -158,7 +157,6 @@ const WPOnboarding = (() => {
   }
 
   function _step5(el) {
-    const returnRates = { conservative: '8–10%', moderate: '11–13%', aggressive: '14–18%' };
     el.innerHTML = `
       <h2 class="onboarding-step-title">You're all set! &#x1F389;</h2>
       <p class="onboarding-step-desc">Here's a summary of your profile. Click 'Get Started' to open your dashboard.</p>
@@ -170,7 +168,6 @@ const WPOnboarding = (() => {
           <div class="flex justify-between"><span class="text-muted">Employment</span><strong>${(_data.employment_type||'').replace('_',' ')}</strong></div>
           <div class="flex justify-between"><span class="text-muted">Retirement Age</span><strong>${_data.retirement_age||60}</strong></div>
           <div class="flex justify-between"><span class="text-muted">Risk Profile</span><strong>${_data.risk_tolerance||'moderate'}</strong></div>
-          <div class="flex justify-between"><span class="text-muted">Projected Returns</span><strong class="text-accent">${returnRates[_data.risk_tolerance||'moderate']}</strong></div>
         </div>
       </div>
       <div class="disclaimer">${APP_CONFIG.disclaimer}</div>`;
