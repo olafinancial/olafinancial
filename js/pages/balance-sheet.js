@@ -199,6 +199,7 @@ const WPBalanceSheet = (() => {
           <div class="form-group">
             <label for="af-inst-type">Institution Type</label>
             <select class="select" id="af-inst-type">
+              <option value=""           ${!e.institution_type              ?'selected':''}>Not Applicable</option>
               <option value="dmb"        ${e.institution_type==='dmb'       ?'selected':''}>DMB (Commercial Bank)</option>
               <option value="mfb"        ${e.institution_type==='mfb'       ?'selected':''}>Microfinance / Neobank</option>
               <option value="investment" ${e.institution_type==='investment'?'selected':''}>Investment / Brokerage</option>
@@ -215,14 +216,18 @@ const WPBalanceSheet = (() => {
           <div class="form-group">
             <label for="af-open">Opening Balance (&#x20A6;)</label>
             <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-              <input class="input" type="number" id="af-open" min="0" step="100" value="${e.open_balance?WPUtils.koboToNaira(e.open_balance):''}" placeholder="0">
+              <input class="input" type="text" inputmode="decimal" id="af-open" value="${e.open_balance?WPUtils.koboToNaira(e.open_balance):''}" placeholder="0" required>
             </div>
           </div>
           <div class="form-group">
-            <label for="af-close">Closing Balance (&#x20A6;)</label>
-            <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-              <input class="input" type="number" id="af-close" min="0" step="100" value="${e.close_balance?WPUtils.koboToNaira(e.close_balance):''}" placeholder="0" required>
-            </div>
+            <label for="af-date">Date Entered</label>
+            <input class="input" type="date" id="af-date" value="${e.period_month || WPUtils.currentPeriod()}" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="toggle-group">
+            <label class="toggle"><input type="checkbox" id="af-income" ${e.is_income_generating?'checked':''}><span class="toggle-slider"></span></label>
+            <span class="toggle-label">Income-generating asset (rental, dividends, interest)</span>
           </div>
         </div>
         <div class="form-row">
@@ -235,33 +240,30 @@ const WPBalanceSheet = (() => {
             <input class="input" type="number" id="af-tenor" min="0" value="${e.tenor_months||''}" placeholder="e.g. 12">
           </div>
         </div>
-        <div class="form-group">
-          <div class="toggle-group">
-            <label class="toggle"><input type="checkbox" id="af-income" ${e.is_income_generating?'checked':''}><span class="toggle-slider"></span></label>
-            <span class="toggle-label">Income-generating asset (rental, dividends, interest)</span>
-          </div>
-        </div>
       </form>`;
 
     WPModal.open(existing ? 'Edit Asset' : 'Add Asset', body, {
       confirmLabel: existing ? 'Update' : 'Add Asset',
       onConfirm: async () => { await _saveAsset(e.id); },
     });
-  }
-
+    WPUtils.maskNumberInput(document.getElementById('af-open'));
   async function _saveAsset(existingId) {
+    const dateVal = document.getElementById('af-date').value || PERIOD;
+    const periodMonth = dateVal.substring(0, 7) + '-01';
+    const rawOpen = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('af-open').value));
+
     const row = {
       user_id:              WPApp.state.user.id,
       asset_name:           document.getElementById('af-name').value.trim(),
       asset_type:           document.getElementById('af-type').value,
-      institution_type:     document.getElementById('af-inst-type').value,
+      institution_type:     document.getElementById('af-inst-type').value || null,
       institution_name:     document.getElementById('af-inst').value.trim(),
-      open_balance:         WPUtils.nairaToKobo(parseFloat(document.getElementById('af-open').value)||0),
-      close_balance:        WPUtils.nairaToKobo(parseFloat(document.getElementById('af-close').value)||0),
+      open_balance:         rawOpen,
+      close_balance:        rawOpen,
       interest_rate:        parseFloat(document.getElementById('af-rate').value)||0,
       tenor_months:         parseInt(document.getElementById('af-tenor').value)||null,
       is_income_generating: document.getElementById('af-income').checked,
-      period_month:         PERIOD,
+      period_month:         periodMonth,
     };
     if (!row.asset_name) { WPToast.warning('Please enter an asset name.'); return; }
     try {
@@ -301,13 +303,13 @@ const WPBalanceSheet = (() => {
           <div class="form-group">
             <label for="lf-open">Opening Balance (&#x20A6;)</label>
             <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-              <input class="input" type="number" id="lf-open" min="0" step="100" value="${e.open_balance?WPUtils.koboToNaira(e.open_balance):''}">
+              <input class="input" type="text" inputmode="decimal" id="lf-open" value="${e.open_balance?WPUtils.koboToNaira(e.open_balance):''}">
             </div>
           </div>
           <div class="form-group">
             <label for="lf-close">Closing Balance (&#x20A6;)</label>
             <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-              <input class="input" type="number" id="lf-close" min="0" step="100" value="${e.close_balance?WPUtils.koboToNaira(e.close_balance):''}">
+              <input class="input" type="text" inputmode="decimal" id="lf-close" value="${e.close_balance?WPUtils.koboToNaira(e.close_balance):''}">
             </div>
           </div>
         </div>
@@ -319,7 +321,7 @@ const WPBalanceSheet = (() => {
           <div class="form-group">
             <label for="lf-mpmt">Monthly Payment (&#x20A6;)</label>
             <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-              <input class="input" type="number" id="lf-mpmt" min="0" step="100" value="${e.monthly_payment?WPUtils.koboToNaira(e.monthly_payment):''}">
+              <input class="input" type="text" inputmode="decimal" id="lf-mpmt" value="${e.monthly_payment?WPUtils.koboToNaira(e.monthly_payment):''}">
             </div>
           </div>
         </div>
@@ -329,6 +331,9 @@ const WPBalanceSheet = (() => {
       confirmLabel: existing ? 'Update' : 'Add Liability',
       onConfirm: async () => { await _saveLiab(e.id); },
     });
+    WPUtils.maskNumberInput(document.getElementById('lf-open'));
+    WPUtils.maskNumberInput(document.getElementById('lf-close'));
+    WPUtils.maskNumberInput(document.getElementById('lf-mpmt'));
   }
 
   async function _saveLiab(existingId) {
@@ -337,10 +342,10 @@ const WPBalanceSheet = (() => {
       liability_name:   document.getElementById('lf-name').value.trim(),
       liability_type:   document.getElementById('lf-type').value,
       lender_name:      document.getElementById('lf-lender').value.trim(),
-      open_balance:     WPUtils.nairaToKobo(parseFloat(document.getElementById('lf-open').value)||0),
-      close_balance:    WPUtils.nairaToKobo(parseFloat(document.getElementById('lf-close').value)||0),
+      open_balance:     WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('lf-open').value)),
+      close_balance:    WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('lf-close').value)),
       apr:              parseFloat(document.getElementById('lf-apr').value)||0,
-      monthly_payment:  WPUtils.nairaToKobo(parseFloat(document.getElementById('lf-mpmt').value)||0),
+      monthly_payment:  WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('lf-mpmt').value)),
       is_interest_bearing: true,
       period_month:     PERIOD,
     };
