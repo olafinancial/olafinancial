@@ -214,7 +214,6 @@ ul, ol { list-style: none; }
 
 /* ── MAIN CONTENT ────────────────────────────────────────── */
 .main-content {
-  margin-left: var(--sidebar-w);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
