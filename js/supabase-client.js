@@ -20,6 +20,11 @@ const WPDb = (() => {
     return _client;
   }
 
+  function fromTable(table) {
+    const mapped = table === 'goals' ? 'financial_goals' : table;
+    return client().from(mapped);
+  }
+
   // ── AUTH HELPERS ─────────────────────────────────────────
   async function getSession()  { return (await client().auth.getSession()).data.session; }
   async function getUser()     { return (await client().auth.getUser()).data.user; }
@@ -47,7 +52,7 @@ const WPDb = (() => {
 
   // ── GENERIC CRUD ─────────────────────────────────────────
   async function fetchAll(table, filters = {}) {
-    let q = client().from(table).select('*');
+    let q = fromTable(table).select('*');
     for (const [k, v] of Object.entries(filters)) {
       q = q.eq(k, v);
     }
@@ -59,49 +64,49 @@ const WPDb = (() => {
   }
 
   async function fetchOne(table, id) {
-    const { data, error } = await client().from(table).select('*').eq('id', id).single();
+    const { data, error } = await fromTable(table).select('*').eq('id', id).single();
     if (error) throw error;
     return data;
   }
 
   async function insert(table, row) {
-    const { data, error } = await client().from(table).insert(row).select().single();
+    const { data, error } = await fromTable(table).insert(row).select().single();
     if (error) throw error;
     return data;
   }
 
   async function upsert(table, row, conflictCols = ['id']) {
-    const { data, error } = await client().from(table).upsert(row, { onConflict: conflictCols.join(',') }).select().single();
+    const { data, error } = await fromTable(table).upsert(row, { onConflict: conflictCols.join(',') }).select().single();
     if (error) throw error;
     return data;
   }
 
   async function update(table, id, changes) {
-    const { data, error } = await client().from(table).update(changes).eq('id', id).select().single();
+    const { data, error } = await fromTable(table).update(changes).eq('id', id).select().single();
     if (error) throw error;
     return data;
   }
 
   async function remove(table, id) {
-    const { error } = await client().from(table).delete().eq('id', id);
+    const { error } = await fromTable(table).delete().eq('id', id);
     if (error) throw error;
   }
 
   // ── DOMAIN-SPECIFIC QUERIES ───────────────────────────────
   async function getProfile(userId) {
-    const { data } = await client().from('user_profiles').select('*').eq('user_id', userId).maybeSingle();
+    const { data } = await fromTable('user_profiles').select('*').eq('user_id', userId).maybeSingle();
     return data;
   }
 
   async function getIncomeByPeriod(userId, period) {
-    const { data, error } = await client().from('income_entries').select('*')
+    const { data, error } = await fromTable('income_entries').select('*')
       .eq('user_id', userId).eq('period_month', period);
     if (error) throw error;
     return data || [];
   }
 
   async function getExpensesByDateRange(userId, startDate, endDate) {
-    const { data, error } = await client().from('expense_entries').select('*')
+    const { data, error } = await fromTable('expense_entries').select('*')
       .eq('user_id', userId)
       .gte('expense_date', startDate)
       .lte('expense_date', endDate)
@@ -111,28 +116,28 @@ const WPDb = (() => {
   }
 
   async function getAssetsByPeriod(userId, period) {
-    const { data, error } = await client().from('assets').select('*')
+    const { data, error } = await fromTable('assets').select('*')
       .eq('user_id', userId).eq('period_month', period);
     if (error) throw error;
     return data || [];
   }
 
   async function getLiabilitiesByPeriod(userId, period) {
-    const { data, error } = await client().from('liabilities').select('*')
+    const { data, error } = await fromTable('liabilities').select('*')
       .eq('user_id', userId).eq('period_month', period);
     if (error) throw error;
     return data || [];
   }
 
   async function getMonthlySnapshots(userId, months = 12) {
-    const { data, error } = await client().from('monthly_snapshots').select('*')
+    const { data, error } = await fromTable('monthly_snapshots').select('*')
       .eq('user_id', userId).order('period_month', { ascending: true }).limit(months);
     if (error) throw error;
     return data || [];
   }
 
   async function getRefData(table) {
-    const { data } = await client().from(table).select('*').order('name');
+    const { data } = await fromTable(table).select('*').order('name');
     return data || [];
   }
 
