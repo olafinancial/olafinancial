@@ -40,7 +40,12 @@ const WPRouter = (() => {
     }
 
     if (!handler) {
-      navigate('/dashboard', true);
+      const fallback = _routes['/dashboard'] ? '/dashboard' : (_routes['/login'] ? '/login' : null);
+      if (fallback && fallback !== path) {
+        navigate(fallback, true);
+      } else {
+        console.warn(`Route not found: ${path} and no valid fallback registered.`);
+      }
       return;
     }
 
