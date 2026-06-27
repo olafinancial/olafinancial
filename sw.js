@@ -25,6 +25,8 @@ const STATIC_ASSETS = [
   '/js/pages/goals.js',
   '/js/pages/retirement.js',
   '/js/pages/reports.js',
+  '/js/lib/supabase.min.js',
+  '/js/lib/chart.umd.min.js',
 ];
 
 // Install: cache all static assets

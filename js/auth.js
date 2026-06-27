@@ -149,18 +149,26 @@ const WPAuth = (() => {
       btn.disabled = true;
       errEl.style.display = 'none';
 
-      const { error } = await WPDb.signIn(
-        document.getElementById('login-email').value.trim(),
-        document.getElementById('login-password').value
-      );
+      try {
+        const { error } = await WPDb.signIn(
+          document.getElementById('login-email').value.trim(),
+          document.getElementById('login-password').value
+        );
 
-      if (error) {
-        errEl.textContent = error.message || 'Invalid credentials';
+        if (error) {
+          errEl.textContent = error.message || 'Invalid credentials';
+          errEl.style.display = 'flex';
+          btn.textContent = 'Sign In';
+          btn.disabled = false;
+        } else {
+          await WPApp.boot();
+        }
+      } catch (err) {
+        console.error(err);
+        errEl.textContent = 'Connection or setup error: ' + (err.message || err);
         errEl.style.display = 'flex';
         btn.textContent = 'Sign In';
         btn.disabled = false;
-      } else {
-        await WPApp.boot();
       }
     });
 
@@ -219,19 +227,26 @@ const WPAuth = (() => {
       btn.textContent = 'Creating account…'; btn.disabled = true;
       errEl.style.display = 'none';
 
-      const { error } = await WPAuth.signUp(
-        document.getElementById('signup-email').value.trim(),
-        document.getElementById('signup-password').value,
-        document.getElementById('signup-name').value.trim()
-      );
+      try {
+        const { error } = await WPAuth.signUp(
+          document.getElementById('signup-email').value.trim(),
+          document.getElementById('signup-password').value,
+          document.getElementById('signup-name').value.trim()
+        );
 
-      if (error) {
-        errEl.textContent = error.message || 'Sign-up failed';
+        if (error) {
+          errEl.textContent = error.message || 'Sign-up failed';
+          errEl.style.display = 'flex';
+          btn.textContent = 'Create Account'; btn.disabled = false;
+        } else {
+          WPToast.success('Account created! Redirecting to setup…');
+          await WPApp.boot();
+        }
+      } catch (err) {
+        console.error(err);
+        errEl.textContent = 'Connection or setup error: ' + (err.message || err);
         errEl.style.display = 'flex';
         btn.textContent = 'Create Account'; btn.disabled = false;
-      } else {
-        WPToast.success('Account created! Redirecting to setup…');
-        await WPApp.boot();
       }
     });
 
