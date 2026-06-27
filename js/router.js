@@ -7,10 +7,12 @@ const WPRouter = (() => {
   let _current = null;
 
   function register(path, handler) {
+    console.log(`[Router] Registering route: ${path}`, !!handler);
     _routes[path] = handler;
   }
 
   function navigate(path, replace = false) {
+    console.log(`[Router] Navigating to: ${path}`);
     const hash = '#' + path;
     if (replace) {
       history.replaceState(null, '', hash);
@@ -21,6 +23,7 @@ const WPRouter = (() => {
   }
 
   function _dispatch(path) {
+    console.log(`[Router] Dispatching path: "${path}". Registered routes:`, Object.keys(_routes));
     // Match exact or with params
     let handler = _routes[path];
     let params  = {};
