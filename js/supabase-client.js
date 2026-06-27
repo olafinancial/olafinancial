@@ -51,7 +51,8 @@ const WPDb = (() => {
     for (const [k, v] of Object.entries(filters)) {
       q = q.eq(k, v);
     }
-    q = q.order('created_at', { ascending: false });
+    const sortCol = table === 'emergency_fund' ? 'updated_at' : 'created_at';
+    q = q.order(sortCol, { ascending: false });
     const { data, error } = await q;
     if (error) throw error;
     return data || [];
