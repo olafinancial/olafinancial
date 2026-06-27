@@ -103,6 +103,15 @@ ul, ol { list-style: none; }
   grid-template-rows: 1fr;
   min-height: 100vh;
 }
+.app-shell.no-sidebar {
+  grid-template-columns: 1fr;
+}
+.app-shell.no-sidebar .sidebar {
+  display: none !important;
+}
+.app-shell.no-sidebar .main-content {
+  margin-left: 0 !important;
+}
 
 /* ── SIDEBAR ─────────────────────────────────────────────── */
 .sidebar {

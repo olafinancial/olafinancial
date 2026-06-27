@@ -38,13 +38,15 @@ const WPApp = (() => {
       state.profile = await WPDb.getProfile(session.user.id);
       WPAuth.startIdleWatcher();
 
+      // Always initialize the app shell structure and routes first
+      _showApp();
+
       // Route guard: onboarding incomplete
       if (!state.profile || !state.profile.onboarding_done) {
         WPRouter.navigate('/onboarding', true);
         return;
       }
 
-      _showApp();
       const currentPath = window.location.hash.replace('#', '') || '/dashboard';
       if (['/login', '/signup', '/onboarding'].includes(currentPath)) {
         WPRouter.navigate('/dashboard', true);
@@ -244,6 +246,23 @@ const WPApp = (() => {
     if (_activePage && typeof _activePage.destroy === 'function') {
       _activePage.destroy();
     }
+
+    // Route guard: if onboarding is not done, only allow onboarding page
+    if (page !== WPOnboarding && (!state.profile || !state.profile.onboarding_done)) {
+      WPRouter.navigate('/onboarding', true);
+      return;
+    }
+
+    // Toggle sidebar visibility based on active page
+    const shell = document.querySelector('.app-shell');
+    if (shell) {
+      if (page === WPOnboarding) {
+        shell.classList.add('no-sidebar');
+      } else {
+        shell.classList.remove('no-sidebar');
+      }
+    }
+
     const container = document.getElementById('page-container');
     if (!container) return;
     container.innerHTML = `<div class="page-body" style="display:flex;align-items:center;justify-content:center;min-height:60vh">
