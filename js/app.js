@@ -25,30 +25,48 @@ const WPApp = (() => {
 
   // ── BOOT ──────────────────────────────────────────────────
   async function boot() {
-    WPDb.init();
-    const session = await WPDb.getSession();
+    try {
+      WPDb.init();
+      const session = await WPDb.getSession();
 
-    if (!session) {
-      _showAuth();
-      return;
-    }
+      if (!session) {
+        _showAuth();
+        return;
+      }
 
-    state.user = session.user;
-    state.profile = await WPDb.getProfile(session.user.id);
-    WPAuth.startIdleWatcher();
+      state.user = session.user;
+      state.profile = await WPDb.getProfile(session.user.id);
+      WPAuth.startIdleWatcher();
 
-    // Route guard: onboarding incomplete
-    if (!state.profile || !state.profile.onboarding_done) {
-      WPRouter.navigate('/onboarding', true);
-      return;
-    }
+      // Route guard: onboarding incomplete
+      if (!state.profile || !state.profile.onboarding_done) {
+        WPRouter.navigate('/onboarding', true);
+        return;
+      }
 
-    _showApp();
-    const currentPath = window.location.hash.replace('#', '') || '/dashboard';
-    if (['/login', '/signup', '/onboarding'].includes(currentPath)) {
-      WPRouter.navigate('/dashboard', true);
-    } else {
-      WPRouter.start();
+      _showApp();
+      const currentPath = window.location.hash.replace('#', '') || '/dashboard';
+      if (['/login', '/signup', '/onboarding'].includes(currentPath)) {
+        WPRouter.navigate('/dashboard', true);
+      } else {
+        WPRouter.start();
+      }
+    } catch (err) {
+      console.error("[Boot Error]", err);
+      const splash = document.getElementById('app-splash');
+      if (splash) {
+        splash.style.background = '#0A1628';
+        splash.innerHTML = `
+          <div style="text-align:center; padding: 2.5rem; max-width: 440px; background: rgba(255, 75, 75, 0.08); border-radius: 16px; border: 1px solid #FF4B4B; box-shadow: 0 8px 32px rgba(0,0,0,0.4)">
+            <div style="font-size: 2.5rem; margin-bottom: 1rem">⚠️</div>
+            <h3 style="color: #ffffff; margin-bottom: 0.75rem; font-weight: 700">Initialization Failed</h3>
+            <p style="color: #A0AEC0; font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.75rem">
+              ${err.message || err || 'An unexpected error occurred while loading the app.'}
+            </p>
+            <button class="btn btn-primary" onclick="window.location.reload()" style="padding: 0.6rem 1.5rem">Try Again</button>
+          </div>
+        `;
+      }
     }
   }
 
