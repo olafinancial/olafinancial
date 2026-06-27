@@ -112,6 +112,15 @@ const WPApp = (() => {
           </div>
           <nav class="sidebar-nav" id="sidebar-nav"></nav>
           <div class="sidebar-footer">
+            <div class="currency-selector-container" style="padding: 0 0 1rem 0; border-bottom: 1px solid var(--clr-border); margin-bottom: 1rem;">
+              <label for="currency-switcher" style="font-size: 0.72rem; color: var(--clr-text-3); display: block; margin-bottom: 0.35rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Base Currency</label>
+              <select id="currency-switcher" class="select select-sm" style="width: 100%; font-size: 0.8rem; height: 32px; padding: 4px 8px; background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-text-1);">
+                <option value="NGN">NGN (₦)</option>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP (£)</option>
+              </select>
+            </div>
             <div class="sidebar-user" id="sidebar-user">
               <div class="sidebar-avatar" id="sidebar-avatar">?</div>
               <div class="sidebar-user-info">
@@ -221,6 +230,24 @@ const WPApp = (() => {
     if (el) el.textContent = name;
     if (em) em.textContent = email;
     if (av) av.textContent = initials;
+
+    const switcher = document.getElementById('currency-switcher');
+    if (switcher) {
+      switcher.value = state.profile?.currency || 'NGN';
+      switcher.addEventListener('change', async (e) => {
+        const newCurrency = e.target.value;
+        try {
+          state.profile = await WPDb.upsert('user_profiles', {
+            user_id: state.user.id,
+            currency: newCurrency
+          }, ['user_id']);
+          WPToast.success(`Currency switched to ${newCurrency}`);
+          WPRouter.navigate(WPRouter.current(), true);
+        } catch (err) {
+          WPToast.error('Could not save currency preference.');
+        }
+      });
+    }
   }
 
   function _setActiveNav(path) {

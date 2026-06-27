@@ -87,6 +87,15 @@ const WPOnboarding = (() => {
           <option value="ED" ${_data.state==='ED'?'selected':''}>Edo</option>
           <option value="other" ${_data.state==='other'?'selected':''}>Other State</option>
         </select>
+      </div>
+      <div class="form-group">
+        <label for="ob-currency">Base Currency</label>
+        <select class="select" id="ob-currency">
+          <option value="NGN" ${_data.currency==='NGN'||!_data.currency?'selected':''}>NGN (₦) — Nigerian Naira</option>
+          <option value="USD" ${_data.currency==='USD'?'selected':''}>USD ($) — US Dollar</option>
+          <option value="EUR" ${_data.currency==='EUR'?'selected':''}>EUR (€) — Euro</option>
+          <option value="GBP" ${_data.currency==='GBP'?'selected':''}>GBP (£) — British Pound</option>
+        </select>
       </div>`;
   }
 
@@ -178,6 +187,7 @@ const WPOnboarding = (() => {
       _data.full_name = document.getElementById('ob-name')?.value.trim();
       _data.age       = parseInt(document.getElementById('ob-age')?.value) || null;
       _data.state     = document.getElementById('ob-state')?.value;
+      _data.currency  = document.getElementById('ob-currency')?.value || 'NGN';
       if (!_data.full_name || !_data.age) { WPToast.warning('Please fill in your name and age.'); return false; }
     }
     if (_step === 2) {
@@ -220,6 +230,7 @@ const WPOnboarding = (() => {
         state: _data.state, employment_type: _data.employment_type,
         dependents: _data.dependents, retirement_age: _data.retirement_age || 60,
         risk_tolerance: _data.risk_tolerance || 'moderate', onboarding_done: true,
+        currency: _data.currency || 'NGN',
       }, ['user_id']);
       WPToast.success('Profile saved! Welcome to Ola Financial.');
       // Reload the full app shell

@@ -8,25 +8,68 @@
 const WPUtils = (() => {
 
   // ── CURRENCY FORMATTING ──────────────────────────────────
+  const CURRENCY_SYMBOLS = {
+    NGN: '₦',
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    CAD: 'CA$',
+    AUD: 'A$',
+  };
+
   function fmt(kobo, opts = {}) {
-    const naira = kobo / 100;
+    const amount = kobo / 100;
+    const currencyCode = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const symbol = CURRENCY_SYMBOLS[currencyCode] || '₦';
+    const locale = currencyCode === 'NGN' ? 'en-NG' : 'en-US';
+    
     const { compact = false, signed = false } = opts;
-    const prefix = signed && naira > 0 ? '+' : '';
-    if (compact && Math.abs(naira) >= 1_000_000_000) {
-      return prefix + '₦' + (naira / 1_000_000_000).toFixed(1) + 'B';
+    const prefix = signed && amount > 0 ? '+' : '';
+    
+    if (compact && Math.abs(amount) >= 1_000_000_000) {
+      return prefix + symbol + (amount / 1_000_000_000).toFixed(1) + 'B';
     }
-    if (compact && Math.abs(naira) >= 1_000_000) {
-      return prefix + '₦' + (naira / 1_000_000).toFixed(1) + 'M';
+    if (compact && Math.abs(amount) >= 1_000_000) {
+      return prefix + symbol + (amount / 1_000_000).toFixed(1) + 'M';
     }
-    if (compact && Math.abs(naira) >= 1_000) {
-      return prefix + '₦' + (naira / 1_000).toFixed(0) + 'K';
+    if (compact && Math.abs(amount) >= 1_000) {
+      return prefix + symbol + (amount / 1_000).toFixed(0) + 'K';
     }
-    return prefix + new Intl.NumberFormat('en-NG', {
+    
+    return prefix + new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: 'NGN',
+      currency: currencyCode,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(naira);
+    }).format(amount);
+  }
+
+  function cleanNum(str) {
+    if (!str) return 0;
+    return parseFloat(str.replace(/,/g, '')) || 0;
+  }
+
+  function maskNumberInput(el) {
+    if (!el) return;
+    el.addEventListener('input', (e) => {
+      let cursor = e.target.selectionStart;
+      let originalLen = e.target.value.length;
+      
+      // Strip everything except digits and one decimal point
+      let val = e.target.value.replace(/[^\d.]/g, '');
+      const parts = val.split('.');
+      if (parts.length > 2) parts.splice(2);
+      
+      // Format integer part with commas
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      const formatted = parts.join('.');
+      
+      e.target.value = formatted;
+      
+      // Adjust cursor
+      let newLen = formatted.length;
+      e.target.setSelectionRange(cursor + (newLen - originalLen), cursor + (newLen - originalLen));
+    });
   }
 
   function nairaToKobo(naira) { return Math.round(naira * 100); }
@@ -375,10 +418,8 @@ const WPUtils = (() => {
       months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`);
     }
     return months;
-  }
-
   return {
-    fmt, nairaToKobo, koboToNaira, pct, fmtPct, fmtDate,
+    fmt, cleanNum, maskNumberInput, nairaToKobo, koboToNaira, pct, fmtPct, fmtDate,
     calcPIT, effectiveTaxRate, taxBracket,
     calcPensionEmployee, calcNHF,
     calcFV, calcPMT, calcAnnuity,

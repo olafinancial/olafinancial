@@ -63,11 +63,11 @@ const WPGoals = (() => {
     const gap      = Math.max(0, g.target_amount - (g.current_savings||0));
     const daysLeft = g.target_date ? Math.ceil((new Date(g.target_date) - new Date()) / 86400000) : null;
     const color    = done ? 'accent' : pct > 75 ? 'accent' : pct > 40 ? 'gold' : 'danger';
-    const icons    = { retire:'&#x1F334;',debt_free:'&#x2702;&#xFE0F;',home:'&#x1F3E0;',emergency:'&#x1F6E1;&#xFE0F;',invest:'&#x1F4C8;',education:'&#x1F393;',business:'&#x1F4BC;',other:'&#x1F3AF;' };
+    const icons    = { retirement:'&#x1F334;', mortgage:'&#x1F3E0;', emergency:'&#x1F6E1;&#xFE0F;', college:'&#x1F393;', custom:'&#x1F3AF;' };
 
     return `<div class="card goal-card ${done?'goal-done':''}">
       <div class="goal-icon">${icons[g.goal_type]||'&#x1F3AF;'}</div>
-      <div class="goal-name">${g.name}</div>
+      <div class="goal-name">${g.goal_name}</div>
       ${g.notes?`<div class="goal-notes text-xs text-muted">${g.notes}</div>`:''}
       <div style="margin:1.25rem 0">
         <div class="progress-labels">
@@ -100,20 +100,17 @@ const WPGoals = (() => {
       <form id="goal-form">
         <div class="form-group">
           <label for="gf-name">Goal Name</label>
-          <input class="input" id="gf-name" value="${e.name||''}" placeholder="e.g. Buy a house in Lekki" required>
+          <input class="input" id="gf-name" value="${e.goal_name||''}" placeholder="e.g. Buy a house in Lekki" required>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label for="gf-type">Goal Type</label>
             <select class="select" id="gf-type">
-              <option value="home"      ${e.goal_type==='home'     ?'selected':''}>&#x1F3E0; Buy a Home</option>
-              <option value="emergency" ${e.goal_type==='emergency'?'selected':''}>&#x1F6E1; Emergency Fund</option>
-              <option value="retire"    ${e.goal_type==='retire'   ?'selected':''}>&#x1F334; Retirement</option>
-              <option value="debt_free" ${e.goal_type==='debt_free'?'selected':''}>&#x2702; Become Debt-Free</option>
-              <option value="invest"    ${e.goal_type==='invest'   ?'selected':''}>&#x1F4C8; Start Investing</option>
-              <option value="education" ${e.goal_type==='education'?'selected':''}>&#x1F393; Education</option>
-              <option value="business"  ${e.goal_type==='business' ?'selected':''}>&#x1F4BC; Business</option>
-              <option value="other"     ${e.goal_type==='other'    ?'selected':''}>Other</option>
+              <option value="mortgage"   ${e.goal_type==='mortgage'  ?'selected':''}>&#x1F3E0; Buy a Home</option>
+              <option value="emergency"  ${e.goal_type==='emergency' ?'selected':''}>&#x1F6E1; Emergency Fund</option>
+              <option value="retirement" ${e.goal_type==='retirement'?'selected':''}>&#x1F334; Retirement</option>
+              <option value="college"    ${e.goal_type==='college'   ?'selected':''}>&#x1F393; Education</option>
+              <option value="custom"     ${e.goal_type==='custom'    ?'selected':''}>Custom / Other</option>
             </select>
           </div>
           <div class="form-group">
@@ -125,14 +122,14 @@ const WPGoals = (() => {
           <div class="form-group">
             <label for="gf-target">Target Amount (&#x20A6;)</label>
             <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-              <input class="input" type="number" id="gf-target" min="0" step="10000"
+              <input class="input" type="text" inputmode="decimal" id="gf-target"
                 value="${e.target_amount?WPUtils.koboToNaira(e.target_amount):''}" placeholder="0" required>
             </div>
           </div>
           <div class="form-group">
             <label for="gf-current">Amount Saved So Far (&#x20A6;)</label>
             <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-              <input class="input" type="number" id="gf-current" min="0" step="100"
+              <input class="input" type="text" inputmode="decimal" id="gf-current"
                 value="${e.current_savings?WPUtils.koboToNaira(e.current_savings):''}" placeholder="0">
             </div>
           </div>
@@ -147,19 +144,21 @@ const WPGoals = (() => {
       confirmLabel: existing ? 'Update' : 'Add Goal',
       onConfirm: async () => { await _save(e.id); },
     });
+    WPUtils.maskNumberInput(document.getElementById('gf-target'));
+    WPUtils.maskNumberInput(document.getElementById('gf-current'));
   }
 
   async function _save(existingId) {
     const row = {
       user_id:        WPApp.state.user.id,
-      name:           document.getElementById('gf-name').value.trim(),
+      goal_name:      document.getElementById('gf-name').value.trim(),
       goal_type:      document.getElementById('gf-type').value,
       target_date:    document.getElementById('gf-date').value || null,
-      target_amount:  WPUtils.nairaToKobo(parseFloat(document.getElementById('gf-target').value)||0),
-      current_savings: WPUtils.nairaToKobo(parseFloat(document.getElementById('gf-current').value)||0),
+      target_amount:  WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('gf-target').value)),
+      current_savings: WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('gf-current').value)),
       notes:          document.getElementById('gf-notes').value.trim(),
     };
-    if (!row.name || !row.target_amount) { WPToast.warning('Name and target amount are required.'); return; }
+    if (!row.goal_name || !row.target_amount) { WPToast.warning('Name and target amount are required.'); return; }
     try {
       if (existingId) await WPDb.update('goals', existingId, row);
       else            await WPDb.insert('goals', row);
@@ -174,10 +173,10 @@ const WPGoals = (() => {
     const body = `
       <form id="goal-update-form">
         <div class="form-group">
-          <label>Goal: <strong>${g.name}</strong></label>
+          <label>Goal: <strong>${g.goal_name}</strong></label>
           <label for="gu-amount">New Saved Amount (&#x20A6;)</label>
           <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-            <input class="input" type="number" id="gu-amount" min="0" step="100"
+            <input class="input" type="text" inputmode="decimal" id="gu-amount"
               value="${WPUtils.koboToNaira(g.current_savings||0)}" required>
           </div>
           <div class="input-hint">Current: ${WPUtils.fmt(g.current_savings||0)} / Target: ${WPUtils.fmt(g.target_amount)}</div>
@@ -186,7 +185,7 @@ const WPGoals = (() => {
     WPModal.open('Update Goal Progress', body, {
       confirmLabel: 'Update',
       onConfirm: async () => {
-        const newAmt = WPUtils.nairaToKobo(parseFloat(document.getElementById('gu-amount').value)||0);
+        const newAmt = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('gu-amount').value));
         try {
           await WPDb.update('goals', id, { current_savings: newAmt });
           if (newAmt >= g.target_amount) WPToast.success('&#x1F389; Goal completed! Congratulations!');
@@ -195,6 +194,7 @@ const WPGoals = (() => {
         } catch (e) { WPToast.error('Could not update.'); }
       },
     });
+    WPUtils.maskNumberInput(document.getElementById('gu-amount'));
   }
 
   async function _edit(id) { const g = _goals.find(x => x.id===id); if (g) _openForm(g); }
