@@ -177,6 +177,10 @@ const WPBalanceSheet = (() => {
 
   function _openAssetForm(existing = null) {
     const e = existing || {};
+    const currencyCode = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbol = symbols[currencyCode] || '₦';
+
     const body = `
       <form id="asset-form">
         <div class="form-group">
@@ -189,7 +193,12 @@ const WPBalanceSheet = (() => {
             <select class="select" id="af-type">
               <option value="savings"       ${e.asset_type==='savings'      ?'selected':''}>Savings Account</option>
               <option value="fixed_deposit" ${e.asset_type==='fixed_deposit'?'selected':''}>Fixed Deposit / T-Bill</option>
-              <option value="equity"        ${e.asset_type==='equity'       ?'selected':''}>Equities / Stocks</option>
+              <option value="equity"        ${e.asset_type==='equity'       ?'selected':''}>Equities / Stocks / ETFs</option>
+              <option value="crypto"        ${e.asset_type==='crypto'       ?'selected':''}>Crypto</option>
+              <option value="forex"         ${e.asset_type==='forex'        ?'selected':''}>Forex</option>
+              <option value="commodities"   ${e.asset_type==='commodities'  ?'selected':''}>Commodities</option>
+              <option value="alternative"   ${e.asset_type==='alternative'  ?'selected':''}>Alternative Investments</option>
+              <option value="currency"      ${e.asset_type==='currency'     ?'selected':''}>Currency</option>
               <option value="property"      ${e.asset_type==='property'     ?'selected':''}>Property / Real Estate</option>
               <option value="vehicle"       ${e.asset_type==='vehicle'      ?'selected':''}>Vehicle</option>
               <option value="pension"       ${e.asset_type==='pension'      ?'selected':''}>Pension / RSA</option>
@@ -230,12 +239,20 @@ const WPBalanceSheet = (() => {
             <span class="toggle-label">Income-generating asset (rental, dividends, interest)</span>
           </div>
         </div>
-        <div class="form-row">
+        <div class="form-row" id="yield-details-row" style="display: ${e.is_income_generating ? 'grid' : 'none'}; grid-template-columns: 1fr 1fr; gap: var(--sp-4);">
           <div class="form-group">
             <label for="af-rate">Interest Rate (% p.a.)</label>
             <input class="input" type="number" id="af-rate" min="0" step="0.1" value="${e.interest_rate||''}" placeholder="e.g. 8.5">
           </div>
           <div class="form-group">
+            <label for="af-income-amt">Expected Annual Income</label>
+            <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
+              <input class="input" type="text" inputmode="decimal" id="af-income-amt" placeholder="0">
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex:1">
             <label for="af-tenor">Tenor (months)</label>
             <input class="input" type="number" id="af-tenor" min="0" value="${e.tenor_months||''}" placeholder="e.g. 12">
           </div>
@@ -246,7 +263,61 @@ const WPBalanceSheet = (() => {
       confirmLabel: existing ? 'Update' : 'Add Asset',
       onConfirm: async () => { await _saveAsset(e.id); },
     });
-    WPUtils.maskNumberInput(document.getElementById('af-open'));
+
+    const openInput = document.getElementById('af-open');
+    const rateInput = document.getElementById('af-rate');
+    const incomeInput = document.getElementById('af-income-amt');
+    const incomeToggle = document.getElementById('af-income');
+    const yieldRow = document.getElementById('yield-details-row');
+
+    WPUtils.maskNumberInput(openInput);
+    WPUtils.maskNumberInput(incomeInput);
+
+    if (e.is_income_generating && e.interest_rate && e.open_balance) {
+      const annualIncome = (e.interest_rate / 100) * (e.open_balance / 100);
+      incomeInput.value = annualIncome;
+      incomeInput.dispatchEvent(new Event('input'));
+    }
+
+    incomeToggle.addEventListener('change', () => {
+      const isChecked = incomeToggle.checked;
+      yieldRow.style.display = isChecked ? 'grid' : 'none';
+      if (!isChecked) {
+        rateInput.value = '';
+        incomeInput.value = '';
+      }
+    });
+
+    rateInput.addEventListener('input', () => {
+      const openVal = WPUtils.cleanNum(openInput.value);
+      const rateVal = parseFloat(rateInput.value) || 0;
+      if (openVal > 0) {
+        const amt = (rateVal / 100) * openVal;
+        incomeInput.value = amt;
+        incomeInput.dispatchEvent(new Event('input'));
+      }
+    });
+
+    incomeInput.addEventListener('input', () => {
+      const openVal = WPUtils.cleanNum(openInput.value);
+      const amtVal = WPUtils.cleanNum(incomeInput.value);
+      if (openVal > 0) {
+        const rate = (amtVal / openVal) * 100;
+        rateInput.value = rate ? rate.toFixed(2) : '';
+      }
+    });
+
+    openInput.addEventListener('input', () => {
+      const openVal = WPUtils.cleanNum(openInput.value);
+      const rateVal = parseFloat(rateInput.value) || 0;
+      if (openVal > 0 && rateVal > 0) {
+        const amt = (rateVal / 100) * openVal;
+        incomeInput.value = amt;
+        incomeInput.dispatchEvent(new Event('input'));
+      }
+    });
+  }
+
   async function _saveAsset(existingId) {
     const dateVal = document.getElementById('af-date').value || PERIOD;
     const periodMonth = dateVal.substring(0, 7) + '-01';
