@@ -180,16 +180,22 @@ const WPUtils = (() => {
     return Math.round(balanceKobo * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1));
   }
 
-  // ── DEBT AVALANCHE ───────────────────────────────────────
+  // ── DEBT PAYOFF STRATEGY ─────────────────────────────────
   // debts: [{ id, name, balanceKobo, apr, monthlyPaymentKobo }]
+  // strategy: 'avalanche' (highest APR first) or 'snowball' (lowest balance first)
   // Returns sorted schedule with months-to-payoff and total interest
-  function calcDebtAvalanche(debts, extraPaymentKobo = 0) {
+  function calcDebtStrategy(debts, extraPaymentKobo = 0, strategy = 'avalanche') {
     if (!debts || !debts.length) return [];
 
-    // Sort highest APR first
+    // Sort: Avalanche = highest APR first, Snowball = lowest balance first
     const sorted = debts
-      .filter(d => d.balanceKobo > 0 && d.apr > 0)
-      .sort((a, b) => b.apr - a.apr);
+      .filter(d => d.balanceKobo > 0 && (d.apr > 0 || d.balanceKobo > 0))
+      .sort((a, b) => {
+        if (strategy === 'snowball') {
+          return a.balanceKobo - b.balanceKobo;
+        }
+        return b.apr - a.apr;
+      });
 
     let results = sorted.map(d => {
       const r = d.apr / 100 / 12;
@@ -214,10 +220,10 @@ const WPUtils = (() => {
       };
     });
 
-    // Avalanche: simulate cascading payments
+    // Strategy cascade simulation
     let remaining = sorted.map(d => ({ ...d, balance: d.balanceKobo }));
     let monthCounts = new Array(remaining.length).fill(0);
-    let avalancheInterest = new Array(remaining.length).fill(0);
+    let strategyInterest = new Array(remaining.length).fill(0);
     let freed = 0;
 
     for (let month = 0; month < 600; month++) {
@@ -232,12 +238,12 @@ const WPUtils = (() => {
 
         const r = d.apr / 100 / 12;
         const interest = Math.round(d.balance * r);
-        avalancheInterest[i] += interest;
+        strategyInterest[i] += interest;
         d.balance += interest;
 
         // Apply minimum payment
         let payment = Math.min(d.balance, d.monthlyPaymentKobo);
-        // Apply extra to highest-priority remaining
+        // Apply extra to highest priority remaining
         if (i === remaining.findIndex(x => x.balance > 0)) {
           payment = Math.min(d.balance, payment + extraLeft);
           extraLeft = 0;
@@ -254,9 +260,9 @@ const WPUtils = (() => {
 
     return results.map((r, i) => ({
       ...r,
-      monthsToPayoffAvalanche: monthCounts[i] || 0,
-      totalInterestAvalanche:  avalancheInterest[i] || 0,
-      interestSaved: Math.max(0, (r.totalInterestMinPmt || 0) - (avalancheInterest[i] || 0)),
+      monthsToPayoff: monthCounts[i] || 0,
+      totalInterestStrategy:  strategyInterest[i] || 0,
+      interestSaved: Math.max(0, (r.totalInterestMinPmt || 0) - (strategyInterest[i] || 0)),
     }));
   }
 
@@ -423,7 +429,8 @@ const WPUtils = (() => {
     calcPIT, effectiveTaxRate, taxBracket,
     calcPensionEmployee, calcNHF,
     calcFV, calcPMT, calcAnnuity,
-    calcDebtAvalanche,
+    calcDebtStrategy,
+    calcDebtAvalanche: (debts, extra) => calcDebtStrategy(debts, extra, 'avalanche'),
     calcNetWorth, coverageRatio, debtToAssetRatio, checkNDIC,
     emergencyFundTarget, emergencyFundStatus,
     calcRetirement,

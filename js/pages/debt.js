@@ -12,26 +12,33 @@ const WPDebt = (() => {
       <div class="page-header">
         <div>
           <h1 class="page-title">Debt Planner</h1>
-          <p class="page-subtitle">Debt Avalanche strategy — pay highest APR first to minimize total interest</p>
+          <p class="page-subtitle">Choose between Debt Avalanche (highest APR first) or Debt Snowball (lowest balance first)</p>
         </div>
         <button class="btn btn-primary" id="add-debt-btn">&#x2795; Add Debt</button>
       </div>
       <div class="page-body">
         <div class="disclaimer mb-6">${APP_CONFIG.disclaimer}</div>
         <div class="kpi-grid" id="debt-kpis" style="margin-bottom:1.5rem"></div>
-        <!-- Extra Payment Simulator -->
+        <!-- Extra Payment & Strategy Simulator -->
         <div class="card" style="margin-bottom:1.5rem">
-          <div class="section-title" style="margin-bottom:1rem">&#x1F4B8; Extra Payment Simulator</div>
-          <div class="flex gap-4 items-center" style="flex-wrap:wrap">
+          <div class="section-title" style="margin-bottom:1rem">&#x1F4B8; Extra Payment & Strategy Simulator</div>
+          <div class="form-row">
             <div class="form-group" style="margin:0;flex:1;min-width:200px">
               <label for="extra-payment">Extra Monthly Payment (&#x20A6;)</label>
               <div class="input-prefix-group">
                 <span class="input-prefix">&#x20A6;</span>
-                <input class="input" type="number" id="extra-payment" min="0" step="1000" placeholder="0" value="0">
+                <input class="input" type="text" inputmode="decimal" id="extra-payment" placeholder="0" value="0">
               </div>
             </div>
-            <button class="btn btn-secondary" id="simulate-btn" style="margin-top:1.5rem">Simulate Avalanche</button>
+            <div class="form-group" style="margin:0;flex:1;min-width:200px">
+              <label for="payoff-strategy">Payoff Strategy</label>
+              <select class="select" id="payoff-strategy">
+                <option value="avalanche">Debt Avalanche (Highest APR First)</option>
+                <option value="snowball">Debt Snowball (Lowest Balance First)</option>
+              </select>
+            </div>
           </div>
+          <button class="btn btn-secondary" id="simulate-btn" style="margin-top:1.5rem;width:100%">Run Payoff Simulation</button>
         </div>
         <!-- Debt Cards -->
         <div id="debt-list"></div>
@@ -42,13 +49,14 @@ const WPDebt = (() => {
         </div>
         <!-- Interest Saved Table -->
         <div class="card" style="margin-top:1.5rem;display:none" id="debt-savings-wrap">
-          <div class="section-title" style="margin-bottom:1rem">Interest Savings with Avalanche</div>
+          <div class="section-title" id="debt-savings-title" style="margin-bottom:1rem">Interest Savings</div>
           <div class="table-wrap" id="debt-savings-table"></div>
         </div>
       </div>`;
 
     document.getElementById('add-debt-btn').addEventListener('click', () => _openForm());
     document.getElementById('simulate-btn').addEventListener('click', _simulate);
+    WPUtils.maskNumberInput(document.getElementById('extra-payment'));
     await _load();
   }
 
@@ -116,18 +124,25 @@ const WPDebt = (() => {
 
   function _simulate() {
     if (!_liabilities.length) return;
-    const extra = WPUtils.nairaToKobo(parseFloat(document.getElementById('extra-payment')?.value)||0);
+    const extra = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('extra-payment')?.value));
+    const strategy = document.getElementById('payoff-strategy').value;
+
     const debts = _liabilities.map(l => ({
       id: l.id, name: l.liability_name,
       balanceKobo:      l.close_balance || l.open_balance || 0,
       apr:              l.apr || 0,
       monthlyPaymentKobo: l.monthly_payment || 0,
     }));
-    const results = WPUtils.calcDebtAvalanche(debts, extra);
+    const results = WPUtils.calcDebtStrategy(debts, extra, strategy);
+
+    const stratLabel = strategy === 'snowball' ? 'Snowball' : 'Avalanche';
 
     // Show chart
     document.getElementById('debt-chart-wrap').style.display = '';
     WPCharts.debtTimeline('chart-debt-timeline', debts);
+
+    // Update section title
+    document.getElementById('debt-savings-title').textContent = `Interest Savings with ${stratLabel}`;
 
     // Show savings table
     document.getElementById('debt-savings-wrap').style.display = '';
@@ -135,22 +150,22 @@ const WPDebt = (() => {
       <td><strong>${r.name}</strong></td>
       <td class="td-mono text-danger">${WPUtils.fmt(r.balanceKobo)}</td>
       <td class="td-mono">${r.apr}%</td>
-      <td>${r.monthsToPayoffAvalanche ? r.monthsToPayoffAvalanche + ' months' : '—'}</td>
+      <td>${r.monthsToPayoff ? r.monthsToPayoff + ' months' : '—'}</td>
       <td class="td-mono text-accent fw-600">${WPUtils.fmt(r.interestSaved)}</td>
     </tr>`).join('');
     const totalSaved = results.reduce((s,r) => s + (r.interestSaved||0), 0);
     document.getElementById('debt-savings-table').innerHTML = `
       <table>
-        <thead><tr><th>Debt</th><th>Balance</th><th>APR</th><th>Payoff (Avalanche)</th><th>Interest Saved</th></tr></thead>
+        <thead><tr><th>Debt</th><th>Balance</th><th>APR</th><th>Payoff (${stratLabel})</th><th>Interest Saved</th></tr></thead>
         <tbody>${tbody}</tbody>
         <tfoot><tr style="border-top:2px solid var(--clr-accent)">
-          <td colspan="4" class="fw-700">Total Interest Saved with Avalanche</td>
+          <td colspan="4" class="fw-700">Total Interest Saved with ${stratLabel}</td>
           <td class="td-mono text-accent fw-700">${WPUtils.fmt(totalSaved)}</td>
         </tr></tfoot>
       </table>`;
 
     if (totalSaved > 0) {
-      WPToast.success(`Avalanche saves you ${WPUtils.fmt(totalSaved, {compact:true})} in interest!`);
+      WPToast.success(`${stratLabel} saves you ${WPUtils.fmt(totalSaved, {compact:true})} in interest!`);
     }
   }
 
