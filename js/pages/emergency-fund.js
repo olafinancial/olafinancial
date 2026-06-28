@@ -153,7 +153,7 @@ const WPEmergencyFund = (() => {
         <div class="form-group">
           <label for="efb-bal">Current Emergency Fund Balance (&#x20A6;)</label>
           <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-            <input class="input" type="number" id="efb-bal" min="0" step="1000"
+            <input class="input" type="text" inputmode="decimal" id="efb-bal"
               value="${e.current_balance ? WPUtils.koboToNaira(e.current_balance) : ''}" placeholder="0" required>
           </div>
         </div>
@@ -172,7 +172,7 @@ const WPEmergencyFund = (() => {
       onConfirm: async () => {
         const row = {
           user_id:          WPApp.state.user.id,
-          current_balance:  WPUtils.nairaToKobo(parseFloat(document.getElementById('efb-bal').value)||0),
+          current_balance:  WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('efb-bal').value)),
           account_name:     document.getElementById('efb-acct').value.trim(),
           institution_name: document.getElementById('efb-inst').value.trim(),
         };
@@ -187,6 +187,7 @@ const WPEmergencyFund = (() => {
         } catch (err) { WPToast.error('Could not save: ' + err.message); }
       },
     });
+    WPUtils.maskNumberInput(document.getElementById('efb-bal'));
   }
 
   function destroy() {}

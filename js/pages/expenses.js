@@ -135,7 +135,9 @@ const WPExpenses = (() => {
     const cats = [
       'Housing','Transportation','Education','Communication','Interest & Debt',
       'Insurance','Family Support','Shopping','Entertainment','Gifts & Charity',
-      'Taxes','Health','Food','Other'
+      'Taxes','Health','Food','Dining Out','Utilities-Power Generation',
+      'Utilities-Water','Utilities-Refuse','Security','Land Use Act/Tenement Rate',
+      'Other'
     ];
     const body = `
       <form id="exp-form">
@@ -148,7 +150,7 @@ const WPExpenses = (() => {
             <label for="ef-amount">Amount (&#x20A6;)</label>
             <div class="input-prefix-group">
               <span class="input-prefix">&#x20A6;</span>
-              <input class="input" type="number" id="ef-amount" min="1" step="100" value="${e.amount?WPUtils.koboToNaira(e.amount):''}" placeholder="0" required>
+              <input class="input" type="text" inputmode="decimal" id="ef-amount" value="${e.amount?WPUtils.koboToNaira(e.amount):''}" placeholder="0" required>
             </div>
           </div>
         </div>
@@ -184,10 +186,11 @@ const WPExpenses = (() => {
       confirmLabel: existing ? 'Update' : 'Add Expense',
       onConfirm: async () => { await _save(e.id); },
     });
+    WPUtils.maskNumberInput(document.getElementById('ef-amount'));
   }
 
   async function _save(existingId) {
-    const amount = WPUtils.nairaToKobo(parseFloat(document.getElementById('ef-amount').value)||0);
+    const amount = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ef-amount').value));
     if (!amount) { WPToast.warning('Please enter an amount.'); return; }
     const row = {
       user_id:          WPApp.state.user.id,
