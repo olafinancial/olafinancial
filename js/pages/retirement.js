@@ -38,25 +38,25 @@ const WPRetirement = (() => {
             <div class="form-group">
               <label for="ret-rsa">Current RSA Balance (&#x20A6;)</label>
               <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-                <input class="input" type="number" id="ret-rsa" min="0" step="10000" placeholder="0">
+                <input class="input" type="text" inputmode="decimal" id="ret-rsa" placeholder="0">
               </div>
             </div>
             <div class="form-group">
               <label for="ret-salary">Current Monthly Gross (&#x20A6;)</label>
               <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-                <input class="input" type="number" id="ret-salary" min="0" step="10000" placeholder="0">
+                <input class="input" type="text" inputmode="decimal" id="ret-salary" placeholder="0">
               </div>
             </div>
             <div class="form-group">
               <label for="ret-invest">Monthly Investment Savings (&#x20A6;)</label>
               <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-                <input class="input" type="number" id="ret-invest" min="0" step="1000" placeholder="0">
+                <input class="input" type="text" inputmode="decimal" id="ret-invest" placeholder="0">
               </div>
             </div>
             <div class="form-group">
               <label for="ret-monthly-need">Monthly Income Needed (&#x20A6;)</label>
               <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-                <input class="input" type="number" id="ret-monthly-need" min="0" step="10000" placeholder="e.g. 500000">
+                <input class="input" type="text" inputmode="decimal" id="ret-monthly-need" placeholder="e.g. 500,000">
               </div>
             </div>
             <div class="form-group">
@@ -80,6 +80,11 @@ const WPRetirement = (() => {
 
     document.getElementById('ret-calc-btn').addEventListener('click', _calculate);
 
+    WPUtils.maskNumberInput(document.getElementById('ret-rsa'));
+    WPUtils.maskNumberInput(document.getElementById('ret-salary'));
+    WPUtils.maskNumberInput(document.getElementById('ret-invest'));
+    WPUtils.maskNumberInput(document.getElementById('ret-monthly-need'));
+
     // Pre-populate from income data
     _prefillFromState();
   }
@@ -100,16 +105,16 @@ const WPRetirement = (() => {
     const age        = parseInt(document.getElementById('ret-age').value) || 35;
     const retAge     = parseInt(document.getElementById('ret-retire').value) || 60;
     const lifeExp    = parseInt(document.getElementById('ret-life').value) || 85;
-    const rsaKobo    = WPUtils.nairaToKobo(parseFloat(document.getElementById('ret-rsa').value)||0);
-    const salaryKobo = WPUtils.nairaToKobo(parseFloat(document.getElementById('ret-salary').value)||0);
-    const investKobo = WPUtils.nairaToKobo(parseFloat(document.getElementById('ret-invest').value)||0);
-    const needKobo   = WPUtils.nairaToKobo(parseFloat(document.getElementById('ret-monthly-need').value)||0);
+    const rsaKobo    = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ret-rsa').value));
+    const salaryKobo = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ret-salary').value));
+    const investKobo = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ret-invest').value));
+    const needKobo   = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ret-monthly-need').value));
     const inflation  = parseFloat(document.getElementById('ret-inflation').value) || 18;
     const riskKey    = document.getElementById('ret-risk').value;
 
     if (retAge <= age) { WPToast.warning('Retirement age must be greater than current age.'); return; }
 
-    const plan = WPUtils.calcRetirementPlan({
+    const plan = WPUtils.calcRetirement({
       currentAge: age, retirementAge: retAge, lifeExpectancy: lifeExp,
       currentRSAKobo: rsaKobo, monthlyGrossKobo: salaryKobo,
       monthlyInvestmentKobo: investKobo, monthlyIncomeNeededKobo: needKobo,
