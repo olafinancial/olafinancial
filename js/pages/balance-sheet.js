@@ -233,10 +233,14 @@ const WPBalanceSheet = (() => {
             <input class="input" type="date" id="af-date" value="${e.period_month || WPUtils.currentPeriod()}" required>
           </div>
         </div>
-        <div class="form-group">
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem;">
           <div class="toggle-group">
             <label class="toggle"><input type="checkbox" id="af-income" ${e.is_income_generating?'checked':''}><span class="toggle-slider"></span></label>
             <span class="toggle-label">Income-generating asset (rental, dividends, interest)</span>
+          </div>
+          <div class="toggle-group">
+            <label class="toggle"><input type="checkbox" id="af-ef-source" ${e.notes && e.notes.includes('[Emergency Fund]') ? 'checked' : ''}><span class="toggle-slider"></span></label>
+            <span class="toggle-label">Use as an Emergency Fund source</span>
           </div>
         </div>
         <div class="form-row" id="yield-details-row" style="display: ${e.is_income_generating ? 'grid' : 'none'}; grid-template-columns: 1fr 1fr; gap: var(--sp-4);">
@@ -323,6 +327,8 @@ const WPBalanceSheet = (() => {
     const periodMonth = dateVal.substring(0, 7) + '-01';
     const rawOpen = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('af-open').value));
 
+    const isEFSource = document.getElementById('af-ef-source').checked;
+
     const row = {
       user_id:              WPApp.state.user.id,
       asset_name:           document.getElementById('af-name').value.trim(),
@@ -334,6 +340,7 @@ const WPBalanceSheet = (() => {
       interest_rate:        parseFloat(document.getElementById('af-rate').value)||0,
       tenor_months:         parseInt(document.getElementById('af-tenor').value)||null,
       is_income_generating: document.getElementById('af-income').checked,
+      notes:                isEFSource ? '[Emergency Fund]' : null,
       period_month:         periodMonth,
     };
     if (!row.asset_name) { WPToast.warning('Please enter an asset name.'); return; }

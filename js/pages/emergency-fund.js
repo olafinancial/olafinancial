@@ -4,7 +4,8 @@
 
 const WPEmergencyFund = (() => {
 
-  let _ef = null;
+  let _efAssets = [];
+  let _currentBalance = 0;
   let _monthlyExpenses = 0;
 
   async function init(container) {
@@ -14,14 +15,12 @@ const WPEmergencyFund = (() => {
           <h1 class="page-title">Emergency Fund</h1>
           <p class="page-subtitle">3 months of essential expenses — your financial safety net</p>
         </div>
-        <button class="btn btn-primary" id="ef-update-btn">&#x270F;&#xFE0F; Update Balance</button>
       </div>
       <div class="page-body">
         <div id="ef-main"></div>
         <div class="disclaimer" style="margin-top:1.5rem">${APP_CONFIG.disclaimer}</div>
       </div>`;
 
-    document.getElementById('ef-update-btn').addEventListener('click', _openUpdateForm);
     await _load();
   }
 
@@ -33,11 +32,14 @@ const WPEmergencyFund = (() => {
       const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
       const end   = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10);
 
-      const [efRows, expenses] = await Promise.all([
-        WPDb.fetchAll('emergency_fund', { user_id: uid }),
+      const [assets, expenses] = await Promise.all([
+        WPDb.getAssetsByPeriod(uid, PERIOD),
         WPDb.getExpensesByDateRange(uid, start, end),
       ]);
-      _ef = efRows[0] || null;
+
+      _efAssets = assets.filter(a => a.notes && a.notes.includes('[Emergency Fund]'));
+      _currentBalance = _efAssets.reduce((s, a) => s + (a.close_balance || a.open_balance || 0), 0);
+
       const nonDisc = expenses.filter(e => !e.is_discretionary).reduce((s,e) => s+(e.amount||0), 0);
       _monthlyExpenses = nonDisc;
       _render();
@@ -46,7 +48,7 @@ const WPEmergencyFund = (() => {
 
   function _render() {
     const target  = WPUtils.emergencyFundTarget(_monthlyExpenses);
-    const current = _ef?.current_balance || 0;
+    const current = _currentBalance;
     const status  = WPUtils.emergencyFundStatus(current, target);
     const gap     = Math.max(0, target - current);
     const months  = _monthlyExpenses > 0 ? (current / _monthlyExpenses).toFixed(1) : '—';
@@ -55,7 +57,7 @@ const WPEmergencyFund = (() => {
     const statusColors = { on_track:'accent', building:'gold', warning:'gold', critical:'danger', no_target:'text-muted' };
     const color = statusColors[status.status] || 'accent';
 
-    document.getElementById('ef-main').innerHTML = `
+    let html = `
       <!-- Big status card -->
       <div class="card" style="text-align:center;padding:3rem;margin-bottom:1.5rem;background:linear-gradient(135deg,var(--clr-surface-3),var(--clr-surface-2))">
         <div class="card-title">Emergency Fund Balance</div>
@@ -97,14 +99,48 @@ const WPEmergencyFund = (() => {
           <div class="card-meta">Non-discretionary spending this month</div>
         </div>
         <div class="card">
-          <div class="card-title">Savings Institution</div>
-          <div class="card-value" style="font-size:1rem;word-break:break-all">${_ef?.institution_name || '—'}</div>
-          <div class="card-meta">${_ef?.account_name || 'Not set'}</div>
+          <div class="card-title">Fund Sources</div>
+          <div class="card-value">${_efAssets.length}</div>
+          <div class="card-meta">Assets marked as safety net</div>
         </div>
       </div>
 
       <!-- Status guidance -->
       ${_renderGuidance(status, gap, current, target)}
+
+      <!-- Sources Table -->
+      <div class="card" style="margin-top:1.5rem">
+        <div class="section-title" style="margin-bottom:1rem">&#x1F4D6; Linked Emergency Fund Sources</div>
+        ${_efAssets.length ? `
+          <div class="table-wrap"><table>
+            <thead>
+              <tr>
+                <th>Asset Name</th>
+                <th>Institution</th>
+                <th>Asset Type</th>
+                <th style="text-align:right">Current Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${_efAssets.map(a => `
+                <tr>
+                  <td><strong>${a.asset_name}</strong></td>
+                  <td>${a.institution_name || '—'}</td>
+                  <td style="text-transform:capitalize">${a.asset_type.replace('_',' ')}</td>
+                  <td class="td-mono fw-700" style="text-align:right">${WPUtils.fmt(a.close_balance || a.open_balance || 0)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table></div>
+        ` : `
+          <div style="text-align:center;padding:3rem 2rem;color:var(--clr-text-3)">
+            <div style="font-size:3rem;margin-bottom:1rem">&#x1F6E1;&#xFE0F;</div>
+            <div style="font-weight:600;font-size:1.1rem;margin-bottom:0.5rem">No Emergency Fund Sources Linked</div>
+            <p style="margin-bottom:1rem">Link your existing savings or fixed deposits here by editing them on the balance sheet.</p>
+            <a class="btn btn-primary" href="#/balance-sheet" style="display:inline-block">Go to Balance Sheet</a>
+          </div>
+        `}
+      </div>
 
       <!-- How to build it -->
       <div class="card" style="margin-top:1.5rem">
@@ -112,15 +148,15 @@ const WPEmergencyFund = (() => {
         <div style="display:flex;flex-direction:column;gap:0.75rem;font-size:0.9rem">
           <div class="flex gap-4">
             <span style="width:24px;height:24px;background:var(--clr-accent-dim);color:var(--clr-accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">1</span>
-            <span>Open a <strong>high-yield savings account</strong> — look for accounts paying ≥10% p.a. in Naira (e.g. fixed deposit, treasury bills via your bank).</span>
+            <span>Open a <strong>high-yield savings account</strong> — look for accounts paying high interest in your base currency.</span>
           </div>
           <div class="flex gap-4">
             <span style="width:24px;height:24px;background:var(--clr-accent-dim);color:var(--clr-accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">2</span>
-            <span>Keep it <strong>separate</strong> from your spending account to avoid dipping into it.</span>
+            <span>Keep it <strong>separate</strong> from your daily spending account to avoid dipping into it.</span>
           </div>
           <div class="flex gap-4">
             <span style="width:24px;height:24px;background:var(--clr-accent-dim);color:var(--clr-accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">3</span>
-            <span>Check NDIC coverage: DMBs cover up to <strong>₦5,000,000</strong>, MFBs cover up to <strong>₦2,000,000</strong> per depositor.</span>
+            <span>Check deposit insurance limits in your region (e.g. NDIC in Nigeria covers up to ₦5,000,000 for DMBs).</span>
           </div>
           <div class="flex gap-4">
             <span style="width:24px;height:24px;background:var(--clr-accent-dim);color:var(--clr-accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">4</span>
@@ -128,6 +164,8 @@ const WPEmergencyFund = (() => {
           </div>
         </div>
       </div>`;
+
+    document.getElementById('ef-main').innerHTML = html;
   }
 
   function _renderGuidance(status, gap, current, target) {
@@ -144,50 +182,6 @@ const WPEmergencyFund = (() => {
       <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
       <span>${g.msg}</span>
     </div>`;
-  }
-
-  function _openUpdateForm() {
-    const e = _ef || {};
-    const body = `
-      <form id="ef-form">
-        <div class="form-group">
-          <label for="efb-bal">Current Emergency Fund Balance (&#x20A6;)</label>
-          <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-            <input class="input" type="text" inputmode="decimal" id="efb-bal"
-              value="${e.current_balance ? WPUtils.koboToNaira(e.current_balance) : ''}" placeholder="0" required>
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="efb-acct">Account Name</label>
-          <input class="input" id="efb-acct" value="${e.account_name||''}" placeholder="e.g. GTBank Emergency Savings">
-        </div>
-        <div class="form-group">
-          <label for="efb-inst">Bank / Institution</label>
-          <input class="input" id="efb-inst" value="${e.institution_name||''}" placeholder="e.g. Zenith Bank">
-        </div>
-      </form>`;
-
-    WPModal.open('Update Emergency Fund', body, {
-      confirmLabel: 'Save',
-      onConfirm: async () => {
-        const row = {
-          user_id:          WPApp.state.user.id,
-          current_balance:  WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('efb-bal').value)),
-          account_name:     document.getElementById('efb-acct').value.trim(),
-          institution_name: document.getElementById('efb-inst').value.trim(),
-        };
-        try {
-          if (_ef) {
-            await WPDb.update('emergency_fund', _ef.id, row);
-          } else {
-            await WPDb.insert('emergency_fund', row);
-          }
-          WPToast.success('Emergency fund updated.');
-          await _load();
-        } catch (err) { WPToast.error('Could not save: ' + err.message); }
-      },
-    });
-    WPUtils.maskNumberInput(document.getElementById('efb-bal'));
   }
 
   function destroy() {}
