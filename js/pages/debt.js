@@ -195,21 +195,29 @@ const WPDebt = (() => {
           </div>
         </div>
         <div class="form-row">
-          <div class="form-group">
+          <div class="form-group" style="flex: 1;">
             <label for="df-bal">Current Balance (&#x20A6;)</label>
             <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-              <input class="input" type="number" id="df-bal" min="0" step="1000" value="${e.close_balance?WPUtils.koboToNaira(e.close_balance):''}" placeholder="0" required>
+              <input class="input" type="text" inputmode="decimal" id="df-bal" value="${e.close_balance?WPUtils.koboToNaira(e.close_balance):''}" placeholder="0" required>
             </div>
-          </div>
-          <div class="form-group">
-            <label for="df-apr">APR (%)</label>
-            <input class="input" type="number" id="df-apr" min="0" max="200" step="0.1" value="${e.apr||''}" placeholder="e.g. 24" required>
           </div>
         </div>
         <div class="form-group">
-          <label for="df-mpmt">Monthly Minimum Payment (&#x20A6;)</label>
-          <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-            <input class="input" type="number" id="df-mpmt" min="0" step="500" value="${e.monthly_payment?WPUtils.koboToNaira(e.monthly_payment):''}" placeholder="0" required>
+          <div class="toggle-group">
+            <label class="toggle"><input type="checkbox" id="df-no-apr" ${!e.apr?'checked':''}><span class="toggle-slider"></span></label>
+            <span class="toggle-label">I don't know the APR (Enter monthly payment manually)</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" id="df-apr-container" style="display: ${e.apr ? 'block' : 'none'}; flex: 1;">
+            <label for="df-apr">APR (%)</label>
+            <input class="input" type="number" id="df-apr" min="0" max="200" step="0.1" value="${e.apr||''}" placeholder="e.g. 24">
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label for="df-mpmt">Monthly Minimum Payment (&#x20A6;)</label>
+            <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
+              <input class="input" type="text" inputmode="decimal" id="df-mpmt" value="${e.monthly_payment?WPUtils.koboToNaira(e.monthly_payment):''}" placeholder="0" ${e.apr?'readonly':''} required>
+            </div>
           </div>
         </div>
       </form>`;
@@ -218,18 +226,69 @@ const WPDebt = (() => {
       confirmLabel: existing ? 'Update' : 'Add Debt',
       onConfirm: async () => { await _save(e.id); },
     });
+
+    const noAprCheck = document.getElementById('df-no-apr');
+    const aprContainer = document.getElementById('df-apr-container');
+    const aprInput = document.getElementById('df-apr');
+    const mpmtInput = document.getElementById('df-mpmt');
+    const balInput = document.getElementById('df-bal');
+    const typeSelect = document.getElementById('df-type');
+
+    WPUtils.maskNumberInput(balInput);
+    WPUtils.maskNumberInput(mpmtInput);
+
+    function updateCalculatedPayment() {
+      if (noAprCheck.checked) return;
+      const aprVal = parseFloat(aprInput.value) || 0;
+      const balVal = WPUtils.cleanNum(balInput.value) || 0;
+      const typeVal = typeSelect.value;
+      if (aprVal > 0 && balVal > 0) {
+        let r = (aprVal / 100) / 12;
+        let months = 36;
+        if (typeVal === 'mortgage') months = 180;
+        else if (typeVal === 'auto_loan') months = 60;
+        else if (typeVal === 'credit_card') {
+          mpmtInput.value = Math.round(balVal * Math.max(0.025, r + 0.01));
+          mpmtInput.dispatchEvent(new Event('input'));
+          return;
+        }
+        const pmt = Math.round(balVal * r * Math.pow(1 + r, months) / (Math.pow(1 + r, months) - 1));
+        mpmtInput.value = pmt;
+        mpmtInput.dispatchEvent(new Event('input'));
+      } else {
+        mpmtInput.value = '';
+      }
+    }
+
+    noAprCheck.addEventListener('change', () => {
+      const manual = noAprCheck.checked;
+      aprContainer.style.display = manual ? 'none' : 'block';
+      if (manual) {
+        aprInput.value = '';
+        mpmtInput.readOnly = false;
+      } else {
+        mpmtInput.readOnly = true;
+        updateCalculatedPayment();
+      }
+    });
+
+    aprInput.addEventListener('input', updateCalculatedPayment);
+    balInput.addEventListener('input', updateCalculatedPayment);
+    typeSelect.addEventListener('change', updateCalculatedPayment);
   }
 
   async function _save(existingId) {
+    const isManual = document.getElementById('df-no-apr').checked;
+    const rawBal = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('df-bal').value));
     const row = {
       user_id:          WPApp.state.user.id,
       liability_name:   document.getElementById('df-name').value.trim(),
       liability_type:   document.getElementById('df-type').value,
       lender_name:      document.getElementById('df-lender').value.trim(),
-      close_balance:    WPUtils.nairaToKobo(parseFloat(document.getElementById('df-bal').value)||0),
-      open_balance:     WPUtils.nairaToKobo(parseFloat(document.getElementById('df-bal').value)||0),
-      apr:              parseFloat(document.getElementById('df-apr').value)||0,
-      monthly_payment:  WPUtils.nairaToKobo(parseFloat(document.getElementById('df-mpmt').value)||0),
+      close_balance:    rawBal,
+      open_balance:     rawBal,
+      apr:              isManual ? 0 : (parseFloat(document.getElementById('df-apr').value)||0),
+      monthly_payment:  WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('df-mpmt').value)),
       is_interest_bearing: true,
       period_month:     PERIOD,
     };

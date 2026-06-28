@@ -391,15 +391,21 @@ const WPBalanceSheet = (() => {
             </div>
           </div>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="lf-apr">APR (%)</label>
-            <input class="input" type="number" id="lf-apr" min="0" step="0.1" value="${e.apr||''}" placeholder="e.g. 22.5">
+        <div class="form-group">
+          <div class="toggle-group">
+            <label class="toggle"><input type="checkbox" id="lf-no-apr" ${!e.apr?'checked':''}><span class="toggle-slider"></span></label>
+            <span class="toggle-label">I don't know the APR (Enter monthly payment manually)</span>
           </div>
-          <div class="form-group">
+        </div>
+        <div class="form-row">
+          <div class="form-group" id="lf-apr-container" style="display: ${e.apr ? 'block' : 'none'}; flex: 1;">
+            <label for="lf-apr">APR (%)</label>
+            <input class="input" type="number" id="lf-apr" min="0" max="200" step="0.1" value="${e.apr||''}" placeholder="e.g. 22.5">
+          </div>
+          <div class="form-group" style="flex: 1;">
             <label for="lf-mpmt">Monthly Payment (&#x20A6;)</label>
             <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
-              <input class="input" type="text" inputmode="decimal" id="lf-mpmt" value="${e.monthly_payment?WPUtils.koboToNaira(e.monthly_payment):''}">
+              <input class="input" type="text" inputmode="decimal" id="lf-mpmt" value="${e.monthly_payment?WPUtils.koboToNaira(e.monthly_payment):''}" ${e.apr?'readonly':''}>
             </div>
           </div>
         </div>
@@ -409,12 +415,62 @@ const WPBalanceSheet = (() => {
       confirmLabel: existing ? 'Update' : 'Add Liability',
       onConfirm: async () => { await _saveLiab(e.id); },
     });
-    WPUtils.maskNumberInput(document.getElementById('lf-open'));
-    WPUtils.maskNumberInput(document.getElementById('lf-close'));
-    WPUtils.maskNumberInput(document.getElementById('lf-mpmt'));
+
+    const noAprCheck = document.getElementById('lf-no-apr');
+    const aprContainer = document.getElementById('lf-apr-container');
+    const aprInput = document.getElementById('lf-apr');
+    const mpmtInput = document.getElementById('lf-mpmt');
+    const openInput = document.getElementById('lf-open');
+    const closeInput = document.getElementById('lf-close');
+    const typeSelect = document.getElementById('lf-type');
+
+    WPUtils.maskNumberInput(openInput);
+    WPUtils.maskNumberInput(closeInput);
+    WPUtils.maskNumberInput(mpmtInput);
+
+    function updateCalculatedPayment() {
+      if (noAprCheck.checked) return;
+      const aprVal = parseFloat(aprInput.value) || 0;
+      const balVal = WPUtils.cleanNum(closeInput.value) || WPUtils.cleanNum(openInput.value) || 0;
+      const typeVal = typeSelect.value;
+      if (aprVal > 0 && balVal > 0) {
+        let r = (aprVal / 100) / 12;
+        let months = 36;
+        if (typeVal === 'mortgage') months = 180;
+        else if (typeVal === 'auto_loan') months = 60;
+        else if (typeVal === 'credit_card') {
+          mpmtInput.value = Math.round(balVal * Math.max(0.025, r + 0.01));
+          mpmtInput.dispatchEvent(new Event('input'));
+          return;
+        }
+        const pmt = Math.round(balVal * r * Math.pow(1 + r, months) / (Math.pow(1 + r, months) - 1));
+        mpmtInput.value = pmt;
+        mpmtInput.dispatchEvent(new Event('input'));
+      } else {
+        mpmtInput.value = '';
+      }
+    }
+
+    noAprCheck.addEventListener('change', () => {
+      const manual = noAprCheck.checked;
+      aprContainer.style.display = manual ? 'none' : 'block';
+      if (manual) {
+        aprInput.value = '';
+        mpmtInput.readOnly = false;
+      } else {
+        mpmtInput.readOnly = true;
+        updateCalculatedPayment();
+      }
+    });
+
+    aprInput.addEventListener('input', updateCalculatedPayment);
+    openInput.addEventListener('input', updateCalculatedPayment);
+    closeInput.addEventListener('input', updateCalculatedPayment);
+    typeSelect.addEventListener('change', updateCalculatedPayment);
   }
 
   async function _saveLiab(existingId) {
+    const isManual = document.getElementById('lf-no-apr').checked;
     const row = {
       user_id:          WPApp.state.user.id,
       liability_name:   document.getElementById('lf-name').value.trim(),
@@ -422,7 +478,7 @@ const WPBalanceSheet = (() => {
       lender_name:      document.getElementById('lf-lender').value.trim(),
       open_balance:     WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('lf-open').value)),
       close_balance:    WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('lf-close').value)),
-      apr:              parseFloat(document.getElementById('lf-apr').value)||0,
+      apr:              isManual ? 0 : (parseFloat(document.getElementById('lf-apr').value)||0),
       monthly_payment:  WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('lf-mpmt').value)),
       is_interest_bearing: true,
       period_month:     PERIOD,
