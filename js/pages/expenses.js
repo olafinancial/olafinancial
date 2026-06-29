@@ -122,8 +122,15 @@ const WPExpenses = (() => {
       </tr></thead>
       <tbody>${sorted.map(e => {
         const cur = WPUtils.getEntryCurrency(e.description);
-        const cleanDesc = (e.description || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
+        const cleanDesc = (e.description || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').replace(/\[freq:[^\]]+\]/g, '').trim();
         const convertedAmount = WPUtils.convert(e.amount||0, cur, pageCurrency);
+
+        const freqMatch = (e.description || '').match(/\[freq:([^\]]+)\]/);
+        let freqText = '';
+        if (freqMatch) {
+          const rawFreq = freqMatch[1];
+          freqText = rawFreq.startsWith('custom:') ? rawFreq.replace('custom:','') : rawFreq;
+        }
 
         return `<tr>
           <td class="text-muted text-sm">${WPUtils.fmtDate(e.expense_date)}</td>
@@ -133,7 +140,7 @@ const WPExpenses = (() => {
           </td>
           <td><span class="badge badge-neutral">${e.category}</span></td>
           <td class="td-mono fw-600 ${convertedAmount>500000?'text-danger':''}">${WPUtils.fmt(convertedAmount, { currency: pageCurrency })}</td>
-          <td><span class="badge ${e.is_discretionary?'badge-gold':'badge-neutral'}">${e.is_discretionary?'Want':'Need'}</span>${e.is_recurring?'<span class="badge badge-info" style="margin-left:4px">Recurring</span>':''}</td>
+          <td><span class="badge ${e.is_discretionary?'badge-gold':'badge-neutral'}">${e.is_discretionary?'Want':'Need'}</span>${e.is_recurring?`<span class="badge badge-info" style="margin-left:4px">Recurring${freqText?` (${freqText})`:''}</span>`:''}</td>
           <td style="white-space:nowrap">
             <button class="btn btn-ghost btn-sm" onclick="WPExpenses._edit('${e.id}')">Edit</button>
             <button class="btn btn-ghost btn-sm text-danger" onclick="WPExpenses._delete('${e.id}')">Delete</button>
@@ -234,7 +241,7 @@ const WPExpenses = (() => {
         </div>
         <div class="form-group">
           <label for="ef-desc">Description</label>
-          <input class="input" id="ef-desc" value="${e.description?e.description.replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim():''}" placeholder="e.g. Monthly rent, Groceries">
+          <input class="input" id="ef-desc" value="${e.description?e.description.replace(/\[(USD|NGN|EUR|GBP)\]/g, '').replace(/\[freq:[^\]]+\]/g, '').trim():''}" placeholder="e.g. Monthly rent, Groceries">
         </div>
         <div class="form-group">
           <label for="ef-merchant">Merchant / Payee (optional)</label>
@@ -250,6 +257,33 @@ const WPExpenses = (() => {
             <span class="toggle-label">Recurring expense</span>
           </div>
         </div>
+
+        <!-- Frequency select dropdown -->
+        ${(() => {
+          const freqMatch = (e.description || '').match(/\[freq:([^\]]+)\]/);
+          const freq = freqMatch ? freqMatch[1] : '';
+          const isCustom = freq.startsWith('custom:');
+          return `
+          <div id="ef-recur-freq-container" style="display:${e.is_recurring?'block':'none'};margin-top:0.75rem">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="ef-freq">Frequency</label>
+                <select class="select" id="ef-freq">
+                  <option value="weekly" ${freq==='weekly'?'selected':''}>Weekly</option>
+                  <option value="bi-weekly" ${freq==='bi-weekly'?'selected':''}>Bi-weekly</option>
+                  <option value="monthly" ${freq==='monthly'||!freq?'selected':''}>Monthly</option>
+                  <option value="quarterly" ${freq==='quarterly'?'selected':''}>Quarterly</option>
+                  <option value="annually" ${freq==='annually'?'selected':''}>Annually</option>
+                  <option value="custom" ${isCustom?'selected':''}>Custom (specify)</option>
+                </select>
+              </div>
+              <div class="form-group" id="ef-freq-custom-container" style="display:${isCustom?'block':'none'}">
+                <label for="ef-freq-custom">Specify Custom Frequency</label>
+                <input class="input" id="ef-freq-custom" value="${isCustom?freq.replace('custom:',''):''}" placeholder="e.g. Every 10 days">
+              </div>
+            </div>
+          </div>`;
+        })()}
       </form>`;
 
     WPModal.open(existing ? 'Edit Expense' : 'Log Expense', body, {
@@ -266,6 +300,22 @@ const WPExpenses = (() => {
       document.querySelector('#exp-form .input-prefix').textContent = newSym;
       document.querySelector('label[for="ef-amount"]').textContent = `Amount (${newSym})`;
     });
+
+    const recurToggle = document.getElementById('ef-recur');
+    const freqContainer = document.getElementById('ef-recur-freq-container');
+    const freqSelect = document.getElementById('ef-freq');
+    const customContainer = document.getElementById('ef-freq-custom-container');
+
+    if (recurToggle && freqContainer) {
+      recurToggle.addEventListener('change', (ev) => {
+        freqContainer.style.display = ev.target.checked ? 'block' : 'none';
+      });
+    }
+    if (freqSelect && customContainer) {
+      freqSelect.addEventListener('change', (ev) => {
+        customContainer.style.display = ev.target.value === 'custom' ? 'block' : 'none';
+      });
+    }
   }
 
   async function _save(existingId) {
@@ -273,7 +323,24 @@ const WPExpenses = (() => {
     if (!amount) { WPToast.warning('Please enter an amount.'); return; }
     const descVal = document.getElementById('ef-desc').value.trim();
     const currency = document.getElementById('ef-currency').value;
-    const finalDesc = WPUtils.setEntryCurrency(descVal, currency);
+
+    const isRecur = document.getElementById('ef-recur').checked;
+    let freq = '';
+    if (isRecur) {
+      const selectedFreq = document.getElementById('ef-freq').value;
+      if (selectedFreq === 'custom') {
+        const customVal = document.getElementById('ef-freq-custom').value.trim();
+        freq = `custom:${customVal || 'Other'}`;
+      } else {
+        freq = selectedFreq;
+      }
+    }
+
+    let cleanDesc = descVal.replace(/\[freq:[^\]]+\]/g, '').trim();
+    if (freq) {
+      cleanDesc = `${cleanDesc} [freq:${freq}]`.trim();
+    }
+    const finalDesc = WPUtils.setEntryCurrency(cleanDesc, currency);
 
     const row = {
       user_id:          WPApp.state.user.id,
