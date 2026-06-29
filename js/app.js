@@ -85,7 +85,11 @@ const WPApp = (() => {
         WPRouter.navigate('/dashboard', true);
         return;
       }
-      const container = document.getElementById('auth-root');
+      let container = document.getElementById('auth-root');
+      if (!container) {
+        document.getElementById('root').innerHTML = '<div id="auth-root"></div>';
+        container = document.getElementById('auth-root');
+      }
       if (container) WPAuth.renderLogin(container);
     });
     WPRouter.register('/signup', () => {
@@ -93,7 +97,11 @@ const WPApp = (() => {
         WPRouter.navigate('/dashboard', true);
         return;
       }
-      const container = document.getElementById('auth-root');
+      let container = document.getElementById('auth-root');
+      if (!container) {
+        document.getElementById('root').innerHTML = '<div id="auth-root"></div>';
+        container = document.getElementById('auth-root');
+      }
       if (container) WPAuth.renderSignup(container);
     });
   }
