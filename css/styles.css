@@ -248,11 +248,14 @@ ul, ol { list-style: none; }
   margin-bottom: var(--sp-3);
 }
 .card-value {
-  font-size: var(--text-3xl);
+  font-size: clamp(1.2rem, 5vw, 1.8rem);
   font-weight: 800;
   color: var(--clr-text);
   letter-spacing: -0.02em;
-  line-height: 1;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 .card-value.accent  { color: var(--clr-accent); }
 .card-value.danger  { color: var(--clr-danger); }
