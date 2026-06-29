@@ -1,11 +1,11 @@
 // ============================================================
-// OlaFinancial — Onboarding (5-step wizard)
+// OlaFinancial — Onboarding (6-step wizard)
 // ============================================================
 
 const WPOnboarding = (() => {
 
   let _step = 1;
-  const TOTAL = 5;
+  const TOTAL = 6;
   let _data = {};
 
   async function init(container) {
@@ -52,13 +52,13 @@ const WPOnboarding = (() => {
     back.style.display = _step > 1 ? '' : 'none';
     next.textContent = _step === TOTAL ? 'Get Started' : 'Continue';
     content.innerHTML = '';
-    [_step1, _step2, _step3, _step4, _step5][_step - 1](content);
+    [_step1, _step2, _step3, _step4, _step5, _step6][_step - 1](content);
   }
 
   function _step1(el) {
     const name = WPApp.state.profile?.full_name || '';
     el.innerHTML = `
-      <h2 class="onboarding-step-title">Welcome to Ola Financial! &#x1F44B;</h2>
+      <h2 class="onboarding-step-title">Welcome to Ola Financial! 👋</h2>
       <p class="onboarding-step-desc">Let's personalize your experience. This takes about 2 minutes.</p>
       <div class="form-group">
         <label for="ob-name">Your Full Name</label>
@@ -141,6 +141,28 @@ const WPOnboarding = (() => {
   }
 
   function _step4(el) {
+    el.innerHTML = `
+      <h2 class="onboarding-step-title">Estate & Legacy Planning 📜</h2>
+      <p class="onboarding-step-desc">Let's audit your legacy readiness. These can be refined later.</p>
+      <div class="form-group">
+        <label for="ob-will">Do you currently have a Last Will & Testament?</label>
+        <select class="select" id="ob-will">
+          <option value="no" ${(!_data.will||_data.will==='no')?'selected':''}>No, I do not have one</option>
+          <option value="yes_outdated" ${_data.will==='yes_outdated'?'selected':''}>Yes, but it is outdated (5+ years old)</option>
+          <option value="yes_current" ${_data.will==='yes_current'?'selected':''}>Yes, and it is up-to-date</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="ob-guardians">Have you designated guardians for minor children or dependents?</label>
+        <select class="select" id="ob-guardians">
+          <option value="no" ${(!_data.guardians||_data.guardians==='no')?'selected':''}>No</option>
+          <option value="yes" ${_data.guardians==='yes'?'selected':''}>Yes</option>
+          <option value="na" ${(_data.guardians==='na'||(_data.dependents===0 && !_data.guardians))?'selected':''}>Not Applicable</option>
+        </select>
+      </div>`;
+  }
+
+  function _step5(el) {
     const goals = [
       { key: 'retire',    icon: '&#x1F334;', label: 'Retirement' },
       { key: 'debt_free', icon: '&#x2702;',  label: 'Become Debt-Free' },
@@ -165,9 +187,9 @@ const WPOnboarding = (() => {
     });
   }
 
-  function _step5(el) {
+  function _step6(el) {
     el.innerHTML = `
-      <h2 class="onboarding-step-title">You're all set! &#x1F389;</h2>
+      <h2 class="onboarding-step-title">You're all set! 🎉</h2>
       <p class="onboarding-step-desc">Here's a summary of your profile. Click 'Get Started' to open your dashboard.</p>
       <div class="card" style="margin-bottom:1rem">
         <div class="card-title">Profile Summary</div>
@@ -177,6 +199,7 @@ const WPOnboarding = (() => {
           <div class="flex justify-between"><span class="text-muted">Employment</span><strong>${(_data.employment_type||'').replace('_',' ')}</strong></div>
           <div class="flex justify-between"><span class="text-muted">Retirement Age</span><strong>${_data.retirement_age||60}</strong></div>
           <div class="flex justify-between"><span class="text-muted">Risk Profile</span><strong>${_data.risk_tolerance||'moderate'}</strong></div>
+          <div class="flex justify-between"><span class="text-muted">Will & Legacy</span><strong>${_data.will==='yes_current'?'Will (Current)':_data.will==='yes_outdated'?'Will (Outdated)':'No Will'}</strong></div>
         </div>
       </div>
       <div class="disclaimer">${APP_CONFIG.disclaimer}</div>`;
@@ -200,6 +223,10 @@ const WPOnboarding = (() => {
       _data.risk_tolerance = document.getElementById('ob-risk')?.value;
     }
     if (_step === 4) {
+      _data.will      = document.getElementById('ob-will')?.value || 'no';
+      _data.guardians = document.getElementById('ob-guardians')?.value || 'no';
+    }
+    if (_step === 5) {
       _data.goals = [...document.querySelectorAll('.goal-chip.active')].map(c => c.dataset.goal);
     }
     return true;
@@ -232,6 +259,19 @@ const WPOnboarding = (() => {
         risk_tolerance: _data.risk_tolerance || 'moderate', onboarding_done: true,
         currency: _data.currency || 'NGN',
       }, ['user_id']);
+      
+      // Save onboarding estate choices to localStorage
+      const estateState = {
+        will: _data.will,
+        guardians: _data.guardians,
+        trust: 'no',
+        poa_fin: 'no',
+        poa_health: 'no',
+        living_will: 'no',
+        beneficiary: 'no'
+      };
+      localStorage.setItem('wp_estate_planning_' + uid, JSON.stringify(estateState));
+      
       WPToast.success('Profile saved! Welcome to Ola Financial.');
       // Reload the full app shell
       document.getElementById('root').innerHTML = '';

@@ -190,6 +190,7 @@ const WPApp = (() => {
     { path: '/emergency-fund', icon: '&#x1F6E1;', label: 'Emergency Fund', section: 'Tools' },
     { path: '/goals',          icon: '&#x1F3AF;', label: 'Goals',          section: 'Tools' },
     { path: '/retirement',     icon: '&#x1F334;', label: 'Retirement',     section: 'Tools' },
+    { path: '/estate-planner', icon: '&#x1F4DC;', label: 'Estate Planner',   section: 'Tools' },
     { path: '/reports',        icon: '&#x1F4CA;', label: 'Reports',        section: 'Reports' },
   ];
 
@@ -299,6 +300,7 @@ const WPApp = (() => {
       '/emergency-fund':WPEmergencyFund,
       '/goals':         WPGoals,
       '/retirement':    WPRetirement,
+      '/estate-planner':WPEstatePlanner,
       '/reports':       WPReports,
     };
 
