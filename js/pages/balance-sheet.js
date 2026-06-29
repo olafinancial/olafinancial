@@ -129,7 +129,7 @@ const WPBalanceSheet = (() => {
       return;
     }
     const baseCurrency = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
-    const typeIcon = { savings:'&#x1F3E6;', fixed_deposit:'&#x1F512;', equity:'&#x1F4C8;', property:'&#x1F3E0;', vehicle:'&#x1F697;', pension:'&#x1F334;', other:'&#x1F4B0;' };
+    const typeIcon = { savings:'&#x1F3E6;', fixed_deposit:'&#x1F512;', equity:'&#x1F4C8;', property:'&#x1F3E0;', vehicle:'&#x1F697;', pension:'&#x1F334;', not_applicable:'&#x1F4BC;', other:'&#x1F4B0;' };
     wrap.innerHTML = `<table>
       <thead><tr><th>Asset</th><th>Type</th><th>Institution</th><th>Opening</th><th>Closing</th><th>Rate</th><th>% of Total</th><th></th></tr></thead>
       <tbody>${_assets.map(a => {
@@ -221,17 +221,18 @@ const WPBalanceSheet = (() => {
           <div class="form-group">
             <label for="af-type">Asset Type</label>
             <select class="select" id="af-type">
-              <option value="savings"       ${e.asset_type==='savings'      ?'selected':''}>Savings Account</option>
-              <option value="fixed_deposit" ${e.asset_type==='fixed_deposit'?'selected':''}>Fixed Deposit / T-Bill</option>
-              <option value="equity"        ${e.asset_type==='equity'       ?'selected':''}>Equities / Stocks / ETFs</option>
-              <option value="crypto"        ${e.asset_type==='crypto'       ?'selected':''}>Crypto</option>
-              <option value="forex"         ${e.asset_type==='forex'        ?'selected':''}>Forex</option>
-              <option value="commodities"   ${e.asset_type==='commodities'  ?'selected':''}>Commodities</option>
               <option value="alternative"   ${e.asset_type==='alternative'  ?'selected':''}>Alternative Investments</option>
+              <option value="commodities"   ${e.asset_type==='commodities'  ?'selected':''}>Commodities</option>
+              <option value="crypto"        ${e.asset_type==='crypto'       ?'selected':''}>Crypto</option>
               <option value="currency"      ${e.asset_type==='currency'     ?'selected':''}>Currency</option>
-              <option value="property"      ${e.asset_type==='property'     ?'selected':''}>Property / Real Estate</option>
-              <option value="vehicle"       ${e.asset_type==='vehicle'      ?'selected':''}>Vehicle</option>
+              <option value="equity"        ${e.asset_type==='equity'       ?'selected':''}>Equities / Stocks / ETFs</option>
+              <option value="fixed_deposit" ${e.asset_type==='fixed_deposit'?'selected':''}>Fixed Deposit / T-Bill</option>
+              <option value="forex"         ${e.asset_type==='forex'        ?'selected':''}>Forex</option>
+              <option value="not_applicable" ${e.asset_type==='not_applicable'?'selected':''}>Not Applicable</option>
               <option value="pension"       ${e.asset_type==='pension'      ?'selected':''}>Pension / RSA</option>
+              <option value="property"      ${e.asset_type==='property'     ?'selected':''}>Property / Real Estate</option>
+              <option value="savings"       ${e.asset_type==='savings'      ?'selected':''}>Savings Account</option>
+              <option value="vehicle"       ${e.asset_type==='vehicle'      ?'selected':''}>Vehicle</option>
               <option value="other"         ${e.asset_type==='other'        ?'selected':''}>Other</option>
             </select>
           </div>
