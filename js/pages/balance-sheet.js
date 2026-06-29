@@ -67,8 +67,15 @@ const WPBalanceSheet = (() => {
   }
 
   function _render() {
-    const totalAssets = _assets.reduce((s,a) => s + (a.close_balance || a.open_balance || 0), 0);
-    const totalLiab   = _liabilities.reduce((s,l) => s + (l.close_balance || l.open_balance || 0), 0);
+    const baseCurrency = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const totalAssets = _assets.reduce((s,a) => {
+      const cur = WPUtils.getEntryCurrency(a.notes);
+      return s + WPUtils.convert(a.close_balance || a.open_balance || 0, cur, baseCurrency);
+    }, 0);
+    const totalLiab   = _liabilities.reduce((s,l) => {
+      const cur = WPUtils.getEntryCurrency(l.notes);
+      return s + WPUtils.convert(l.close_balance || l.open_balance || 0, cur, baseCurrency);
+    }, 0);
     const netWorth    = totalAssets - totalLiab;
     const nwColor     = netWorth >= 0 ? 'accent' : 'danger';
     const dta         = WPUtils.debtToAssetRatio(totalLiab, totalAssets);
@@ -90,17 +97,21 @@ const WPBalanceSheet = (() => {
 
     // NDIC alerts
     const ndicAlerts = _assets.filter(a => {
-      const check = WPUtils.checkNDIC(a.close_balance||a.open_balance||0, a.institution_type||'dmb');
+      const cur = WPUtils.getEntryCurrency(a.notes);
+      const balBase = WPUtils.convert(a.close_balance||a.open_balance||0, cur, 'NGN'); // NDIC limits are NGN
+      const check = WPUtils.checkNDIC(balBase, a.institution_type||'dmb');
       return check.alert;
     });
     const ndicEl = document.getElementById('ndic-alert');
     if (ndicAlerts.length) {
       ndicEl.style.display = '';
       ndicEl.innerHTML = ndicAlerts.map(a => {
-        const check = WPUtils.checkNDIC(a.close_balance||a.open_balance||0, a.institution_type||'dmb');
+        const cur = WPUtils.getEntryCurrency(a.notes);
+        const balBase = WPUtils.convert(a.close_balance||a.open_balance||0, cur, 'NGN');
+        const check = WPUtils.checkNDIC(balBase, a.institution_type||'dmb');
         return `<div class="alert alert-warning">
           <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
-          <span><strong>${a.asset_name}</strong>: Balance ${WPUtils.fmt(a.close_balance||a.open_balance||0)} exceeds NDIC coverage of ${WPUtils.fmt(check.limit)}. Consider spreading across multiple institutions.</span>
+          <span><strong>${a.asset_name}</strong>: Balance ${WPUtils.fmt(a.close_balance||a.open_balance||0, { currency: cur })} exceeds NDIC coverage of ${WPUtils.fmt(check.limit)}. Consider spreading across multiple institutions.</span>
         </div>`;
       }).join('');
     } else {
@@ -117,26 +128,32 @@ const WPBalanceSheet = (() => {
       wrap.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--clr-text-2)">No assets recorded. Click "Add Asset" to begin.</div>';
       return;
     }
+    const baseCurrency = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
     const typeIcon = { savings:'&#x1F3E6;', fixed_deposit:'&#x1F512;', equity:'&#x1F4C8;', property:'&#x1F3E0;', vehicle:'&#x1F697;', pension:'&#x1F334;', other:'&#x1F4B0;' };
     wrap.innerHTML = `<table>
       <thead><tr><th>Asset</th><th>Type</th><th>Institution</th><th>Opening</th><th>Closing</th><th>Rate</th><th>% of Total</th><th></th></tr></thead>
       <tbody>${_assets.map(a => {
         const bal = a.close_balance || a.open_balance || 0;
+        const cur = WPUtils.getEntryCurrency(a.notes);
+        const balBase = WPUtils.convert(bal, cur, baseCurrency);
+        const isEFSource = a.notes && a.notes.includes('[Emergency Fund]');
+        const cleanNotes = (a.notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').replace(/\[Emergency Fund\]/g, '').trim();
         return `<tr>
           <td><strong>${typeIcon[a.asset_type]||'&#x1F4B0;'} ${a.asset_name}</strong>
-            ${a.is_income_generating?'<span class="badge badge-gold" style="margin-left:4px">Income</span>':''}
+            ${isEFSource?'<span class="badge badge-gold" style="margin-left:4px">EF Source</span>':''}
+            ${cleanNotes?`<br><span class="text-xs text-muted">${cleanNotes}</span>`:''}
           </td>
           <td><span class="badge badge-neutral">${(a.asset_type||'').replace('_',' ')}</span></td>
           <td class="text-muted text-sm">${a.institution_name||'—'}</td>
-          <td class="td-mono">${WPUtils.fmt(a.open_balance||0)}</td>
-          <td class="td-mono fw-600">${WPUtils.fmt(bal)}</td>
+          <td class="td-mono">${WPUtils.fmt(a.open_balance||0, { currency: cur })}</td>
+          <td class="td-mono fw-600">${WPUtils.fmt(bal, { currency: cur })}</td>
           <td class="td-mono text-accent">${a.interest_rate?a.interest_rate+'%':'—'}</td>
           <td>
             <div class="flex items-center gap-4">
               <div class="progress-bar" style="height:6px;width:60px">
-                <div class="progress-fill" style="width:${Math.min(100,(bal/Math.max(1,total)*100)).toFixed(0)}%"></div>
+                <div class="progress-fill" style="width:${Math.min(100,(balBase/Math.max(1,total)*100)).toFixed(0)}%"></div>
               </div>
-              <span class="text-xs text-muted">${(bal/Math.max(1,total)*100).toFixed(1)}%</span>
+              <span class="text-xs text-muted">${(balBase/Math.max(1,total)*100).toFixed(1)}%</span>
             </div>
           </td>
           <td style="white-space:nowrap">
@@ -158,14 +175,16 @@ const WPBalanceSheet = (() => {
       <thead><tr><th>Liability</th><th>Type</th><th>Lender</th><th>Opening</th><th>Closing</th><th>APR</th><th>Monthly Pmt</th><th></th></tr></thead>
       <tbody>${_liabilities.map(l => {
         const bal = l.close_balance || l.open_balance || 0;
+        const cur = WPUtils.getEntryCurrency(l.notes);
+        const cleanNotes = (l.notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
         return `<tr>
-          <td><strong>${l.liability_name}</strong></td>
+          <td><strong>${l.liability_name}</strong>${cleanNotes?`<br><span class="text-xs text-muted">${cleanNotes}</span>`:''}</td>
           <td><span class="badge badge-danger">${(l.liability_type||'').replace('_',' ')}</span></td>
           <td class="text-muted text-sm">${l.lender_name||'—'}</td>
-          <td class="td-mono">${WPUtils.fmt(l.open_balance||0)}</td>
-          <td class="td-mono fw-600 text-danger">${WPUtils.fmt(bal)}</td>
+          <td class="td-mono">${WPUtils.fmt(l.open_balance||0, { currency: cur })}</td>
+          <td class="td-mono fw-600 text-danger">${WPUtils.fmt(bal, { currency: cur })}</td>
           <td class="td-mono ${l.apr>25?'text-danger':'text-gold'}">${l.apr||0}%</td>
-          <td class="td-mono">${WPUtils.fmt(l.monthly_payment||0)}</td>
+          <td class="td-mono">${WPUtils.fmt(l.monthly_payment||0, { currency: cur })}</td>
           <td style="white-space:nowrap">
             <button class="btn btn-ghost btn-sm" onclick="WPBalanceSheet._editLiab('${l.id}')">Edit</button>
             <button class="btn btn-ghost btn-sm text-danger" onclick="WPBalanceSheet._deleteLiab('${l.id}')">Delete</button>
@@ -177,15 +196,26 @@ const WPBalanceSheet = (() => {
 
   function _openAssetForm(existing = null) {
     const e = existing || {};
-    const currencyCode = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const currencyCode = WPUtils.getEntryCurrency(e.notes);
     const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
     const symbol = symbols[currencyCode] || '₦';
 
     const body = `
       <form id="asset-form">
-        <div class="form-group">
-          <label for="af-name">Asset Name</label>
-          <input class="input" id="af-name" value="${e.asset_name||''}" placeholder="e.g. GTBank Savings, Lagos Property" required>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="af-currency">Currency</label>
+            <select class="select" id="af-currency">
+              <option value="NGN" ${currencyCode==='NGN'?'selected':''}>NGN (₦)</option>
+              <option value="USD" ${currencyCode==='USD'?'selected':''}>USD ($)</option>
+              <option value="EUR" ${currencyCode==='EUR'?'selected':''}>EUR (€)</option>
+              <option value="GBP" ${currencyCode==='GBP'?'selected':''}>GBP (£)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="af-name">Asset Name</label>
+            <input class="input" id="af-name" value="${e.asset_name||''}" placeholder="e.g. GTBank Savings, Lagos Property" required>
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -223,8 +253,8 @@ const WPBalanceSheet = (() => {
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="af-open">Opening Balance (&#x20A6;)</label>
-            <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
+            <label for="af-open">Opening Balance (${symbol})</label>
+            <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
               <input class="input" type="text" inputmode="decimal" id="af-open" value="${e.open_balance?WPUtils.koboToNaira(e.open_balance):''}" placeholder="0" required>
             </div>
           </div>
@@ -249,7 +279,7 @@ const WPBalanceSheet = (() => {
             <input class="input" type="number" id="af-rate" min="0" step="0.1" value="${e.interest_rate||''}" placeholder="e.g. 8.5">
           </div>
           <div class="form-group">
-            <label for="af-income-amt">Expected Annual Income</label>
+            <label for="af-income-amt">Expected Annual Income (${symbol})</label>
             <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
               <input class="input" type="text" inputmode="decimal" id="af-income-amt" placeholder="0">
             </div>
@@ -273,9 +303,18 @@ const WPBalanceSheet = (() => {
     const incomeInput = document.getElementById('af-income-amt');
     const incomeToggle = document.getElementById('af-income');
     const yieldRow = document.getElementById('yield-details-row');
+    const currencySelect = document.getElementById('af-currency');
 
     WPUtils.maskNumberInput(openInput);
     WPUtils.maskNumberInput(incomeInput);
+
+    currencySelect.addEventListener('change', (ev) => {
+      const newCur = ev.target.value;
+      const newSym = symbols[newCur] || '₦';
+      document.querySelectorAll('#asset-form .input-prefix').forEach(span => span.textContent = newSym);
+      document.querySelector('label[for="af-open"]').textContent = `Opening Balance (${newSym})`;
+      document.querySelector('label[for="af-income-amt"]').textContent = `Expected Annual Income (${newSym})`;
+    });
 
     if (e.is_income_generating && e.interest_rate && e.open_balance) {
       const annualIncome = (e.interest_rate / 100) * (e.open_balance / 100);
@@ -328,6 +367,9 @@ const WPBalanceSheet = (() => {
     const rawOpen = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('af-open').value));
 
     const isEFSource = document.getElementById('af-ef-source').checked;
+    const currency = document.getElementById('af-currency').value;
+    let finalNotes = isEFSource ? '[Emergency Fund]' : '';
+    finalNotes = WPUtils.setEntryCurrency(finalNotes, currency);
 
     const row = {
       user_id:              WPApp.state.user.id,
@@ -340,7 +382,7 @@ const WPBalanceSheet = (() => {
       interest_rate:        parseFloat(document.getElementById('af-rate').value)||0,
       tenor_months:         parseInt(document.getElementById('af-tenor').value)||null,
       is_income_generating: document.getElementById('af-income').checked,
-      notes:                isEFSource ? '[Emergency Fund]' : null,
+      notes:                finalNotes,
       period_month:         periodMonth,
     };
     if (!row.asset_name) { WPToast.warning('Please enter an asset name.'); return; }
@@ -354,11 +396,26 @@ const WPBalanceSheet = (() => {
 
   function _openLiabForm(existing = null) {
     const e = existing || {};
+    const currencyCode = WPUtils.getEntryCurrency(e.notes);
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbol = symbols[currencyCode] || '₦';
+
     const body = `
       <form id="liab-form">
-        <div class="form-group">
-          <label for="lf-name">Liability Name</label>
-          <input class="input" id="lf-name" value="${e.liability_name||''}" placeholder="e.g. GTBank Personal Loan, FCMB Mortgage" required>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="lf-currency">Currency</label>
+            <select class="select" id="lf-currency">
+              <option value="NGN" ${currencyCode==='NGN'?'selected':''}>NGN (₦)</option>
+              <option value="USD" ${currencyCode==='USD'?'selected':''}>USD ($)</option>
+              <option value="EUR" ${currencyCode==='EUR'?'selected':''}>EUR (€)</option>
+              <option value="GBP" ${currencyCode==='GBP'?'selected':''}>GBP (£)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="lf-name">Liability Name</label>
+            <input class="input" id="lf-name" value="${e.liability_name||''}" placeholder="e.g. GTBank Personal Loan, FCMB Mortgage" required>
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -379,14 +436,14 @@ const WPBalanceSheet = (() => {
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="lf-open">Opening Balance (&#x20A6;)</label>
-            <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
+            <label for="lf-open">Opening Balance (${symbol})</label>
+            <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
               <input class="input" type="text" inputmode="decimal" id="lf-open" value="${e.open_balance?WPUtils.koboToNaira(e.open_balance):''}">
             </div>
           </div>
           <div class="form-group">
-            <label for="lf-close">Closing Balance (&#x20A6;)</label>
-            <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
+            <label for="lf-close">Closing Balance (${symbol})</label>
+            <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
               <input class="input" type="text" inputmode="decimal" id="lf-close" value="${e.close_balance?WPUtils.koboToNaira(e.close_balance):''}">
             </div>
           </div>
@@ -403,8 +460,8 @@ const WPBalanceSheet = (() => {
             <input class="input" type="number" id="lf-apr" min="0" max="200" step="0.1" value="${e.apr||''}" placeholder="e.g. 22.5">
           </div>
           <div class="form-group" style="flex: 1;">
-            <label for="lf-mpmt">Monthly Payment (&#x20A6;)</label>
-            <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
+            <label for="lf-mpmt">Monthly Payment (${symbol})</label>
+            <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
               <input class="input" type="text" inputmode="decimal" id="lf-mpmt" value="${e.monthly_payment?WPUtils.koboToNaira(e.monthly_payment):''}" ${e.apr?'readonly':''}>
             </div>
           </div>
@@ -423,10 +480,20 @@ const WPBalanceSheet = (() => {
     const openInput = document.getElementById('lf-open');
     const closeInput = document.getElementById('lf-close');
     const typeSelect = document.getElementById('lf-type');
+    const currencySelect = document.getElementById('lf-currency');
 
     WPUtils.maskNumberInput(openInput);
     WPUtils.maskNumberInput(closeInput);
     WPUtils.maskNumberInput(mpmtInput);
+
+    currencySelect.addEventListener('change', (ev) => {
+      const newCur = ev.target.value;
+      const newSym = symbols[newCur] || '₦';
+      document.querySelectorAll('#liab-form .input-prefix').forEach(span => span.textContent = newSym);
+      document.querySelector('label[for="lf-open"]').textContent = `Opening Balance (${newSym})`;
+      document.querySelector('label[for="lf-close"]').textContent = `Closing Balance (${newSym})`;
+      document.querySelector('label[for="lf-mpmt"]').textContent = `Monthly Payment (${newSym})`;
+    });
 
     function updateCalculatedPayment() {
       if (noAprCheck.checked) return;
@@ -471,6 +538,9 @@ const WPBalanceSheet = (() => {
 
   async function _saveLiab(existingId) {
     const isManual = document.getElementById('lf-no-apr').checked;
+    const currency = document.getElementById('lf-currency').value;
+    const finalNotes = WPUtils.setEntryCurrency('', currency);
+
     const row = {
       user_id:          WPApp.state.user.id,
       liability_name:   document.getElementById('lf-name').value.trim(),
@@ -482,6 +552,7 @@ const WPBalanceSheet = (() => {
       monthly_payment:  WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('lf-mpmt').value)),
       is_interest_bearing: true,
       period_month:     PERIOD,
+      notes:            finalNotes,
     };
     if (!row.liability_name) { WPToast.warning('Please enter a liability name.'); return; }
     try {

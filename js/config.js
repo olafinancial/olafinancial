@@ -20,6 +20,14 @@ const APP_CONFIG = {
   currencySymbol:'₦',
   locale:        'en-NG',
 
+  // ── EXCHANGE RATES (Indicative to NGN) ──────────────────────
+  exchangeRates: {
+    NGN: 1,
+    USD: 1500,
+    EUR: 1600,
+    GBP: 1900,
+  },
+
   // ── NIGERIA TAX ACT 2025 — PERSONAL INCOME TAX ────────────
   // Source: Nigeria Tax Act 2025 (signed May 2025)
   // Brackets apply to Chargeable Income after reliefs

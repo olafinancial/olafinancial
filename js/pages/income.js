@@ -43,14 +43,14 @@ const WPIncome = (() => {
               <label for="te-gross">Annual Gross Emoluments (&#x20A6;)</label>
               <div class="input-prefix-group">
                 <span class="input-prefix">&#x20A6;</span>
-                <input class="input" type="number" id="te-gross" placeholder="e.g. 3600000" min="0" step="1000">
+                <input class="input" type="text" inputmode="decimal" id="te-gross" placeholder="e.g. 3,600,000">
               </div>
             </div>
             <div class="form-group">
               <label for="te-rent">Annual Rent Paid (&#x20A6;)</label>
               <div class="input-prefix-group">
                 <span class="input-prefix">&#x20A6;</span>
-                <input class="input" type="number" id="te-rent" placeholder="e.g. 600000" min="0" step="1000">
+                <input class="input" type="text" inputmode="decimal" id="te-rent" placeholder="e.g. 600,000">
               </div>
             </div>
           </div>
@@ -68,6 +68,9 @@ const WPIncome = (() => {
     });
     document.getElementById('te-calc-btn').addEventListener('click', _runTaxEstimator);
 
+    WPUtils.maskNumberInput(document.getElementById('te-gross'));
+    WPUtils.maskNumberInput(document.getElementById('te-rent'));
+
     await _load();
   }
 
@@ -81,12 +84,28 @@ const WPIncome = (() => {
   }
 
   function _renderKPIs() {
-    const totalGross = _entries.reduce((s, e) => s + (e.gross_amount||0), 0);
-    const totalTax   = _entries.reduce((s, e) => s + (e.paye_tax||0), 0);
-    const totalPen   = _entries.reduce((s, e) => s + (e.pension_contrib||0), 0);
-    const totalOther = _entries.reduce((s, e) => s + (e.nhf_contrib||0) + (e.other_deductions||0), 0);
+    const baseCurrency = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const totalGross = _entries.reduce((s, e) => {
+      const cur = WPUtils.getEntryCurrency(e.notes);
+      return s + WPUtils.convert(e.gross_amount||0, cur, baseCurrency);
+    }, 0);
+    const totalTax   = _entries.reduce((s, e) => {
+      const cur = WPUtils.getEntryCurrency(e.notes);
+      return s + WPUtils.convert(e.paye_tax||0, cur, baseCurrency);
+    }, 0);
+    const totalPen   = _entries.reduce((s, e) => {
+      const cur = WPUtils.getEntryCurrency(e.notes);
+      return s + WPUtils.convert(e.pension_contrib||0, cur, baseCurrency);
+    }, 0);
+    const totalOther = _entries.reduce((s, e) => {
+      const cur = WPUtils.getEntryCurrency(e.notes);
+      return s + WPUtils.convert((e.nhf_contrib||0) + (e.other_deductions||0), cur, baseCurrency);
+    }, 0);
     const totalNet   = totalGross - totalTax - totalPen - totalOther;
-    const passive    = _entries.filter(e => e.income_type==='passive').reduce((s,e) => s+(e.gross_amount||0), 0);
+    const passive    = _entries.filter(e => e.income_type==='passive').reduce((s,e) => {
+      const cur = WPUtils.getEntryCurrency(e.notes);
+      return s + WPUtils.convert(e.gross_amount||0, cur, baseCurrency);
+    }, 0);
 
     document.getElementById('income-kpis').innerHTML = `
       <div class="card"><div class="card-title">Total Gross Income</div><div class="card-value">${WPUtils.fmt(totalGross)}</div><div class="card-meta">${_entries.length} source${_entries.length!==1?'s':''}</div></div>
@@ -112,13 +131,15 @@ const WPIncome = (() => {
       <tbody>${filtered.map(e => {
         const net = (e.gross_amount||0)-(e.paye_tax||0)-(e.pension_contrib||0)-(e.nhf_contrib||0)-(e.other_deductions||0);
         const typeBadge = {active:'badge-info',passive:'badge-gold',investment:'badge-accent'}[e.income_type]||'badge-neutral';
+        const cur = WPUtils.getEntryCurrency(e.notes);
+        const cleanNotes = (e.notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
         return `<tr>
-          <td><strong>${e.source_name}</strong>${e.notes?`<br><span class="text-xs text-muted">${e.notes}</span>`:''}</td>
+          <td><strong>${e.source_name}</strong>${cleanNotes?`<br><span class="text-xs text-muted">${cleanNotes}</span>`:''}</td>
           <td><span class="badge ${typeBadge}">${e.income_type}</span></td>
-          <td class="td-mono">${WPUtils.fmt(e.gross_amount||0)}</td>
-          <td class="td-mono text-danger">${WPUtils.fmt(e.paye_tax||0)}</td>
-          <td class="td-mono text-gold">${WPUtils.fmt(e.pension_contrib||0)}</td>
-          <td class="td-mono text-accent fw-700">${WPUtils.fmt(net)}</td>
+          <td class="td-mono">${WPUtils.fmt(e.gross_amount||0, { currency: cur })}</td>
+          <td class="td-mono text-danger">${WPUtils.fmt(e.paye_tax||0, { currency: cur })}</td>
+          <td class="td-mono text-gold">${WPUtils.fmt(e.pension_contrib||0, { currency: cur })}</td>
+          <td class="td-mono text-accent fw-700">${WPUtils.fmt(net, { currency: cur })}</td>
           <td><span class="badge badge-neutral">${e.frequency}</span></td>
           <td style="white-space:nowrap">
             <button class="btn btn-ghost btn-sm" onclick="WPIncome._edit('${e.id}')">Edit</button>
@@ -130,8 +151,8 @@ const WPIncome = (() => {
   }
 
   function _runTaxEstimator() {
-    const gross  = WPUtils.nairaToKobo(parseFloat(document.getElementById('te-gross').value)||0);
-    const rent   = WPUtils.nairaToKobo(parseFloat(document.getElementById('te-rent').value)||0);
+    const gross  = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('te-gross').value)||0);
+    const rent   = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('te-rent').value)||0);
     const pension = WPUtils.calcPensionEmployee(gross);
     const tax     = WPUtils.calcPIT(gross, pension, rent);
     const net     = gross - tax - pension;
@@ -154,17 +175,22 @@ const WPIncome = (() => {
   function _openForm(existing = null) {
     const isEdit = !!existing;
     const e = existing || {};
-    const currencyCode = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const currencyCode = WPUtils.getEntryCurrency(e.notes);
     const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
     const symbol = symbols[currencyCode] || '₦';
 
     const body = `
       <form id="income-form">
-        <div class="form-group">
-          <label for="if-name">Source Name</label>
-          <input class="input" id="if-name" placeholder="e.g. Dangote Salary, Rental Property, Dividends" value="${e.source_name||''}" required>
-        </div>
         <div class="form-row">
+          <div class="form-group">
+            <label for="if-currency">Currency</label>
+            <select class="select" id="if-currency">
+              <option value="NGN" ${currencyCode==='NGN'?'selected':''}>NGN (₦)</option>
+              <option value="USD" ${currencyCode==='USD'?'selected':''}>USD ($)</option>
+              <option value="EUR" ${currencyCode==='EUR'?'selected':''}>EUR (€)</option>
+              <option value="GBP" ${currencyCode==='GBP'?'selected':''}>GBP (£)</option>
+            </select>
+          </div>
           <div class="form-group">
             <label for="if-type">Income Type</label>
             <select class="select" id="if-type">
@@ -173,6 +199,8 @@ const WPIncome = (() => {
               <option value="investment" ${e.income_type==='investment'?'selected':''}>Investment (Dividends / Interest)</option>
             </select>
           </div>
+        </div>
+        <div class="form-row">
           <div class="form-group">
             <label for="if-freq">Frequency</label>
             <select class="select" id="if-freq">
@@ -181,6 +209,10 @@ const WPIncome = (() => {
               <option value="annual"    ${e.frequency==='annual'   ?'selected':''}>Annual</option>
               <option value="one_time"  ${e.frequency==='one_time' ?'selected':''}>One-Time</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label for="if-name">Source Name</label>
+            <input class="input" id="if-name" placeholder="e.g. Dangote Salary, Rental Property, Dividends" value="${e.source_name||''}" required>
           </div>
         </div>
         <div class="form-group">
@@ -209,7 +241,7 @@ const WPIncome = (() => {
         </div>
         <div class="form-group">
           <label for="if-notes">Notes (optional)</label>
-          <textarea class="textarea" id="if-notes" placeholder="e.g. Includes ₦80,000 transport allowance">${e.notes||''}</textarea>
+          <textarea class="textarea" id="if-notes" placeholder="e.g. Includes ₦80,000 transport allowance">${e.notes?e.notes.replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim():''}</textarea>
         </div>
       </form>`;
 
@@ -221,10 +253,22 @@ const WPIncome = (() => {
     const grossInput = document.getElementById('if-gross');
     const taxInput = document.getElementById('if-tax');
     const pensionInput = document.getElementById('if-pension');
+    const currencySelect = document.getElementById('if-currency');
 
     WPUtils.maskNumberInput(grossInput);
     WPUtils.maskNumberInput(taxInput);
     WPUtils.maskNumberInput(pensionInput);
+
+    currencySelect.addEventListener('change', (ev) => {
+      const newCur = ev.target.value;
+      const newSym = symbols[newCur] || '₦';
+      document.querySelectorAll('#income-form .input-prefix').forEach(span => {
+        span.textContent = newSym;
+      });
+      document.querySelector('label[for="if-gross"]').textContent = `Gross Amount (${newSym})`;
+      document.querySelector('label[for="if-tax"]').textContent = `PAYE Tax (${newSym})`;
+      document.querySelector('label[for="if-pension"]').textContent = `Pension 8% (${newSym})`;
+    });
 
     document.getElementById('calc-tax-link')?.addEventListener('click', () => {
       const gross  = WPUtils.nairaToKobo(WPUtils.cleanNum(grossInput.value)||0);
@@ -232,7 +276,6 @@ const WPIncome = (() => {
       const tax     = WPUtils.calcPIT(gross, pension);
       taxInput.value    = WPUtils.koboToNaira(tax).toFixed(0);
       pensionInput.value = WPUtils.koboToNaira(pension).toFixed(0);
-      // Trigger inputs to update comma masks
       taxInput.dispatchEvent(new Event('input'));
       pensionInput.dispatchEvent(new Event('input'));
       WPToast.info('Calculated using Nigeria Tax Act 2025 brackets.');
@@ -241,6 +284,10 @@ const WPIncome = (() => {
 
   async function _save(existingId = null) {
     const grossKobo = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-gross').value)||0);
+    const notesVal = document.getElementById('if-notes').value.trim();
+    const currency = document.getElementById('if-currency').value;
+    const finalNotes = WPUtils.setEntryCurrency(notesVal, currency);
+
     const row = {
       user_id:         WPApp.state.user.id,
       source_name:     document.getElementById('if-name').value.trim(),
@@ -250,7 +297,7 @@ const WPIncome = (() => {
       paye_tax:        WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-tax').value)||0),
       pension_contrib: WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-pension').value)||0),
       period_month:    PERIOD,
-      notes:           document.getElementById('if-notes').value.trim(),
+      notes:           finalNotes,
     };
     if (!row.source_name || !row.gross_amount) { WPToast.warning('Name and amount are required.'); return; }
     try {

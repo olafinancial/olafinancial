@@ -64,11 +64,13 @@ const WPGoals = (() => {
     const daysLeft = g.target_date ? Math.ceil((new Date(g.target_date) - new Date()) / 86400000) : null;
     const color    = done ? 'accent' : pct > 75 ? 'accent' : pct > 40 ? 'gold' : 'danger';
     const icons    = { retirement:'&#x1F334;', mortgage:'&#x1F3E0;', emergency:'&#x1F6E1;&#xFE0F;', college:'&#x1F393;', custom:'&#x1F3AF;' };
+    const cur      = WPUtils.getEntryCurrency(g.notes);
+    const cleanNotes = (g.notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
 
     return `<div class="card goal-card ${done?'goal-done':''}">
       <div class="goal-icon">${icons[g.goal_type]||'&#x1F3AF;'}</div>
       <div class="goal-name">${g.goal_name}</div>
-      ${g.notes?`<div class="goal-notes text-xs text-muted">${g.notes}</div>`:''}
+      ${cleanNotes?`<div class="goal-notes text-xs text-muted">${cleanNotes}</div>`:''}
       <div style="margin:1.25rem 0">
         <div class="progress-labels">
           <span class="text-muted text-sm">Progress</span>
@@ -79,9 +81,9 @@ const WPGoals = (() => {
         </div>
       </div>
       <div class="goal-amounts">
-        <div><div class="text-muted text-xs">Saved</div><div class="fw-700 text-accent">${WPUtils.fmt(g.current_savings||0, {compact:true})}</div></div>
-        <div style="text-align:center"><div class="text-muted text-xs">Gap</div><div class="fw-600">${WPUtils.fmt(gap, {compact:true})}</div></div>
-        <div style="text-align:right"><div class="text-muted text-xs">Target</div><div class="fw-700">${WPUtils.fmt(g.target_amount, {compact:true})}</div></div>
+        <div><div class="text-muted text-xs">Saved</div><div class="fw-700 text-accent">${WPUtils.fmt(g.current_savings||0, {compact:true, currency: cur})}</div></div>
+        <div style="text-align:center"><div class="text-muted text-xs">Gap</div><div class="fw-600">${WPUtils.fmt(gap, {compact:true, currency: cur})}</div></div>
+        <div style="text-align:right"><div class="text-muted text-xs">Target</div><div class="fw-700">${WPUtils.fmt(g.target_amount, {compact:true, currency: cur})}</div></div>
       </div>
       ${daysLeft !== null ? `<div class="text-xs text-muted" style="margin-top:0.75rem">
         ${done ? '&#x1F389; Completed!' : daysLeft > 0 ? `${daysLeft} days remaining` : `<span class="text-danger">&#x26A0;&#xFE0F; ${Math.abs(daysLeft)} days overdue</span>`}
@@ -96,15 +98,26 @@ const WPGoals = (() => {
 
   function _openForm(existing = null) {
     const e = existing || {};
-    const currencyCode = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const currencyCode = WPUtils.getEntryCurrency(e.notes);
     const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
     const symbol = symbols[currencyCode] || '₦';
 
     const body = `
       <form id="goal-form">
-        <div class="form-group">
-          <label for="gf-name">Goal Name</label>
-          <input class="input" id="gf-name" value="${e.goal_name||''}" placeholder="e.g. Buy a house in Lekki" required>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="gf-currency">Currency</label>
+            <select class="select" id="gf-currency">
+              <option value="NGN" ${currencyCode==='NGN'?'selected':''}>NGN (₦)</option>
+              <option value="USD" ${currencyCode==='USD'?'selected':''}>USD ($)</option>
+              <option value="EUR" ${currencyCode==='EUR'?'selected':''}>EUR (€)</option>
+              <option value="GBP" ${currencyCode==='GBP'?'selected':''}>GBP (£)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="gf-name">Goal Name</label>
+            <input class="input" id="gf-name" value="${e.goal_name||''}" placeholder="e.g. Buy a house in Lekki" required>
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -140,7 +153,7 @@ const WPGoals = (() => {
         </div>
         <div class="form-group">
           <label for="gf-notes">Notes (optional)</label>
-          <textarea class="textarea" id="gf-notes" placeholder="e.g. 3-bedroom apartment in Lekki Phase 1">${e.notes||''}</textarea>
+          <textarea class="textarea" id="gf-notes" placeholder="e.g. 3-bedroom apartment in Lekki Phase 1">${e.notes?e.notes.replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim():''}</textarea>
         </div>
       </form>`;
 
@@ -148,11 +161,27 @@ const WPGoals = (() => {
       confirmLabel: existing ? 'Update' : 'Add Goal',
       onConfirm: async () => { await _save(e.id); },
     });
-    WPUtils.maskNumberInput(document.getElementById('gf-target'));
-    WPUtils.maskNumberInput(document.getElementById('gf-current'));
+    const targetInput = document.getElementById('gf-target');
+    const currentInput = document.getElementById('gf-current');
+    const currencySelect = document.getElementById('gf-currency');
+
+    WPUtils.maskNumberInput(targetInput);
+    WPUtils.maskNumberInput(currentInput);
+
+    currencySelect.addEventListener('change', (ev) => {
+      const newCur = ev.target.value;
+      const newSym = symbols[newCur] || '₦';
+      document.querySelectorAll('#goal-form .input-prefix').forEach(span => span.textContent = newSym);
+      document.querySelector('label[for="gf-target"]').textContent = `Target Amount (${newSym})`;
+      document.querySelector('label[for="gf-current"]').textContent = `Amount Saved So Far (${newSym})`;
+    });
   }
 
   async function _save(existingId) {
+    const currency = document.getElementById('gf-currency').value;
+    const notesVal = document.getElementById('gf-notes').value.trim();
+    const finalNotes = WPUtils.setEntryCurrency(notesVal, currency);
+
     const row = {
       user_id:        WPApp.state.user.id,
       goal_name:      document.getElementById('gf-name').value.trim(),
@@ -160,7 +189,7 @@ const WPGoals = (() => {
       target_date:    document.getElementById('gf-date').value || null,
       target_amount:  WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('gf-target').value)),
       current_savings: WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('gf-current').value)),
-      notes:          document.getElementById('gf-notes').value.trim(),
+      notes:          finalNotes,
     };
     if (!row.goal_name || !row.target_amount) { WPToast.warning('Name and target amount are required.'); return; }
     try {

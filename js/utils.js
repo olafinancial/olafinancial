@@ -306,36 +306,85 @@ const WPUtils = (() => {
 
   // ── RETIREMENT ────────────────────────────────────────────
   function calcRetirement({
-    currentAgeYears,
-    retirementAgeYears,
-    rsaBalanceKobo,
-    monthlyContributionKobo,
-    expectedAnnualReturn = 0.11,
+    currentAge,
+    retirementAge,
+    lifeExpectancy,
+    currentRSAKobo,
+    monthlyGrossKobo,
+    monthlyInvestmentKobo,
     monthlyIncomeNeededKobo,
-    inflationRate = APP_CONFIG.inflationRate,
+    inflationPct,
+    riskTolerance = 'moderate',
   }) {
-    const yearsToRetirement = retirementAgeYears - currentAgeYears;
-    if (yearsToRetirement <= 0) return null;
+    const yearsToRetirement = retirementAge - currentAge;
+    if (yearsToRetirement <= 0) {
+      return {
+        yearsToRetirement: 0,
+        projectedRSAKobo: currentRSAKobo,
+        projectedInvestKobo: 0,
+        projectedFundKobo: currentRSAKobo,
+        requiredNestEggKobo: monthlyIncomeNeededKobo * 12 * (lifeExpectancy - retirementAge),
+        rsaMonthlyDrawdownKobo: 0,
+        monthlyPensionTotalKobo: 0,
+        additionalMonthlyKobo: 0,
+        recommendations: ["Current age is already at or past retirement age."]
+      };
+    }
 
-    const projectedRSA = calcFV(expectedAnnualReturn, yearsToRetirement, monthlyContributionKobo, rsaBalanceKobo);
+    // Expected return based on risk tolerance
+    const rates = { conservative: 0.09, moderate: 0.12, aggressive: 0.16 };
+    const rate = rates[riskTolerance] || 0.12;
 
-    // Real value of income needed at retirement (inflation-adjusted)
+    // PENCOM CPS Monthly Pension (8% employee + 10% employer = 18%)
+    const monthlyPensionTotalKobo = Math.round(monthlyGrossKobo * 0.18);
+
+    // Projected RSA & Investment
+    const projectedRSAKobo = calcFV(rate, yearsToRetirement, monthlyPensionTotalKobo, currentRSAKobo);
+    const projectedInvestKobo = calcFV(rate, yearsToRetirement, monthlyInvestmentKobo, 0);
+    const projectedFundKobo = projectedRSAKobo + projectedInvestKobo;
+
+    // Required Nest Egg
+    const inflationRate = inflationPct / 100;
     const realIncomeNeeded = Math.round(monthlyIncomeNeededKobo * Math.pow(1 + inflationRate, yearsToRetirement));
+    const yearsInRetirement = lifeExpectancy - retirementAge;
+    const drawdownRate = Math.max(0.06, rate - 0.03); // conservative drawdown rate in retirement
 
-    // Monthly annuity from projected RSA over 25 years post-retirement
-    const monthlyFromRSA = calcAnnuity(projectedRSA, expectedAnnualReturn, 25);
+    const r = drawdownRate / 12;
+    const n = yearsInRetirement * 12;
+    let requiredNestEggKobo = 0;
+    if (n > 0) {
+      if (Math.abs(r) < 1e-10) requiredNestEggKobo = realIncomeNeeded * n;
+      else requiredNestEggKobo = Math.round(realIncomeNeeded * ((Math.pow(1 + r, n) - 1) / (r * Math.pow(1 + r, n))));
+    }
 
-    const gap = Math.max(0, realIncomeNeeded - monthlyFromRSA);
-    const payCycles = yearsToRetirement * 12;
+    // RSA Monthly Drawdown
+    const rsaMonthlyDrawdownKobo = calcAnnuity(projectedRSAKobo, drawdownRate, yearsInRetirement);
+
+    // Shortfall & Additional Savings
+    const surplus = projectedFundKobo - requiredNestEggKobo;
+    const additionalMonthlyKobo = surplus < 0 ? calcPMT(rate, yearsToRetirement, 0, Math.abs(surplus)) : 0;
+
+    // Recommendations
+    const recommendations = [];
+    if (surplus >= 0) {
+      recommendations.push("Your retirement plan is fully funded! Keep maintaining your current savings rate.");
+      recommendations.push("As you approach retirement, consider shifting a portion of your funds to more conservative, fixed-income assets to protect capital.");
+    } else {
+      recommendations.push(`Increase your monthly savings by ${fmt(additionalMonthlyKobo)} to close your retirement gap of ${fmt(Math.abs(surplus))}.`);
+      recommendations.push("Review your monthly expenses to identify discretionary areas where you can save and invest more.");
+      recommendations.push("Verify that your PFA is generating competitive returns (e.g. above inflation/industry benchmark) to boost RSA growth.");
+    }
 
     return {
       yearsToRetirement,
-      payCycles,
-      projectedRSA,
-      monthlyFromRSA,
-      realIncomeNeeded,
-      gap,
-      isFunded: gap === 0,
+      projectedRSAKobo,
+      projectedInvestKobo,
+      projectedFundKobo,
+      requiredNestEggKobo,
+      rsaMonthlyDrawdownKobo,
+      monthlyPensionTotalKobo,
+      additionalMonthlyKobo,
+      recommendations
     };
   }
 
@@ -426,6 +475,28 @@ const WPUtils = (() => {
     return months;
   }
 
+  function getEntryCurrency(notes) {
+    if (notes && typeof notes === 'string') {
+      const match = notes.match(/\[(USD|NGN|EUR|GBP)\]/);
+      if (match) return match[1];
+    }
+    return WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+  }
+
+  function setEntryCurrency(notes, currency) {
+    let cleanNotes = (notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
+    return currency ? `${cleanNotes} [${currency}]`.trim() : cleanNotes;
+  }
+
+  function convert(amountKobo, fromCurrency, toCurrency) {
+    if (fromCurrency === toCurrency) return amountKobo;
+    const rates = APP_CONFIG.exchangeRates || { NGN: 1, USD: 1500, EUR: 1600, GBP: 1900 };
+    const rateFrom = rates[fromCurrency] || 1;
+    const rateTo = rates[toCurrency] || 1;
+    const amountInNGN = amountKobo * rateFrom;
+    return Math.round(amountInNGN / rateTo);
+  }
+
   return {
     fmt, cleanNum, maskNumberInput, nairaToKobo, koboToNaira, pct, fmtPct, fmtDate,
     calcPIT, effectiveTaxRate, taxBracket,
@@ -441,5 +512,6 @@ const WPUtils = (() => {
     goalProgress,
     healthScore, healthScoreLabel,
     currentPeriod, periodLabel, last12Months,
+    getEntryCurrency, setEntryCurrency, convert,
   };
 })();

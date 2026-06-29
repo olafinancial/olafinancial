@@ -67,10 +67,20 @@ const WPExpenses = (() => {
   }
 
   function _renderKPIs() {
-    const total   = _entries.reduce((s,e) => s+(e.amount||0), 0);
-    const disc    = _entries.filter(e =>  e.is_discretionary).reduce((s,e) => s+(e.amount||0), 0);
+    const baseCurrency = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const total = _entries.reduce((s,e) => {
+      const cur = WPUtils.getEntryCurrency(e.description);
+      return s + WPUtils.convert(e.amount||0, cur, baseCurrency);
+    }, 0);
+    const disc = _entries.filter(e => e.is_discretionary).reduce((s,e) => {
+      const cur = WPUtils.getEntryCurrency(e.description);
+      return s + WPUtils.convert(e.amount||0, cur, baseCurrency);
+    }, 0);
     const nonDisc = total - disc;
-    const recur   = _entries.filter(e =>  e.is_recurring).reduce((s,e) => s+(e.amount||0), 0);
+    const recur = _entries.filter(e => e.is_recurring).reduce((s,e) => {
+      const cur = WPUtils.getEntryCurrency(e.description);
+      return s + WPUtils.convert(e.amount||0, cur, baseCurrency);
+    }, 0);
 
     document.getElementById('expense-kpis').innerHTML = `
       <div class="card"><div class="card-title">Total Expenses</div><div class="card-value danger">${WPUtils.fmt(total)}</div><div class="card-meta">${_entries.length} transactions</div></div>
@@ -85,33 +95,43 @@ const WPExpenses = (() => {
       wrap.innerHTML = '<div style="padding:3rem;text-align:center;color:var(--clr-text-2)">No expenses in this date range. Click "Log Expense" to add one.</div>';
       return;
     }
-    // Sort by date desc
     const sorted = [..._entries].sort((a,b) => new Date(b.expense_date) - new Date(a.expense_date));
     wrap.innerHTML = `<table>
       <thead><tr>
         <th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Type</th><th></th>
       </tr></thead>
-      <tbody>${sorted.map(e => `<tr>
-        <td class="text-muted text-sm">${WPUtils.fmtDate(e.expense_date)}</td>
-        <td>
-          <strong>${e.description||'—'}</strong>
-          ${e.merchant?`<br><span class="text-xs text-muted">${e.merchant}</span>`:''}
-        </td>
-        <td><span class="badge badge-neutral">${e.category}</span></td>
-        <td class="td-mono fw-600 ${e.amount>500000?'text-danger':''}">${WPUtils.fmt(e.amount)}</td>
-        <td><span class="badge ${e.is_discretionary?'badge-gold':'badge-neutral'}">${e.is_discretionary?'Want':'Need'}</span>${e.is_recurring?'<span class="badge badge-info" style="margin-left:4px">Recurring</span>':''}</td>
-        <td style="white-space:nowrap">
-          <button class="btn btn-ghost btn-sm" onclick="WPExpenses._edit('${e.id}')">Edit</button>
-          <button class="btn btn-ghost btn-sm text-danger" onclick="WPExpenses._delete('${e.id}')">Delete</button>
-        </td>
-      </tr>`).join('')}</tbody>
+      <tbody>${sorted.map(e => {
+        const cur = WPUtils.getEntryCurrency(e.description);
+        const cleanDesc = (e.description || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
+        return `<tr>
+          <td class="text-muted text-sm">${WPUtils.fmtDate(e.expense_date)}</td>
+          <td>
+            <strong>${cleanDesc||'—'}</strong>
+            ${e.merchant?`<br><span class="text-xs text-muted">${e.merchant}</span>`:''}
+          </td>
+          <td><span class="badge badge-neutral">${e.category}</span></td>
+          <td class="td-mono fw-600 ${e.amount>500000?'text-danger':''}">${WPUtils.fmt(e.amount, { currency: cur })}</td>
+          <td><span class="badge ${e.is_discretionary?'badge-gold':'badge-neutral'}">${e.is_discretionary?'Want':'Need'}</span>${e.is_recurring?'<span class="badge badge-info" style="margin-left:4px">Recurring</span>':''}</td>
+          <td style="white-space:nowrap">
+            <button class="btn btn-ghost btn-sm" onclick="WPExpenses._edit('${e.id}')">Edit</button>
+            <button class="btn btn-ghost btn-sm text-danger" onclick="WPExpenses._delete('${e.id}')">Delete</button>
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
     </table>`;
   }
 
   function _renderBudgetRule() {
-    const total   = _entries.reduce((s,e) => s+(e.amount||0), 0);
+    const baseCurrency = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const total = _entries.reduce((s,e) => {
+      const cur = WPUtils.getEntryCurrency(e.description);
+      return s + WPUtils.convert(e.amount||0, cur, baseCurrency);
+    }, 0);
     if (!total) return;
-    const nonDisc = _entries.filter(e => !e.is_discretionary).reduce((s,e) => s+(e.amount||0), 0);
+    const nonDisc = _entries.filter(e => !e.is_discretionary).reduce((s,e) => {
+      const cur = WPUtils.getEntryCurrency(e.description);
+      return s + WPUtils.convert(e.amount||0, cur, baseCurrency);
+    }, 0);
     const disc    = total - nonDisc;
     const needsPct  = (nonDisc/total*100).toFixed(0);
     const wantsPct  = (disc/total*100).toFixed(0);
@@ -132,24 +152,50 @@ const WPExpenses = (() => {
 
   function _openForm(existing = null) {
     const e = existing || {};
-    const currencyCode = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const currencyCode = WPUtils.getEntryCurrency(e.description);
     const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
     const symbol = symbols[currencyCode] || '₦';
 
     const cats = [
-      'Housing','Transportation','Education','Communication','Interest & Debt',
-      'Insurance','Family Support','Shopping','Entertainment','Gifts & Charity',
-      'Taxes','Health','Food','Dining Out','Utilities-Power Generation',
-      'Utilities-Water','Utilities-Refuse','Security','Land Use Act/Tenement Rate',
+      'Communication',
+      'Dining Out',
+      'Education',
+      'Entertainment',
+      'Family Support',
+      'Food',
+      'Gifts & Charity',
+      'Health',
+      'Housing',
+      'Insurance',
+      'Interest & Debt',
+      'Land Use Act/Tenement Rate',
+      'Security',
+      'Shopping',
+      'Taxes',
+      'Transportation',
+      'Utilities-Power Generation',
+      'Utilities-Refuse',
+      'Utilities-Water',
       'Other'
     ];
     const body = `
       <form id="exp-form">
         <div class="form-row">
           <div class="form-group">
+            <label for="ef-currency">Currency</label>
+            <select class="select" id="ef-currency">
+              <option value="NGN" ${currencyCode==='NGN'?'selected':''}>NGN (₦)</option>
+              <option value="USD" ${currencyCode==='USD'?'selected':''}>USD ($)</option>
+              <option value="EUR" ${currencyCode==='EUR'?'selected':''}>EUR (€)</option>
+              <option value="GBP" ${currencyCode==='GBP'?'selected':''}>GBP (£)</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label for="ef-date">Date</label>
             <input class="input" type="date" id="ef-date" value="${e.expense_date||new Date().toISOString().slice(0,10)}" required>
           </div>
+        </div>
+        <div class="form-row">
           <div class="form-group">
             <label for="ef-amount">Amount (${symbol})</label>
             <div class="input-prefix-group">
@@ -157,18 +203,16 @@ const WPExpenses = (() => {
               <input class="input" type="text" inputmode="decimal" id="ef-amount" value="${e.amount?WPUtils.koboToNaira(e.amount):''}" placeholder="0" required>
             </div>
           </div>
-        </div>
-        <div class="form-row">
           <div class="form-group">
             <label for="ef-cat">Category</label>
             <select class="select" id="ef-cat">
               ${cats.map(c => `<option value="${c}" ${e.category===c?'selected':''}>${c}</option>`).join('')}
             </select>
           </div>
-          <div class="form-group">
-            <label for="ef-desc">Description</label>
-            <input class="input" id="ef-desc" value="${e.description||''}" placeholder="e.g. Monthly rent, Groceries">
-          </div>
+        </div>
+        <div class="form-group">
+          <label for="ef-desc">Description</label>
+          <input class="input" id="ef-desc" value="${e.description?e.description.replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim():''}" placeholder="e.g. Monthly rent, Groceries">
         </div>
         <div class="form-group">
           <label for="ef-merchant">Merchant / Payee (optional)</label>
@@ -190,18 +234,31 @@ const WPExpenses = (() => {
       confirmLabel: existing ? 'Update' : 'Add Expense',
       onConfirm: async () => { await _save(e.id); },
     });
-    WPUtils.maskNumberInput(document.getElementById('ef-amount'));
+    const amountInput = document.getElementById('ef-amount');
+    const currencySelect = document.getElementById('ef-currency');
+    WPUtils.maskNumberInput(amountInput);
+
+    currencySelect.addEventListener('change', (ev) => {
+      const newCur = ev.target.value;
+      const newSym = symbols[newCur] || '₦';
+      document.querySelector('#exp-form .input-prefix').textContent = newSym;
+      document.querySelector('label[for="ef-amount"]').textContent = `Amount (${newSym})`;
+    });
   }
 
   async function _save(existingId) {
     const amount = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ef-amount').value));
     if (!amount) { WPToast.warning('Please enter an amount.'); return; }
+    const descVal = document.getElementById('ef-desc').value.trim();
+    const currency = document.getElementById('ef-currency').value;
+    const finalDesc = WPUtils.setEntryCurrency(descVal, currency);
+
     const row = {
       user_id:          WPApp.state.user.id,
       expense_date:     document.getElementById('ef-date').value,
       amount,
       category:         document.getElementById('ef-cat').value,
-      description:      document.getElementById('ef-desc').value.trim(),
+      description:      finalDesc,
       merchant:         document.getElementById('ef-merchant').value.trim(),
       is_discretionary: document.getElementById('ef-disc').checked,
       is_recurring:     document.getElementById('ef-recur').checked,

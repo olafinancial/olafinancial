@@ -71,8 +71,15 @@ const WPDebt = (() => {
   }
 
   function _renderKPIs() {
-    const totalDebt = _liabilities.reduce((s,l) => s + (l.close_balance||l.open_balance||0), 0);
-    const totalPmt  = _liabilities.reduce((s,l) => s + (l.monthly_payment||0), 0);
+    const baseCurrency = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const totalDebt = _liabilities.reduce((s,l) => {
+      const cur = WPUtils.getEntryCurrency(l.notes);
+      return s + WPUtils.convert(l.close_balance||l.open_balance||0, cur, baseCurrency);
+    }, 0);
+    const totalPmt  = _liabilities.reduce((s,l) => {
+      const cur = WPUtils.getEntryCurrency(l.notes);
+      return s + WPUtils.convert(l.monthly_payment||0, cur, baseCurrency);
+    }, 0);
     const avgAPR    = _liabilities.length
       ? (_liabilities.reduce((s,l) => s + (l.apr||0), 0) / _liabilities.length).toFixed(1)
       : 0;
@@ -96,7 +103,9 @@ const WPDebt = (() => {
     }
     el.innerHTML = sorted.map((l, i) => {
       const bal = l.close_balance || l.open_balance || 0;
+      const cur = WPUtils.getEntryCurrency(l.notes);
       const priorityClass = i === 0 ? 'priority-1' : i === 1 ? 'priority-2' : 'priority-3';
+      const cleanNotes = (l.notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
       return `<div class="debt-card ${priorityClass}">
         <div class="debt-header">
           <div>
@@ -104,14 +113,15 @@ const WPDebt = (() => {
               ${i === 0 ? '&#x1F525; ' : i === 1 ? '&#x1F7E0; ' : '&#x1F7E2; '}
               ${l.liability_name}
               ${i === 0 ? '<span class="badge badge-danger" style="margin-left:8px">Avalanche Target #1</span>' : ''}
+              ${cleanNotes ? `<span class="text-xs text-muted" style="display:block;margin-top:4px">${cleanNotes}</span>` : ''}
             </div>
             <div class="text-xs text-muted">${l.lender_name||''}</div>
           </div>
           <div class="debt-apr">${l.apr||0}% APR</div>
         </div>
         <div class="debt-stats">
-          <div><div class="debt-stat-label">Balance</div><div class="debt-stat-value text-danger">${WPUtils.fmt(bal)}</div></div>
-          <div><div class="debt-stat-label">Monthly Payment</div><div class="debt-stat-value">${WPUtils.fmt(l.monthly_payment||0)}</div></div>
+          <div><div class="debt-stat-label">Balance</div><div class="debt-stat-value text-danger">${WPUtils.fmt(bal, { currency: cur })}</div></div>
+          <div><div class="debt-stat-label">Monthly Payment</div><div class="debt-stat-value">${WPUtils.fmt(l.monthly_payment||0, { currency: cur })}</div></div>
           <div><div class="debt-stat-label">Type</div><div class="debt-stat-value">${(l.liability_type||'').replace('_',' ')}</div></div>
         </div>
         <div style="margin-top:0.75rem;text-align:right">
@@ -124,15 +134,19 @@ const WPDebt = (() => {
 
   function _simulate() {
     if (!_liabilities.length) return;
+    const baseCurrency = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
     const extra = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('extra-payment')?.value));
     const strategy = document.getElementById('payoff-strategy').value;
 
-    const debts = _liabilities.map(l => ({
-      id: l.id, name: l.liability_name,
-      balanceKobo:      l.close_balance || l.open_balance || 0,
-      apr:              l.apr || 0,
-      monthlyPaymentKobo: l.monthly_payment || 0,
-    }));
+    const debts = _liabilities.map(l => {
+      const cur = WPUtils.getEntryCurrency(l.notes);
+      return {
+        id: l.id, name: l.liability_name,
+        balanceKobo:      WPUtils.convert(l.close_balance || l.open_balance || 0, cur, baseCurrency),
+        apr:              l.apr || 0,
+        monthlyPaymentKobo: WPUtils.convert(l.monthly_payment || 0, cur, baseCurrency),
+      };
+    });
     const results = WPUtils.calcDebtStrategy(debts, extra, strategy);
 
     const stratLabel = strategy === 'snowball' ? 'Snowball' : 'Avalanche';
@@ -171,11 +185,26 @@ const WPDebt = (() => {
 
   function _openForm(existing = null) {
     const e = existing || {};
+    const currencyCode = WPUtils.getEntryCurrency(e.notes);
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbol = symbols[currencyCode] || '₦';
+
     const body = `
       <form id="debt-form">
-        <div class="form-group">
-          <label for="df-name">Debt Name</label>
-          <input class="input" id="df-name" value="${e.liability_name||''}" placeholder="e.g. UBA Personal Loan" required>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="df-currency">Currency</label>
+            <select class="select" id="df-currency">
+              <option value="NGN" ${currencyCode==='NGN'?'selected':''}>NGN (₦)</option>
+              <option value="USD" ${currencyCode==='USD'?'selected':''}>USD ($)</option>
+              <option value="EUR" ${currencyCode==='EUR'?'selected':''}>EUR (€)</option>
+              <option value="GBP" ${currencyCode==='GBP'?'selected':''}>GBP (£)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="df-name">Debt Name</label>
+            <input class="input" id="df-name" value="${e.liability_name||''}" placeholder="e.g. UBA Personal Loan" required>
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -196,8 +225,8 @@ const WPDebt = (() => {
         </div>
         <div class="form-row">
           <div class="form-group" style="flex: 1;">
-            <label for="df-bal">Current Balance (&#x20A6;)</label>
-            <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
+            <label for="df-bal">Current Balance (${symbol})</label>
+            <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
               <input class="input" type="text" inputmode="decimal" id="df-bal" value="${e.close_balance?WPUtils.koboToNaira(e.close_balance):''}" placeholder="0" required>
             </div>
           </div>
@@ -214,8 +243,8 @@ const WPDebt = (() => {
             <input class="input" type="number" id="df-apr" min="0" max="200" step="0.1" value="${e.apr||''}" placeholder="e.g. 24">
           </div>
           <div class="form-group" style="flex: 1;">
-            <label for="df-mpmt">Monthly Minimum Payment (&#x20A6;)</label>
-            <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
+            <label for="df-mpmt">Monthly Minimum Payment (${symbol})</label>
+            <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
               <input class="input" type="text" inputmode="decimal" id="df-mpmt" value="${e.monthly_payment?WPUtils.koboToNaira(e.monthly_payment):''}" placeholder="0" ${e.apr?'readonly':''} required>
             </div>
           </div>
@@ -233,9 +262,18 @@ const WPDebt = (() => {
     const mpmtInput = document.getElementById('df-mpmt');
     const balInput = document.getElementById('df-bal');
     const typeSelect = document.getElementById('df-type');
+    const currencySelect = document.getElementById('df-currency');
 
     WPUtils.maskNumberInput(balInput);
     WPUtils.maskNumberInput(mpmtInput);
+
+    currencySelect.addEventListener('change', (ev) => {
+      const newCur = ev.target.value;
+      const newSym = symbols[newCur] || '₦';
+      document.querySelectorAll('#debt-form .input-prefix').forEach(span => span.textContent = newSym);
+      document.querySelector('label[for="df-bal"]').textContent = `Current Balance (${newSym})`;
+      document.querySelector('label[for="df-mpmt"]').textContent = `Monthly Minimum Payment (${newSym})`;
+    });
 
     function updateCalculatedPayment() {
       if (noAprCheck.checked) return;
@@ -280,6 +318,9 @@ const WPDebt = (() => {
   async function _save(existingId) {
     const isManual = document.getElementById('df-no-apr').checked;
     const rawBal = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('df-bal').value));
+    const currency = document.getElementById('df-currency').value;
+    const finalNotes = WPUtils.setEntryCurrency('', currency);
+
     const row = {
       user_id:          WPApp.state.user.id,
       liability_name:   document.getElementById('df-name').value.trim(),
@@ -291,6 +332,7 @@ const WPDebt = (() => {
       monthly_payment:  WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('df-mpmt').value)),
       is_interest_bearing: true,
       period_month:     PERIOD,
+      notes:            finalNotes,
     };
     if (!row.liability_name || !row.close_balance) { WPToast.warning('Name and balance are required.'); return; }
     try {
