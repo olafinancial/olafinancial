@@ -54,7 +54,11 @@ const WPAuth = (() => {
   // ── SIGN OUT ──────────────────────────────────────────────
   async function signOut() {
     stopIdleWatcher();
-    await WPDb.signOut();
+    try {
+      await WPDb.signOut();
+    } catch (e) {
+      console.warn('Supabase signOut error, signing out locally:', e);
+    }
     WPApp.state.user    = null;
     WPApp.state.profile = null;
     WPRouter.navigate('/login');
