@@ -176,8 +176,21 @@ const WPIncome = (() => {
   }
 
   function _runTaxEstimator() {
-    const gross  = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('te-gross').value)||0);
-    const rent   = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('te-rent').value)||0);
+    const grossEl = document.getElementById('te-gross');
+    const rentEl = document.getElementById('te-rent');
+    if (!grossEl || !rentEl) return;
+
+    const pageCurrency = localStorage.getItem('wp_page_currency_income') || WPApp.state.profile?.currency || 'NGN';
+    const grossVal = WPUtils.cleanNum(grossEl.value);
+    const rentVal = WPUtils.cleanNum(rentEl.value);
+
+    if (isNaN(grossVal) || grossVal < 0) {
+      WPToast.warning("Please enter a valid positive gross emolument.");
+      return;
+    }
+
+    const gross  = WPUtils.nairaToKobo(grossVal || 0);
+    const rent   = WPUtils.nairaToKobo(rentVal || 0);
     const pension = WPUtils.calcPensionEmployee(gross);
     const tax     = WPUtils.calcPIT(gross, pension, rent);
     const net     = gross - tax - pension;
@@ -186,13 +199,13 @@ const WPIncome = (() => {
 
     document.getElementById('te-result').innerHTML = `
       <div class="grid-3" style="gap:1rem">
-        <div class="card"><div class="card-title">Annual PAYE Tax</div><div class="card-value danger">${WPUtils.fmt(tax)}</div><div class="card-meta">Effective rate: ${WPUtils.fmtPct(effective)}</div></div>
-        <div class="card"><div class="card-title">Pension Contribution</div><div class="card-value gold">${WPUtils.fmt(pension)}</div><div class="card-meta">8% of emoluments (PENCOM)</div></div>
-        <div class="card"><div class="card-title">Annual Net Income</div><div class="card-value accent">${WPUtils.fmt(net)}</div><div class="card-meta">Monthly: ${WPUtils.fmt(Math.round(net/12))}</div></div>
+        <div class="card"><div class="card-title">Annual PAYE Tax</div><div class="card-value danger">${WPUtils.fmt(tax, { currency: pageCurrency })}</div><div class="card-meta">Effective rate: ${WPUtils.fmtPct(effective)}</div></div>
+        <div class="card"><div class="card-title">Pension Contribution</div><div class="card-value gold">${WPUtils.fmt(pension, { currency: pageCurrency })}</div><div class="card-meta">8% of emoluments (PENCOM)</div></div>
+        <div class="card"><div class="card-title">Annual Net Income</div><div class="card-value accent">${WPUtils.fmt(net, { currency: pageCurrency })}</div><div class="card-meta">Monthly: ${WPUtils.fmt(Math.round(net/12), { currency: pageCurrency })}</div></div>
       </div>
       <div class="alert alert-info" style="margin-top:1rem">
         <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-        <span>Your marginal tax bracket is <strong>${bracket.label}</strong> under the Nigeria Tax Act 2025.
+        <span>Your marginal tax bracket is <strong>${bracket.label || '—'}</strong> under the Nigeria Tax Act 2025.
         Rent relief applied: up to ₦500,000 (20% of annual rent).</span>
       </div>`;
   }
