@@ -44,6 +44,7 @@ const WPIncome = (() => {
           <div class="table-wrap" id="income-table-wrap"></div>
         </div>
         <!-- Tax Estimator -->
+        ${(WPApp.state.profile?.state && WPApp.state.profile?.state !== 'non_resident') ? `
         <div class="card" style="margin-top:1.5rem">
           <div class="section-title" style="margin-bottom:1rem">&#x1F4CA; Nigeria Tax Act 2025 — Tax Estimator</div>
           <div class="form-row">
@@ -64,7 +65,13 @@ const WPIncome = (() => {
           </div>
           <button class="btn btn-secondary" id="te-calc-btn">Calculate Tax</button>
           <div id="te-result" style="margin-top:1rem"></div>
-        </div>
+        </div>` : `
+        <div class="card" style="margin-top:1.5rem">
+          <div class="section-title" style="margin-bottom:1rem">&#x1F4CA; Nigeria Tax Act 2025 — Tax Estimator</div>
+          <div style="padding:1.5rem;background:rgba(255,255,255,0.01);border-radius:8px;border:1px solid var(--clr-border);line-height:1.6;font-size:0.92rem;color:var(--clr-text-2)">
+            ℹ️ <strong>Disclaimer</strong>: PAYE Tax and tax estimator features only apply to Nigerian Residents. Since your residency is configured as Non-Resident, tax calculations are not applicable.
+          </div>
+        </div>`}
       </div>`;
 
     document.getElementById('add-income-btn').addEventListener('click', () => _openForm());
@@ -74,7 +81,13 @@ const WPIncome = (() => {
       document.querySelectorAll('#income-type-filter .tab-btn').forEach(b => b.classList.toggle('active', b === btn));
       _renderTable(btn.dataset.type);
     });
-    document.getElementById('te-calc-btn').addEventListener('click', _runTaxEstimator);
+    const calcBtn = document.getElementById('te-calc-btn');
+    if (calcBtn) calcBtn.addEventListener('click', _runTaxEstimator);
+
+    const teGross = document.getElementById('te-gross');
+    const teRent = document.getElementById('te-rent');
+    if (teGross) WPUtils.maskNumberInput(teGross);
+    if (teRent) WPUtils.maskNumberInput(teRent);
 
     const curSelect = document.getElementById('income-page-currency');
     if (curSelect) {
@@ -85,9 +98,6 @@ const WPIncome = (() => {
         _renderTable(document.querySelector('#income-type-filter .tab-btn.active')?.dataset.type || 'all');
       });
     }
-
-    WPUtils.maskNumberInput(document.getElementById('te-gross'));
-    WPUtils.maskNumberInput(document.getElementById('te-rent'));
 
     await _load();
   }
@@ -103,14 +113,16 @@ const WPIncome = (() => {
 
   function _renderKPIs() {
     const baseCurrency = localStorage.getItem('wp_page_currency_income') || WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const isResident = WPApp.state.profile?.state && WPApp.state.profile?.state !== 'non_resident';
+
     const totalGross = _entries.reduce((s, e) => {
       const cur = WPUtils.getEntryCurrency(e.notes);
       return s + WPUtils.convert(e.gross_amount||0, cur, baseCurrency);
     }, 0);
-    const totalTax   = _entries.reduce((s, e) => {
+    const totalTax   = isResident ? _entries.reduce((s, e) => {
       const cur = WPUtils.getEntryCurrency(e.notes);
       return s + WPUtils.convert(e.paye_tax||0, cur, baseCurrency);
-    }, 0);
+    }, 0) : 0;
     const totalPen   = _entries.reduce((s, e) => {
       const cur = WPUtils.getEntryCurrency(e.notes);
       return s + WPUtils.convert(e.pension_contrib||0, cur, baseCurrency);
@@ -125,10 +137,13 @@ const WPIncome = (() => {
       return s + WPUtils.convert(e.gross_amount||0, cur, baseCurrency);
     }, 0);
 
+    const taxFmt = isResident ? WPUtils.fmt(totalTax, { currency: baseCurrency }) : 'N/A (Non-Resident)';
+    const taxMeta = isResident ? `Effective rate: ${WPUtils.fmtPct(totalTax/Math.max(1,totalGross))}` : 'PAYE applies to Residents only';
+
     document.getElementById('income-kpis').innerHTML = `
       <div class="card"><div class="card-title">Total Gross Income</div><div class="card-value">${WPUtils.fmt(totalGross, { currency: baseCurrency })}</div><div class="card-meta">${_entries.length} source${_entries.length!==1?'s':''}</div></div>
       <div class="card"><div class="card-title">Total Net Income</div><div class="card-value accent">${WPUtils.fmt(totalNet, { currency: baseCurrency })}</div><div class="card-meta">After all deductions</div></div>
-      <div class="card"><div class="card-title">PAYE Tax</div><div class="card-value danger">${WPUtils.fmt(totalTax, { currency: baseCurrency })}</div><div class="card-meta">Effective rate: ${WPUtils.fmtPct(totalTax/Math.max(1,totalGross))}</div></div>
+      <div class="card"><div class="card-title">PAYE Tax</div><div class="card-value danger">${taxFmt}</div><div class="card-meta">${taxMeta}</div></div>
       <div class="card"><div class="card-title">Pension (8%)</div><div class="card-value gold">${WPUtils.fmt(totalPen, { currency: baseCurrency })}</div><div class="card-meta">PENCOM contributory scheme</div></div>
       <div class="card"><div class="card-title">Passive Income</div><div class="card-value gold">${WPUtils.fmt(passive, { currency: baseCurrency })}</div><div class="card-meta">${WPUtils.fmtPct(passive/Math.max(1,totalGross))} of total income</div></div>`;
   }

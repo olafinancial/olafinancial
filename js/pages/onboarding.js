@@ -85,7 +85,8 @@ const WPOnboarding = (() => {
           <option value="EN" ${_data.state==='EN'?'selected':''}>Enugu</option>
           <option value="AB" ${_data.state==='AB'?'selected':''}>Abia</option>
           <option value="ED" ${_data.state==='ED'?'selected':''}>Edo</option>
-          <option value="other" ${_data.state==='other'?'selected':''}>Other State</option>
+          <option value="other" ${_data.state==='other'?'selected':''}>Other State (Nigeria)</option>
+          <option value="non_resident" ${_data.state==='non_resident'?'selected':''}>Non-Resident (Outside Nigeria)</option>
         </select>
       </div>
       <div class="form-group">
