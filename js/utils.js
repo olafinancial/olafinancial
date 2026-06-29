@@ -19,7 +19,7 @@ const WPUtils = (() => {
 
   function fmt(kobo, opts = {}) {
     const amount = kobo / 100;
-    const currencyCode = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const currencyCode = opts.currency || WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
     const symbol = CURRENCY_SYMBOLS[currencyCode] || '₦';
     const locale = currencyCode === 'NGN' ? 'en-NG' : 'en-US';
     

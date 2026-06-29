@@ -11,7 +11,13 @@ const WPDashboard = (() => {
           <h1 class="page-title" id="dash-greeting">Loading…</h1>
           <p class="page-subtitle" id="dash-period"></p>
         </div>
-        <div class="flex gap-4">
+        <div class="flex gap-4" style="align-items:center">
+          <select id="dash-page-currency" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
+            <option value="NGN">NGN (₦)</option>
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="GBP">GBP (£)</option>
+          </select>
           <button class="btn btn-secondary" id="dash-refresh">&#x21BB; Refresh</button>
           <button class="btn btn-primary" id="dash-snapshot">&#x1F4F8; Save Snapshot</button>
         </div>
@@ -66,6 +72,16 @@ const WPDashboard = (() => {
     _setPeriod();
     document.getElementById('dash-refresh')?.addEventListener('click', () => _load());
     document.getElementById('dash-snapshot')?.addEventListener('click', _saveSnapshot);
+
+    const curSelect = document.getElementById('dash-page-currency');
+    if (curSelect) {
+      curSelect.value = localStorage.getItem('wp_page_currency_dashboard') || WPApp.state.profile?.currency || 'NGN';
+      curSelect.addEventListener('change', (e) => {
+        localStorage.setItem('wp_page_currency_dashboard', e.target.value);
+        _load();
+      });
+    }
+
     await _load();
   }
 
@@ -102,18 +118,31 @@ const WPDashboard = (() => {
   }
 
   function _renderKPIs(s) {
-    const nwColor = s.netWorth >= 0 ? 'accent' : 'danger';
+    const pageCurrency = localStorage.getItem('wp_page_currency_dashboard') || WPApp.state.profile?.currency || 'NGN';
+    const baseCurrency = WPApp.state.profile?.currency || 'NGN';
+
+    const netWorth = WPUtils.convert(s.netWorth, baseCurrency, pageCurrency);
+    const totalAssets = WPUtils.convert(s.totalAssets, baseCurrency, pageCurrency);
+    const totalLiabilities = WPUtils.convert(s.totalLiabilities, baseCurrency, pageCurrency);
+    const netCashFlow = WPUtils.convert(s.cf.netCashFlow, baseCurrency, pageCurrency);
+    const netIncome = WPUtils.convert(s.cf.netIncome, baseCurrency, pageCurrency);
+    const passiveKobo = WPUtils.convert(s.passiveKPIs.passiveKobo, baseCurrency, pageCurrency);
+    const efBalance = WPUtils.convert(s.efBalance, baseCurrency, pageCurrency);
+    const efTarget = WPUtils.convert(s.efTarget, baseCurrency, pageCurrency);
+
+    const nwColor = netWorth >= 0 ? 'accent' : 'danger';
     const srPct   = s.cf.netCashFlow / Math.max(1, s.cf.netIncome);
+
     document.getElementById('dash-kpis').innerHTML = `
       <div class="card animate-in">
         <div class="card-title">Net Worth</div>
-        <div class="card-value ${nwColor}">${WPUtils.fmt(s.netWorth, {compact:true})}</div>
-        <div class="card-meta">Assets ${WPUtils.fmt(s.totalAssets,{compact:true})} &minus; Liabilities ${WPUtils.fmt(s.totalLiabilities,{compact:true})}</div>
+        <div class="card-value ${nwColor}">${WPUtils.fmt(netWorth, {compact:true, currency: pageCurrency})}</div>
+        <div class="card-meta">Assets ${WPUtils.fmt(totalAssets,{compact:true, currency: pageCurrency})} &minus; Liabilities ${WPUtils.fmt(totalLiabilities,{compact:true, currency: pageCurrency})}</div>
       </div>
       <div class="card animate-in" style="animation-delay:0.05s">
         <div class="card-title">Net Cash Flow</div>
-        <div class="card-value ${s.cf.netCashFlow>=0?'accent':'danger'}">${WPUtils.fmt(s.cf.netCashFlow,{compact:true,signed:true})}</div>
-        <div class="card-meta">Net income ${WPUtils.fmt(s.cf.netIncome,{compact:true})}</div>
+        <div class="card-value ${netCashFlow>=0?'accent':'danger'}">${WPUtils.fmt(netCashFlow,{compact:true,signed:true, currency: pageCurrency})}</div>
+        <div class="card-meta">Net income ${WPUtils.fmt(netIncome,{compact:true, currency: pageCurrency})}</div>
       </div>
       <div class="card animate-in" style="animation-delay:0.1s">
         <div class="card-title">Savings Rate</div>
@@ -122,13 +151,13 @@ const WPDashboard = (() => {
       </div>
       <div class="card animate-in" style="animation-delay:0.15s">
         <div class="card-title">Passive Income</div>
-        <div class="card-value gold">${WPUtils.fmt(s.passiveKPIs.passiveKobo,{compact:true})}</div>
+        <div class="card-value gold">${WPUtils.fmt(passiveKobo,{compact:true, currency: pageCurrency})}</div>
         <div class="card-meta">${WPUtils.fmtPct(s.passiveKPIs.pctOfExpenses/100)} of expenses covered</div>
       </div>
       <div class="card animate-in" style="animation-delay:0.2s">
         <div class="card-title">Emergency Fund</div>
-        <div class="card-value ${s.efStatus.status==='on_track'?'accent':s.efStatus.status==='critical'?'danger':'gold'}">${WPUtils.fmt(s.efBalance,{compact:true})}</div>
-        <div class="card-meta">${s.efStatus.label||'—'} · Target ${WPUtils.fmt(s.efTarget,{compact:true})}</div>
+        <div class="card-value ${s.efStatus.status==='on_track'?'accent':s.efStatus.status==='critical'?'danger':'gold'}">${WPUtils.fmt(efBalance,{compact:true, currency: pageCurrency})}</div>
+        <div class="card-meta">${s.efStatus.label||'—'} · Target ${WPUtils.fmt(efTarget,{compact:true, currency: pageCurrency})}</div>
       </div>`;
   }
 

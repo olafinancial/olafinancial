@@ -601,10 +601,11 @@ const WPEstatePlanner = (() => {
   }
 
   function _generateReport(force = false) {
-    if (!force) _collectStepData();
+    try {
+      _collectStepData();
 
-    const scores = _calculateRiskScore();
-    const total = scores.total;
+      const scores = _calculateRiskScore();
+      const total = scores.total;
 
     let riskTitle = "Adequate (Low Risk)";
     let riskClass = "text-accent";
@@ -730,6 +731,10 @@ const WPEstatePlanner = (() => {
       document.getElementById('estate-report-view').style.display = 'none';
       document.getElementById('estate-layout-grid').style.display = '';
     });
+    } catch (e) {
+      console.error("Report Generation Error: ", e);
+      WPToast.error("Failed to generate report. Please verify all form inputs.");
+    }
   }
 
   function destroy() {}

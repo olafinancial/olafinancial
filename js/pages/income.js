@@ -14,7 +14,15 @@ const WPIncome = (() => {
           <h1 class="page-title">Income</h1>
           <p class="page-subtitle">Track all income sources for ${WPUtils.periodLabel(PERIOD)}</p>
         </div>
-        <button class="btn btn-primary" id="add-income-btn">&#x2795; Add Income Source</button>
+        <div style="display:flex;gap:0.75rem;align-items:center">
+          <select id="income-page-currency" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
+            <option value="NGN">NGN (₦)</option>
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="GBP">GBP (£)</option>
+          </select>
+          <button class="btn btn-primary" id="add-income-btn">&#x2795; Add Income Source</button>
+        </div>
       </div>
       <div class="page-body">
         <div class="disclaimer mb-6">${APP_CONFIG.disclaimer}</div>
@@ -68,6 +76,16 @@ const WPIncome = (() => {
     });
     document.getElementById('te-calc-btn').addEventListener('click', _runTaxEstimator);
 
+    const curSelect = document.getElementById('income-page-currency');
+    if (curSelect) {
+      curSelect.value = localStorage.getItem('wp_page_currency_income') || WPApp.state.profile?.currency || 'NGN';
+      curSelect.addEventListener('change', (e) => {
+        localStorage.setItem('wp_page_currency_income', e.target.value);
+        _renderKPIs();
+        _renderTable(document.querySelector('#income-type-filter .tab-btn.active')?.dataset.type || 'all');
+      });
+    }
+
     WPUtils.maskNumberInput(document.getElementById('te-gross'));
     WPUtils.maskNumberInput(document.getElementById('te-rent'));
 
@@ -84,7 +102,7 @@ const WPIncome = (() => {
   }
 
   function _renderKPIs() {
-    const baseCurrency = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const baseCurrency = localStorage.getItem('wp_page_currency_income') || WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
     const totalGross = _entries.reduce((s, e) => {
       const cur = WPUtils.getEntryCurrency(e.notes);
       return s + WPUtils.convert(e.gross_amount||0, cur, baseCurrency);
@@ -108,14 +126,15 @@ const WPIncome = (() => {
     }, 0);
 
     document.getElementById('income-kpis').innerHTML = `
-      <div class="card"><div class="card-title">Total Gross Income</div><div class="card-value">${WPUtils.fmt(totalGross)}</div><div class="card-meta">${_entries.length} source${_entries.length!==1?'s':''}</div></div>
-      <div class="card"><div class="card-title">Total Net Income</div><div class="card-value accent">${WPUtils.fmt(totalNet)}</div><div class="card-meta">After all deductions</div></div>
-      <div class="card"><div class="card-title">PAYE Tax</div><div class="card-value danger">${WPUtils.fmt(totalTax)}</div><div class="card-meta">Effective rate: ${WPUtils.fmtPct(totalTax/Math.max(1,totalGross))}</div></div>
-      <div class="card"><div class="card-title">Pension (8%)</div><div class="card-value gold">${WPUtils.fmt(totalPen)}</div><div class="card-meta">PENCOM contributory scheme</div></div>
-      <div class="card"><div class="card-title">Passive Income</div><div class="card-value gold">${WPUtils.fmt(passive)}</div><div class="card-meta">${WPUtils.fmtPct(passive/Math.max(1,totalGross))} of total income</div></div>`;
+      <div class="card"><div class="card-title">Total Gross Income</div><div class="card-value">${WPUtils.fmt(totalGross, { currency: baseCurrency })}</div><div class="card-meta">${_entries.length} source${_entries.length!==1?'s':''}</div></div>
+      <div class="card"><div class="card-title">Total Net Income</div><div class="card-value accent">${WPUtils.fmt(totalNet, { currency: baseCurrency })}</div><div class="card-meta">After all deductions</div></div>
+      <div class="card"><div class="card-title">PAYE Tax</div><div class="card-value danger">${WPUtils.fmt(totalTax, { currency: baseCurrency })}</div><div class="card-meta">Effective rate: ${WPUtils.fmtPct(totalTax/Math.max(1,totalGross))}</div></div>
+      <div class="card"><div class="card-title">Pension (8%)</div><div class="card-value gold">${WPUtils.fmt(totalPen, { currency: baseCurrency })}</div><div class="card-meta">PENCOM contributory scheme</div></div>
+      <div class="card"><div class="card-title">Passive Income</div><div class="card-value gold">${WPUtils.fmt(passive, { currency: baseCurrency })}</div><div class="card-meta">${WPUtils.fmtPct(passive/Math.max(1,totalGross))} of total income</div></div>`;
   }
 
   function _renderTable(type = 'all') {
+    const pageCurrency = localStorage.getItem('wp_page_currency_income') || WPApp.state.profile?.currency || 'NGN';
     const filtered = type === 'all' ? _entries : _entries.filter(e => e.income_type === type);
     const wrap = document.getElementById('income-table-wrap');
     if (!filtered.length) {
@@ -133,13 +152,19 @@ const WPIncome = (() => {
         const typeBadge = {active:'badge-info',passive:'badge-gold',investment:'badge-accent'}[e.income_type]||'badge-neutral';
         const cur = WPUtils.getEntryCurrency(e.notes);
         const cleanNotes = (e.notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
+
+        const convertedGross = WPUtils.convert(e.gross_amount||0, cur, pageCurrency);
+        const convertedTax   = WPUtils.convert(e.paye_tax||0, cur, pageCurrency);
+        const convertedPension = WPUtils.convert(e.pension_contrib||0, cur, pageCurrency);
+        const convertedNet   = WPUtils.convert(net, cur, pageCurrency);
+
         return `<tr>
           <td><strong>${e.source_name}</strong>${cleanNotes?`<br><span class="text-xs text-muted">${cleanNotes}</span>`:''}</td>
           <td><span class="badge ${typeBadge}">${e.income_type}</span></td>
-          <td class="td-mono">${WPUtils.fmt(e.gross_amount||0, { currency: cur })}</td>
-          <td class="td-mono text-danger">${WPUtils.fmt(e.paye_tax||0, { currency: cur })}</td>
-          <td class="td-mono text-gold">${WPUtils.fmt(e.pension_contrib||0, { currency: cur })}</td>
-          <td class="td-mono text-accent fw-700">${WPUtils.fmt(net, { currency: cur })}</td>
+          <td class="td-mono">${WPUtils.fmt(convertedGross, { currency: pageCurrency })}</td>
+          <td class="td-mono text-danger">${WPUtils.fmt(convertedTax, { currency: pageCurrency })}</td>
+          <td class="td-mono text-gold">${WPUtils.fmt(convertedPension, { currency: pageCurrency })}</td>
+          <td class="td-mono text-accent fw-700">${WPUtils.fmt(convertedNet, { currency: pageCurrency })}</td>
           <td><span class="badge badge-neutral">${e.frequency}</span></td>
           <td style="white-space:nowrap">
             <button class="btn btn-ghost btn-sm" onclick="WPIncome._edit('${e.id}')">Edit</button>

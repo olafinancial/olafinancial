@@ -15,7 +15,13 @@ const WPBalanceSheet = (() => {
           <h1 class="page-title">Balance Sheet</h1>
           <p class="page-subtitle">Assets, liabilities, and net worth for ${WPUtils.periodLabel(PERIOD)}</p>
         </div>
-        <div class="flex gap-4">
+        <div class="flex gap-4" style="align-items:center">
+          <select id="bs-page-currency" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
+            <option value="NGN">NGN (₦)</option>
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="GBP">GBP (£)</option>
+          </select>
           <button class="btn btn-secondary" id="add-asset-btn">&#x2795; Add Asset</button>
           <button class="btn btn-primary"   id="add-liab-btn">&#x2795; Add Liability</button>
         </div>
@@ -51,7 +57,17 @@ const WPBalanceSheet = (() => {
       </div>`;
 
     document.getElementById('add-asset-btn').addEventListener('click', () => _openAssetForm());
-    document.getElementById('add-liab-btn').addEventListener('click',  () => _openLiabForm());
+    document.getElementById('add-liab-btn').addEventListener('click', () => _openLiabForm());
+
+    const curSelect = document.getElementById('bs-page-currency');
+    if (curSelect) {
+      curSelect.value = localStorage.getItem('wp_page_currency_balance_sheet') || WPApp.state.profile?.currency || 'NGN';
+      curSelect.addEventListener('change', (e) => {
+        localStorage.setItem('wp_page_currency_balance_sheet', e.target.value);
+        _render();
+      });
+    }
+
     await _load();
   }
 
@@ -67,31 +83,33 @@ const WPBalanceSheet = (() => {
   }
 
   function _render() {
-    const baseCurrency = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const pageCurrency = localStorage.getItem('wp_page_currency_balance_sheet') || WPApp.state.profile?.currency || 'NGN';
+    const baseCurrency = WPApp.state.profile?.currency || 'NGN';
+
     const totalAssets = _assets.reduce((s,a) => {
       const cur = WPUtils.getEntryCurrency(a.notes);
-      return s + WPUtils.convert(a.close_balance || a.open_balance || 0, cur, baseCurrency);
+      return s + WPUtils.convert(a.close_balance || a.open_balance || 0, cur, pageCurrency);
     }, 0);
     const totalLiab   = _liabilities.reduce((s,l) => {
       const cur = WPUtils.getEntryCurrency(l.notes);
-      return s + WPUtils.convert(l.close_balance || l.open_balance || 0, cur, baseCurrency);
+      return s + WPUtils.convert(l.close_balance || l.open_balance || 0, cur, pageCurrency);
     }, 0);
     const netWorth    = totalAssets - totalLiab;
     const nwColor     = netWorth >= 0 ? 'accent' : 'danger';
     const dta         = WPUtils.debtToAssetRatio(totalLiab, totalAssets);
     const coverage    = WPUtils.coverageRatio(totalAssets, totalLiab);
 
-    document.getElementById('nw-value').textContent = WPUtils.fmt(netWorth);
+    document.getElementById('nw-value').textContent = WPUtils.fmt(netWorth, { currency: pageCurrency });
     document.getElementById('nw-value').className   = `card-value ${nwColor}`;
     document.getElementById('nw-meta').textContent  =
-      `Assets ${WPUtils.fmt(totalAssets, {compact:true})} − Liabilities ${WPUtils.fmt(totalLiab, {compact:true})}`;
+      `Assets ${WPUtils.fmt(totalAssets, {compact:true, currency: pageCurrency})} − Liabilities ${WPUtils.fmt(totalLiab, {compact:true, currency: pageCurrency})}`;
 
-    document.getElementById('assets-total').textContent = WPUtils.fmt(totalAssets, {compact:true});
-    document.getElementById('liab-total').textContent   = WPUtils.fmt(totalLiab, {compact:true});
+    document.getElementById('assets-total').textContent = WPUtils.fmt(totalAssets, {compact:true, currency: pageCurrency});
+    document.getElementById('liab-total').textContent   = WPUtils.fmt(totalLiab, {compact:true, currency: pageCurrency});
 
     document.getElementById('bs-kpis').innerHTML = `
-      <div class="card"><div class="card-title">Total Assets</div><div class="card-value accent">${WPUtils.fmt(totalAssets,{compact:true})}</div><div class="card-meta">${_assets.length} asset${_assets.length!==1?'s':''}</div></div>
-      <div class="card"><div class="card-title">Total Liabilities</div><div class="card-value danger">${WPUtils.fmt(totalLiab,{compact:true})}</div><div class="card-meta">${_liabilities.length} liabilit${_liabilities.length!==1?'ies':'y'}</div></div>
+      <div class="card"><div class="card-title">Total Assets</div><div class="card-value accent">${WPUtils.fmt(totalAssets,{compact:true, currency: pageCurrency})}</div><div class="card-meta">${_assets.length} asset${_assets.length!==1?'s':''}</div></div>
+      <div class="card"><div class="card-title">Total Liabilities</div><div class="card-value danger">${WPUtils.fmt(totalLiab,{compact:true, currency: pageCurrency})}</div><div class="card-meta">${_liabilities.length} liabilit${_liabilities.length!==1?'ies':'y'}</div></div>
       <div class="card"><div class="card-title">Debt-to-Asset Ratio</div><div class="card-value ${dta>50?'danger':'accent'}">${dta.toFixed(1)}%</div><div class="card-meta">Target: below 50%</div></div>
       <div class="card"><div class="card-title">Coverage Ratio</div><div class="card-value ${coverage<1?'danger':'accent'}">${isFinite(coverage)?coverage.toFixed(2)+'x':'∞'}</div><div class="card-meta">Assets / Liabilities</div></div>`;
 
@@ -123,19 +141,20 @@ const WPBalanceSheet = (() => {
   }
 
   function _renderAssetsTable(total) {
+    const pageCurrency = localStorage.getItem('wp_page_currency_balance_sheet') || WPApp.state.profile?.currency || 'NGN';
     const wrap = document.getElementById('assets-table');
     if (!_assets.length) {
       wrap.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--clr-text-2)">No assets recorded. Click "Add Asset" to begin.</div>';
       return;
     }
-    const baseCurrency = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
     const typeIcon = { savings:'&#x1F3E6;', fixed_deposit:'&#x1F512;', equity:'&#x1F4C8;', property:'&#x1F3E0;', vehicle:'&#x1F697;', pension:'&#x1F334;', not_applicable:'&#x1F4BC;', other:'&#x1F4B0;' };
     wrap.innerHTML = `<table>
       <thead><tr><th>Asset</th><th>Type</th><th>Institution</th><th>Opening</th><th>Closing</th><th>Rate</th><th>% of Total</th><th></th></tr></thead>
       <tbody>${_assets.map(a => {
         const bal = a.close_balance || a.open_balance || 0;
         const cur = WPUtils.getEntryCurrency(a.notes);
-        const balBase = WPUtils.convert(bal, cur, baseCurrency);
+        const balPage = WPUtils.convert(bal, cur, pageCurrency);
+        const openBalPage = WPUtils.convert(a.open_balance||0, cur, pageCurrency);
         const isEFSource = a.notes && a.notes.includes('[Emergency Fund]');
         const cleanNotes = (a.notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').replace(/\[Emergency Fund\]/g, '').trim();
         return `<tr>
@@ -145,15 +164,15 @@ const WPBalanceSheet = (() => {
           </td>
           <td><span class="badge badge-neutral">${(a.asset_type||'').replace('_',' ')}</span></td>
           <td class="text-muted text-sm">${a.institution_name||'—'}</td>
-          <td class="td-mono">${WPUtils.fmt(a.open_balance||0, { currency: cur })}</td>
-          <td class="td-mono fw-600">${WPUtils.fmt(bal, { currency: cur })}</td>
+          <td class="td-mono">${WPUtils.fmt(openBalPage, { currency: pageCurrency })}</td>
+          <td class="td-mono fw-600">${WPUtils.fmt(balPage, { currency: pageCurrency })}</td>
           <td class="td-mono text-accent">${a.interest_rate?a.interest_rate+'%':'—'}</td>
           <td>
             <div class="flex items-center gap-4">
               <div class="progress-bar" style="height:6px;width:60px">
-                <div class="progress-fill" style="width:${Math.min(100,(balBase/Math.max(1,total)*100)).toFixed(0)}%"></div>
+                <div class="progress-fill" style="width:${Math.min(100,(balPage/Math.max(1,total)*100)).toFixed(0)}%"></div>
               </div>
-              <span class="text-xs text-muted">${(balBase/Math.max(1,total)*100).toFixed(1)}%</span>
+              <span class="text-xs text-muted">${(balPage/Math.max(1,total)*100).toFixed(1)}%</span>
             </div>
           </td>
           <td style="white-space:nowrap">
@@ -166,6 +185,7 @@ const WPBalanceSheet = (() => {
   }
 
   function _renderLiabTable(total) {
+    const pageCurrency = localStorage.getItem('wp_page_currency_balance_sheet') || WPApp.state.profile?.currency || 'NGN';
     const wrap = document.getElementById('liab-table');
     if (!_liabilities.length) {
       wrap.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--clr-text-2)">No liabilities. Great — or click "Add Liability" to record one.</div>';
@@ -176,15 +196,18 @@ const WPBalanceSheet = (() => {
       <tbody>${_liabilities.map(l => {
         const bal = l.close_balance || l.open_balance || 0;
         const cur = WPUtils.getEntryCurrency(l.notes);
+        const balPage = WPUtils.convert(bal, cur, pageCurrency);
+        const openBalPage = WPUtils.convert(l.open_balance||0, cur, pageCurrency);
+        const pmtPage = WPUtils.convert(l.monthly_payment||0, cur, pageCurrency);
         const cleanNotes = (l.notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
         return `<tr>
           <td><strong>${l.liability_name}</strong>${cleanNotes?`<br><span class="text-xs text-muted">${cleanNotes}</span>`:''}</td>
           <td><span class="badge badge-danger">${(l.liability_type||'').replace('_',' ')}</span></td>
           <td class="text-muted text-sm">${l.lender_name||'—'}</td>
-          <td class="td-mono">${WPUtils.fmt(l.open_balance||0, { currency: cur })}</td>
-          <td class="td-mono fw-600 text-danger">${WPUtils.fmt(bal, { currency: cur })}</td>
+          <td class="td-mono">${WPUtils.fmt(openBalPage, { currency: pageCurrency })}</td>
+          <td class="td-mono fw-600 text-danger">${WPUtils.fmt(balPage, { currency: pageCurrency })}</td>
           <td class="td-mono ${l.apr>25?'text-danger':'text-gold'}">${l.apr||0}%</td>
-          <td class="td-mono">${WPUtils.fmt(l.monthly_payment||0, { currency: cur })}</td>
+          <td class="td-mono">${WPUtils.fmt(pmtPage, { currency: pageCurrency })}</td>
           <td style="white-space:nowrap">
             <button class="btn btn-ghost btn-sm" onclick="WPBalanceSheet._editLiab('${l.id}')">Edit</button>
             <button class="btn btn-ghost btn-sm text-danger" onclick="WPBalanceSheet._deleteLiab('${l.id}')">Delete</button>

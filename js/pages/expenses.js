@@ -19,7 +19,15 @@ const WPExpenses = (() => {
           <h1 class="page-title">Expenses</h1>
           <p class="page-subtitle">Track and categorize your spending</p>
         </div>
-        <button class="btn btn-primary" id="add-expense-btn">&#x2795; Log Expense</button>
+        <div style="display:flex;gap:0.75rem;align-items:center">
+          <select id="expense-page-currency" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
+            <option value="NGN">NGN (₦)</option>
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="GBP">GBP (£)</option>
+          </select>
+          <button class="btn btn-primary" id="add-expense-btn">&#x2795; Log Expense</button>
+        </div>
       </div>
       <div class="page-body">
         <div class="kpi-grid" id="expense-kpis" style="margin-bottom:1.5rem"></div>
@@ -54,6 +62,17 @@ const WPExpenses = (() => {
       await _load();
     });
 
+    const curSelect = document.getElementById('expense-page-currency');
+    if (curSelect) {
+      curSelect.value = localStorage.getItem('wp_page_currency_expenses') || WPApp.state.profile?.currency || 'NGN';
+      curSelect.addEventListener('change', (e) => {
+        localStorage.setItem('wp_page_currency_expenses', e.target.value);
+        _renderKPIs();
+        _renderTable();
+        _renderBudgetRule();
+      });
+    }
+
     await _load();
   }
 
@@ -67,7 +86,7 @@ const WPExpenses = (() => {
   }
 
   function _renderKPIs() {
-    const baseCurrency = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const baseCurrency = localStorage.getItem('wp_page_currency_expenses') || WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
     const total = _entries.reduce((s,e) => {
       const cur = WPUtils.getEntryCurrency(e.description);
       return s + WPUtils.convert(e.amount||0, cur, baseCurrency);
@@ -83,13 +102,14 @@ const WPExpenses = (() => {
     }, 0);
 
     document.getElementById('expense-kpis').innerHTML = `
-      <div class="card"><div class="card-title">Total Expenses</div><div class="card-value danger">${WPUtils.fmt(total)}</div><div class="card-meta">${_entries.length} transactions</div></div>
-      <div class="card"><div class="card-title">Essential (Needs)</div><div class="card-value">${WPUtils.fmt(nonDisc)}</div><div class="card-meta">${WPUtils.fmtPct(nonDisc/Math.max(1,total))} of total</div></div>
-      <div class="card"><div class="card-title">Discretionary (Wants)</div><div class="card-value gold">${WPUtils.fmt(disc)}</div><div class="card-meta">${WPUtils.fmtPct(disc/Math.max(1,total))} of total</div></div>
-      <div class="card"><div class="card-title">Recurring</div><div class="card-value">${WPUtils.fmt(recur)}</div><div class="card-meta">${_entries.filter(e=>e.is_recurring).length} recurring items</div></div>`;
+      <div class="card"><div class="card-title">Total Expenses</div><div class="card-value danger">${WPUtils.fmt(total, { currency: baseCurrency })}</div><div class="card-meta">${_entries.length} transactions</div></div>
+      <div class="card"><div class="card-title">Essential (Needs)</div><div class="card-value">${WPUtils.fmt(nonDisc, { currency: baseCurrency })}</div><div class="card-meta">${WPUtils.fmtPct(nonDisc/Math.max(1,total))} of total</div></div>
+      <div class="card"><div class="card-title">Discretionary (Wants)</div><div class="card-value gold">${WPUtils.fmt(disc, { currency: baseCurrency })}</div><div class="card-meta">${WPUtils.fmtPct(disc/Math.max(1,total))} of total</div></div>
+      <div class="card"><div class="card-title">Recurring</div><div class="card-value">${WPUtils.fmt(recur, { currency: baseCurrency })}</div><div class="card-meta">${_entries.filter(e=>e.is_recurring).length} recurring items</div></div>`;
   }
 
   function _renderTable() {
+    const pageCurrency = localStorage.getItem('wp_page_currency_expenses') || WPApp.state.profile?.currency || 'NGN';
     const wrap = document.getElementById('expense-table');
     if (!_entries.length) {
       wrap.innerHTML = '<div style="padding:3rem;text-align:center;color:var(--clr-text-2)">No expenses in this date range. Click "Log Expense" to add one.</div>';
@@ -103,6 +123,8 @@ const WPExpenses = (() => {
       <tbody>${sorted.map(e => {
         const cur = WPUtils.getEntryCurrency(e.description);
         const cleanDesc = (e.description || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
+        const convertedAmount = WPUtils.convert(e.amount||0, cur, pageCurrency);
+
         return `<tr>
           <td class="text-muted text-sm">${WPUtils.fmtDate(e.expense_date)}</td>
           <td>
@@ -110,7 +132,7 @@ const WPExpenses = (() => {
             ${e.merchant?`<br><span class="text-xs text-muted">${e.merchant}</span>`:''}
           </td>
           <td><span class="badge badge-neutral">${e.category}</span></td>
-          <td class="td-mono fw-600 ${e.amount>500000?'text-danger':''}">${WPUtils.fmt(e.amount, { currency: cur })}</td>
+          <td class="td-mono fw-600 ${convertedAmount>500000?'text-danger':''}">${WPUtils.fmt(convertedAmount, { currency: pageCurrency })}</td>
           <td><span class="badge ${e.is_discretionary?'badge-gold':'badge-neutral'}">${e.is_discretionary?'Want':'Need'}</span>${e.is_recurring?'<span class="badge badge-info" style="margin-left:4px">Recurring</span>':''}</td>
           <td style="white-space:nowrap">
             <button class="btn btn-ghost btn-sm" onclick="WPExpenses._edit('${e.id}')">Edit</button>
