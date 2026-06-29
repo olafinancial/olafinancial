@@ -432,7 +432,7 @@ const WPUtils = (() => {
     calcPensionEmployee, calcNHF,
     calcFV, calcPMT, calcAnnuity,
     calcDebtStrategy,
-    calcDebtAvalanche: (debts, extra) => calcDebtStrategy(debts, extra, 'avalanche'),
+    calcDebtAvalanche: function(debts, extra) { return calcDebtStrategy(debts, extra, 'avalanche'); },
     calcNetWorth, coverageRatio, debtToAssetRatio, checkNDIC,
     emergencyFundTarget, emergencyFundStatus,
     calcRetirement,
