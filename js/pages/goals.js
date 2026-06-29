@@ -96,6 +96,10 @@ const WPGoals = (() => {
 
   function _openForm(existing = null) {
     const e = existing || {};
+    const currencyCode = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbol = symbols[currencyCode] || '₦';
+
     const body = `
       <form id="goal-form">
         <div class="form-group">
@@ -120,15 +124,15 @@ const WPGoals = (() => {
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="gf-target">Target Amount (&#x20A6;)</label>
-            <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
+            <label for="gf-target">Target Amount (${symbol})</label>
+            <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
               <input class="input" type="text" inputmode="decimal" id="gf-target"
                 value="${e.target_amount?WPUtils.koboToNaira(e.target_amount):''}" placeholder="0" required>
             </div>
           </div>
           <div class="form-group">
-            <label for="gf-current">Amount Saved So Far (&#x20A6;)</label>
-            <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
+            <label for="gf-current">Amount Saved So Far (${symbol})</label>
+            <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
               <input class="input" type="text" inputmode="decimal" id="gf-current"
                 value="${e.current_savings?WPUtils.koboToNaira(e.current_savings):''}" placeholder="0">
             </div>
@@ -170,12 +174,16 @@ const WPGoals = (() => {
   function _update(id) {
     const g = _goals.find(x => x.id === id);
     if (!g) return;
+    const currencyCode = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbol = symbols[currencyCode] || '₦';
+
     const body = `
       <form id="goal-update-form">
         <div class="form-group">
           <label>Goal: <strong>${g.goal_name}</strong></label>
-          <label for="gu-amount">New Saved Amount (&#x20A6;)</label>
-          <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
+          <label for="gu-amount">New Saved Amount (${symbol})</label>
+          <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
             <input class="input" type="text" inputmode="decimal" id="gu-amount"
               value="${WPUtils.koboToNaira(g.current_savings||0)}" required>
           </div>

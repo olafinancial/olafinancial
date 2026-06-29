@@ -154,6 +154,10 @@ const WPIncome = (() => {
   function _openForm(existing = null) {
     const isEdit = !!existing;
     const e = existing || {};
+    const currencyCode = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbol = symbols[currencyCode] || '₦';
+
     const body = `
       <form id="income-form">
         <div class="form-group">
@@ -180,26 +184,26 @@ const WPIncome = (() => {
           </div>
         </div>
         <div class="form-group">
-          <label for="if-gross">Gross Amount (&#x20A6;)</label>
+          <label for="if-gross">Gross Amount (${symbol})</label>
           <div class="input-prefix-group">
-            <span class="input-prefix">&#x20A6;</span>
-            <input class="input" type="number" id="if-gross" min="0" step="100" value="${e.gross_amount?WPUtils.koboToNaira(e.gross_amount):''}" placeholder="0" required>
+            <span class="input-prefix">${symbol}</span>
+            <input class="input" type="text" inputmode="decimal" id="if-gross" value="${e.gross_amount?WPUtils.koboToNaira(e.gross_amount):''}" placeholder="0" required>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="if-tax">PAYE Tax (&#x20A6;)</label>
+            <label for="if-tax">PAYE Tax (${symbol})</label>
             <div class="input-prefix-group">
-              <span class="input-prefix">&#x20A6;</span>
-              <input class="input" type="number" id="if-tax" min="0" step="100" value="${e.paye_tax?WPUtils.koboToNaira(e.paye_tax):''}" placeholder="0">
+              <span class="input-prefix">${symbol}</span>
+              <input class="input" type="text" inputmode="decimal" id="if-tax" value="${e.paye_tax?WPUtils.koboToNaira(e.paye_tax):''}" placeholder="0">
             </div>
             <div class="input-hint"><a id="calc-tax-link" style="color:var(--clr-accent);cursor:pointer">Auto-calculate from gross (Tax Act 2025)</a></div>
           </div>
           <div class="form-group">
-            <label for="if-pension">Pension 8% (&#x20A6;)</label>
+            <label for="if-pension">Pension 8% (${symbol})</label>
             <div class="input-prefix-group">
-              <span class="input-prefix">&#x20A6;</span>
-              <input class="input" type="number" id="if-pension" min="0" step="100" value="${e.pension_contrib?WPUtils.koboToNaira(e.pension_contrib):''}" placeholder="0">
+              <span class="input-prefix">${symbol}</span>
+              <input class="input" type="text" inputmode="decimal" id="if-pension" value="${e.pension_contrib?WPUtils.koboToNaira(e.pension_contrib):''}" placeholder="0">
             </div>
           </div>
         </div>
@@ -214,26 +218,37 @@ const WPIncome = (() => {
       onConfirm: async () => { await _save(e.id); },
     });
 
+    const grossInput = document.getElementById('if-gross');
+    const taxInput = document.getElementById('if-tax');
+    const pensionInput = document.getElementById('if-pension');
+
+    WPUtils.maskNumberInput(grossInput);
+    WPUtils.maskNumberInput(taxInput);
+    WPUtils.maskNumberInput(pensionInput);
+
     document.getElementById('calc-tax-link')?.addEventListener('click', () => {
-      const gross  = WPUtils.nairaToKobo(parseFloat(document.getElementById('if-gross').value)||0);
+      const gross  = WPUtils.nairaToKobo(WPUtils.cleanNum(grossInput.value)||0);
       const pension = WPUtils.calcPensionEmployee(gross);
       const tax     = WPUtils.calcPIT(gross, pension);
-      document.getElementById('if-tax').value    = WPUtils.koboToNaira(tax).toFixed(0);
-      document.getElementById('if-pension').value = WPUtils.koboToNaira(pension).toFixed(0);
+      taxInput.value    = WPUtils.koboToNaira(tax).toFixed(0);
+      pensionInput.value = WPUtils.koboToNaira(pension).toFixed(0);
+      // Trigger inputs to update comma masks
+      taxInput.dispatchEvent(new Event('input'));
+      pensionInput.dispatchEvent(new Event('input'));
       WPToast.info('Calculated using Nigeria Tax Act 2025 brackets.');
     });
   }
 
   async function _save(existingId = null) {
-    const grossKobo = WPUtils.nairaToKobo(parseFloat(document.getElementById('if-gross').value)||0);
+    const grossKobo = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-gross').value)||0);
     const row = {
       user_id:         WPApp.state.user.id,
       source_name:     document.getElementById('if-name').value.trim(),
       income_type:     document.getElementById('if-type').value,
       frequency:       document.getElementById('if-freq').value,
       gross_amount:    grossKobo,
-      paye_tax:        WPUtils.nairaToKobo(parseFloat(document.getElementById('if-tax').value)||0),
-      pension_contrib: WPUtils.nairaToKobo(parseFloat(document.getElementById('if-pension').value)||0),
+      paye_tax:        WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-tax').value)||0),
+      pension_contrib: WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-pension').value)||0),
       period_month:    PERIOD,
       notes:           document.getElementById('if-notes').value.trim(),
     };

@@ -132,6 +132,10 @@ const WPExpenses = (() => {
 
   function _openForm(existing = null) {
     const e = existing || {};
+    const currencyCode = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbol = symbols[currencyCode] || '₦';
+
     const cats = [
       'Housing','Transportation','Education','Communication','Interest & Debt',
       'Insurance','Family Support','Shopping','Entertainment','Gifts & Charity',
@@ -147,9 +151,9 @@ const WPExpenses = (() => {
             <input class="input" type="date" id="ef-date" value="${e.expense_date||new Date().toISOString().slice(0,10)}" required>
           </div>
           <div class="form-group">
-            <label for="ef-amount">Amount (&#x20A6;)</label>
+            <label for="ef-amount">Amount (${symbol})</label>
             <div class="input-prefix-group">
-              <span class="input-prefix">&#x20A6;</span>
+              <span class="input-prefix">${symbol}</span>
               <input class="input" type="text" inputmode="decimal" id="ef-amount" value="${e.amount?WPUtils.koboToNaira(e.amount):''}" placeholder="0" required>
             </div>
           </div>

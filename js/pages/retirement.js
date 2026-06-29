@@ -10,6 +10,10 @@ const WPRetirement = (() => {
     const retAge  = profile.retirement_age || 60;
     const risk    = profile.risk_tolerance || 'moderate';
 
+    const currencyCode = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbol = symbols[currencyCode] || '₦';
+
     container.innerHTML = `
       <div class="page-header">
         <div>
@@ -36,26 +40,26 @@ const WPRetirement = (() => {
               <input class="input" type="number" id="ret-life" min="60" max="100" value="85">
             </div>
             <div class="form-group">
-              <label for="ret-rsa">Current RSA Balance (&#x20A6;)</label>
-              <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
+              <label for="ret-rsa">Current RSA Balance (${symbol})</label>
+              <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
                 <input class="input" type="text" inputmode="decimal" id="ret-rsa" placeholder="0">
               </div>
             </div>
             <div class="form-group">
-              <label for="ret-salary">Current Monthly Gross (&#x20A6;)</label>
-              <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
+              <label for="ret-salary">Current Monthly Gross (${symbol})</label>
+              <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
                 <input class="input" type="text" inputmode="decimal" id="ret-salary" placeholder="0">
               </div>
             </div>
             <div class="form-group">
-              <label for="ret-invest">Monthly Investment Savings (&#x20A6;)</label>
-              <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
+              <label for="ret-invest">Monthly Investment Savings (${symbol})</label>
+              <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
                 <input class="input" type="text" inputmode="decimal" id="ret-invest" placeholder="0">
               </div>
             </div>
             <div class="form-group">
-              <label for="ret-monthly-need">Monthly Income Needed (&#x20A6;)</label>
-              <div class="input-prefix-group"><span class="input-prefix">&#x20A6;</span>
+              <label for="ret-monthly-need">Monthly Income Needed (${symbol})</label>
+              <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
                 <input class="input" type="text" inputmode="decimal" id="ret-monthly-need" placeholder="e.g. 500,000">
               </div>
             </div>
