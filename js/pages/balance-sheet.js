@@ -192,19 +192,17 @@ const WPBalanceSheet = (() => {
       return;
     }
     wrap.innerHTML = `<table>
-      <thead><tr><th>Liability</th><th>Type</th><th>Lender</th><th>Opening</th><th>Closing</th><th>APR</th><th>Monthly Pmt</th><th></th></tr></thead>
+      <thead><tr><th>Liability</th><th>Type</th><th>Lender</th><th>Balance</th><th>APR</th><th>Monthly Pmt</th><th></th></tr></thead>
       <tbody>${_liabilities.map(l => {
-        const bal = l.close_balance || l.open_balance || 0;
+        const bal = l.open_balance || 0;
         const cur = WPUtils.getEntryCurrency(l.notes);
         const balPage = WPUtils.convert(bal, cur, pageCurrency);
-        const openBalPage = WPUtils.convert(l.open_balance||0, cur, pageCurrency);
         const pmtPage = WPUtils.convert(l.monthly_payment||0, cur, pageCurrency);
         const cleanNotes = (l.notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
         return `<tr>
           <td><strong>${l.liability_name}</strong>${cleanNotes?`<br><span class="text-xs text-muted">${cleanNotes}</span>`:''}</td>
           <td><span class="badge badge-danger">${(l.liability_type||'').replace('_',' ')}</span></td>
           <td class="text-muted text-sm">${l.lender_name||'—'}</td>
-          <td class="td-mono">${WPUtils.fmt(openBalPage, { currency: pageCurrency })}</td>
           <td class="td-mono fw-600 text-danger">${WPUtils.fmt(balPage, { currency: pageCurrency })}</td>
           <td class="td-mono ${l.apr>25?'text-danger':'text-gold'}">${l.apr||0}%</td>
           <td class="td-mono">${WPUtils.fmt(pmtPage, { currency: pageCurrency })}</td>
@@ -460,15 +458,9 @@ const WPBalanceSheet = (() => {
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="lf-open">Opening Balance (${symbol})</label>
+            <label for="lf-open">Current Balance (${symbol})</label>
             <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
               <input class="input" type="text" inputmode="decimal" id="lf-open" value="${e.open_balance?WPUtils.koboToNaira(e.open_balance):''}">
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="lf-close">Closing Balance (${symbol})</label>
-            <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
-              <input class="input" type="text" inputmode="decimal" id="lf-close" value="${e.close_balance?WPUtils.koboToNaira(e.close_balance):''}">
             </div>
           </div>
         </div>
@@ -502,27 +494,24 @@ const WPBalanceSheet = (() => {
     const aprInput = document.getElementById('lf-apr');
     const mpmtInput = document.getElementById('lf-mpmt');
     const openInput = document.getElementById('lf-open');
-    const closeInput = document.getElementById('lf-close');
     const typeSelect = document.getElementById('lf-type');
     const currencySelect = document.getElementById('lf-currency');
 
     WPUtils.maskNumberInput(openInput);
-    WPUtils.maskNumberInput(closeInput);
     WPUtils.maskNumberInput(mpmtInput);
 
     currencySelect.addEventListener('change', (ev) => {
       const newCur = ev.target.value;
       const newSym = symbols[newCur] || '₦';
       document.querySelectorAll('#liab-form .input-prefix').forEach(span => span.textContent = newSym);
-      document.querySelector('label[for="lf-open"]').textContent = `Opening Balance (${newSym})`;
-      document.querySelector('label[for="lf-close"]').textContent = `Closing Balance (${newSym})`;
+      document.querySelector('label[for="lf-open"]').textContent = `Current Balance (${newSym})`;
       document.querySelector('label[for="lf-mpmt"]').textContent = `Monthly Payment (${newSym})`;
     });
 
     function updateCalculatedPayment() {
       if (noAprCheck.checked) return;
       const aprVal = parseFloat(aprInput.value) || 0;
-      const balVal = WPUtils.cleanNum(closeInput.value) || WPUtils.cleanNum(openInput.value) || 0;
+      const balVal = WPUtils.cleanNum(openInput.value) || 0;
       const typeVal = typeSelect.value;
       if (aprVal > 0 && balVal > 0) {
         let r = (aprVal / 100) / 12;
@@ -556,7 +545,6 @@ const WPBalanceSheet = (() => {
 
     aprInput.addEventListener('input', updateCalculatedPayment);
     openInput.addEventListener('input', updateCalculatedPayment);
-    closeInput.addEventListener('input', updateCalculatedPayment);
     typeSelect.addEventListener('change', updateCalculatedPayment);
   }
 
@@ -571,7 +559,7 @@ const WPBalanceSheet = (() => {
       liability_type:   document.getElementById('lf-type').value,
       lender_name:      document.getElementById('lf-lender').value.trim(),
       open_balance:     WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('lf-open').value)),
-      close_balance:    WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('lf-close').value)),
+      close_balance:    WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('lf-open').value)),
       apr:              isManual ? 0 : (parseFloat(document.getElementById('lf-apr').value)||0),
       monthly_payment:  WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('lf-mpmt').value)),
       is_interest_bearing: true,
