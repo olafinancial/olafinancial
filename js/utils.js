@@ -424,6 +424,8 @@ const WPUtils = (() => {
       months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`);
     }
     return months;
+  }
+
   return {
     fmt, cleanNum, maskNumberInput, nairaToKobo, koboToNaira, pct, fmtPct, fmtDate,
     calcPIT, effectiveTaxRate, taxBracket,
