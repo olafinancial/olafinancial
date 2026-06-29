@@ -61,7 +61,7 @@ const WPAuth = (() => {
     }
     WPApp.state.user    = null;
     WPApp.state.profile = null;
-    WPRouter.navigate('/login');
+    WPRouter.navigate('/logged-out');
   }
 
   // ── PASSWORD VALIDATION ───────────────────────────────────

@@ -41,14 +41,14 @@ const WPApp = (() => {
       // Always initialize the app shell structure and routes first
       _showApp();
 
-      // Route guard: onboarding incomplete
-      if (!state.profile || !state.profile.onboarding_done) {
+      // Route guard: onboarding incomplete (only if logged in)
+      if (state.user && (!state.profile || !state.profile.onboarding_done)) {
         WPRouter.navigate('/onboarding', true);
         return;
       }
 
       const currentPath = window.location.hash.replace('#', '') || '/dashboard';
-      if (['/login', '/signup', '/onboarding'].includes(currentPath)) {
+      if (['/login', '/signup', '/onboarding', '/logged-out'].includes(currentPath)) {
         WPRouter.navigate('/dashboard', true);
       } else {
         WPRouter.start();
@@ -103,6 +103,25 @@ const WPApp = (() => {
         container = document.getElementById('auth-root');
       }
       if (container) WPAuth.renderSignup(container);
+    });
+    WPRouter.register('/logged-out', () => {
+      let container = document.getElementById('auth-root');
+      if (!container) {
+        document.getElementById('root').innerHTML = '<div id="auth-root"></div>';
+        container = document.getElementById('auth-root');
+      }
+      if (container) {
+        container.innerHTML = `
+          <div class="auth-shell">
+            <div class="auth-card" style="text-align: center; padding: 3rem 2rem;">
+              <div style="font-size: 3.5rem; margin-bottom: 1.25rem;">👋</div>
+              <h2 style="color: #ffffff; margin-bottom: 0.5rem; font-weight: 700;">You've been signed out</h2>
+              <p style="color: var(--clr-text-3); font-size: 0.9rem; margin-bottom: 2rem; line-height: 1.5;">Thank you for using Ola Financial. Your session has been safely closed.</p>
+              <button class="btn btn-primary" style="width: 100%;" onclick="WPRouter.navigate('/login')">Sign In Again</button>
+            </div>
+          </div>
+        `;
+      }
     });
   }
 
@@ -296,8 +315,8 @@ const WPApp = (() => {
       _activePage.destroy();
     }
 
-    // Route guard: if onboarding is not done, only allow onboarding page
-    if (page !== WPOnboarding && (!state.profile || !state.profile.onboarding_done)) {
+    // Route guard: if onboarding is not done, only allow onboarding page (only for logged in users)
+    if (state.user && page !== WPOnboarding && (!state.profile || !state.profile.onboarding_done)) {
       WPRouter.navigate('/onboarding', true);
       return;
     }
