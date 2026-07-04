@@ -7,6 +7,7 @@ const WPDebt = (() => {
   let _liabilities = [];
   const PERIOD = WPUtils.currentPeriod();
 
+  async function init(container) {
     const baseCur = WPApp.state.profile?.currency || 'NGN';
     const pageCurrency = localStorage.getItem('wp_page_currency_debt') || baseCur;
     const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', AED: 'د.إ', CNY: '¥', XOF: 'CFA', XAF: 'FCFA', KES: 'KSh', GHS: 'GH₵', ZAR: 'R', SAR: 'ر.س' };

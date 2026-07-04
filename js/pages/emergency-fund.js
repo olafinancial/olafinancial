@@ -8,6 +8,7 @@ const WPEmergencyFund = (() => {
   let _currentBalance = 0;
   let _monthlyExpenses = 0;
 
+  async function init(container) {
     const baseCur = WPApp.state.profile?.currency || 'NGN';
     const pageCurrency = localStorage.getItem('wp_page_currency_emergency') || baseCur;
 

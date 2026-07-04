@@ -393,7 +393,6 @@ const WPDashboard = (() => {
       }
     });
   }
-  }
 
   function destroy() {}
   return { init, destroy };
