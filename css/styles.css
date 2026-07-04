@@ -949,9 +949,25 @@ tbody td {
 
 /* ── PRINT STYLES (Reports) ──────────────────────────────── */
 @media print {
-  .sidebar, .bottom-nav, .btn, .modal-overlay { display: none !important; }
-  .main-content { margin-left: 0 !important; }
-  body { background: #fff; color: #000; }
-  .card { border: 1px solid #ddd; page-break-inside: avoid; }
-  .chart-wrap { page-break-inside: avoid; }
+  .sidebar, .bottom-nav, .btn, .modal-overlay, .page-header { display: none !important; }
+  .main-content { margin-left: 0 !important; padding: 0 !important; }
+  body { background: #fff; color: #000; font-size: 11pt; }
+  .card { border: 1px solid #ddd; page-break-inside: avoid; box-shadow: none !important; background: #fff !important; color: #000 !important; }
+  .card-title, .section-title, .card-meta, th { color: #333 !important; }
+  .card-value { color: #111 !important; }
+  .chart-wrap, .chart-container { page-break-inside: avoid; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ccc; padding: 6px 8px; font-size: 10pt; color: #000 !important; }
+  th { background: #f5f5f5 !important; }
+  .badge { border: 1px solid #999; color: #000 !important; background: #eee !important; }
+  .print-header { display: block !important; }
+  .disclaimer { font-size: 8pt; color: #666; border-top: 1px solid #ccc; padding-top: 8px; margin-top: 20px; }
+  .print-footer-name { display: block !important; }
+
+  /* Estate planner report print tweaks */
+  #estate-report-view .card { background: #fff !important; color: #000 !important; }
+  #estate-report-view h2, #estate-report-view h3, #estate-report-view strong { color: #111 !important; }
+  #estate-report-view .text-danger { color: #c0392b !important; }
+  #estate-report-view .text-gold { color: #b8860b !important; }
+  #estate-report-view .text-accent { color: #1a8a6a !important; }
 }

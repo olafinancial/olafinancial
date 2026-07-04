@@ -14,6 +14,19 @@ const WPReports = (() => {
         <button class="btn btn-primary" id="export-btn">&#x1F4E5; Export PDF</button>
       </div>
       <div class="page-body">
+        <!-- Print Header (only visible when printing) -->
+        <div id="print-header" class="print-header" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #333;padding-bottom:12px;margin-bottom:16px">
+            <div>
+              <div style="font-size:1.4rem;font-weight:800">Ola Financial — Financial Report</div>
+              <div style="font-size:0.85rem;color:#555;margin-top:4px">Prepared for: <strong id="print-client-name"></strong></div>
+            </div>
+            <div style="text-align:right;font-size:0.8rem;color:#555">
+              <div>Date Generated: <strong id="print-date"></strong></div>
+              <div style="margin-top:2px">Confidential</div>
+            </div>
+          </div>
+        </div>
         <div id="reports-kpis" style="margin-bottom:1.5rem"></div>
         <!-- Trend Charts -->
         <div class="card" style="margin-bottom:1.5rem">
@@ -91,13 +104,14 @@ const WPReports = (() => {
   }
 
   function _renderCharts(snapshots) {
-    if (snapshots.length < 2) {
+    if (snapshots.length === 0) {
       ['rpt-chart-nw','rpt-chart-cf','rpt-chart-sr'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.parentElement.innerHTML = '<div style="height:240px;display:flex;align-items:center;justify-content:center;color:var(--clr-text-3);font-size:0.85rem">Save monthly snapshots to see trends</div>';
+        if (el) el.parentElement.innerHTML = '<div style="height:240px;display:flex;align-items:center;justify-content:center;color:var(--clr-text-3);font-size:0.85rem">No data yet. Add income and expenses to see charts.</div>';
       });
       return;
     }
+    // Show charts even with a single snapshot
     WPCharts.netWorthTrend('rpt-chart-nw', snapshots);
     WPCharts.incomeVsExpenses('rpt-chart-cf', snapshots);
     WPCharts.savingsRateLine('rpt-chart-sr', snapshots);
@@ -158,6 +172,13 @@ const WPReports = (() => {
   }
 
   function _exportPDF() {
+    // Populate print header with user name and date
+    const name = WPApp.state.profile?.full_name || 'Client';
+    const nameEl = document.getElementById('print-client-name');
+    const dateEl = document.getElementById('print-date');
+    if (nameEl) nameEl.textContent = name;
+    if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
     WPToast.info('PDF export — use your browser\'s Print function (Ctrl+P) and select "Save as PDF".');
     window.print();
   }

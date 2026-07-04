@@ -670,12 +670,26 @@ const WPEstatePlanner = (() => {
 
     const reportEl = document.getElementById('estate-report-view');
     reportEl.style.display = '';
+    const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     reportEl.innerHTML = `
+      <!-- Print-only header -->
+      <div class="print-header" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #333;padding-bottom:12px;margin-bottom:16px">
+          <div>
+            <div style="font-size:1.4rem;font-weight:800">Ola Financial — Legacy Risk Report</div>
+            <div style="font-size:0.85rem;color:#555;margin-top:4px">Prepared for: <strong>${_data.full_name||'Client'}</strong></div>
+          </div>
+          <div style="text-align:right;font-size:0.8rem;color:#555">
+            <div>Date Generated: <strong>${dateStr}</strong></div>
+            <div style="margin-top:2px">Confidential</div>
+          </div>
+        </div>
+      </div>
       <div class="card" style="padding: 2.5rem;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--clr-border);padding-bottom:1.5rem">
           <div>
             <h2 style="margin:0;font-weight:800;font-size:1.8rem;color:#ffffff">Legacy Risk Report</h2>
-            <div style="font-size:0.85rem;color:var(--clr-text-3);margin-top:4px">Client Name: <strong>${_data.full_name||'—'}</strong> • Date: ${new Date().toLocaleDateString()}</div>
+            <div style="font-size:0.85rem;color:var(--clr-text-3);margin-top:4px">Client: <strong>${_data.full_name||'—'}</strong> • Date: ${dateStr}</div>
           </div>
           <button class="btn btn-secondary" onclick="window.print()">🖨️ Print Report</button>
         </div>
@@ -722,7 +736,9 @@ const WPEstatePlanner = (() => {
           `}
         </div>
 
-        <div style="margin-top:3rem;text-align:center;border-top:1px solid var(--clr-border);padding-top:2rem">
+        <div class="disclaimer" style="margin-top:2.5rem">${APP_CONFIG.disclaimer}</div>
+
+        <div style="margin-top:2rem;text-align:center;border-top:1px solid var(--clr-border);padding-top:2rem">
           <button class="btn btn-secondary" id="estate-return-btn">⬅️ Edit Answers & Recalculate</button>
         </div>
       </div>`;

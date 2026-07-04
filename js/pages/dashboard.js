@@ -162,16 +162,27 @@ const WPDashboard = (() => {
   }
 
   function _renderCharts(s) {
-    const snaps = WPApp.state.data.snapshots;
-    if (snaps.length > 1) {
-      WPCharts.netWorthTrend('chart-net-worth', snaps);
-      WPCharts.incomeVsExpenses('chart-income-exp', snaps);
-    } else {
-      ['chart-net-worth','chart-income-exp'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.parentElement.innerHTML = '<div style="height:240px;display:flex;align-items:center;justify-content:center;color:var(--clr-text-3);font-size:0.85rem">Save monthly snapshots to see trends</div>';
-      });
+    let snaps = WPApp.state.data.snapshots;
+
+    // If no snapshots saved yet, create a synthetic one from current live data
+    if (snaps.length === 0) {
+      const period = WPUtils.currentPeriod();
+      snaps = [{
+        period_month: period,
+        net_worth: s.netWorth,
+        total_assets: s.totalAssets,
+        total_liabilities: s.totalLiabilities,
+        total_income: s.cf.netIncome,
+        total_expenses: s.cf.totalExpenses,
+        net_cash_flow: s.cf.netCashFlow,
+        passive_income_amt: s.passiveKPIs.passiveKobo,
+      }];
     }
+
+    // Always render charts — even with a single data point
+    WPCharts.netWorthTrend('chart-net-worth', snaps);
+    WPCharts.incomeVsExpenses('chart-income-exp', snaps);
+
     if (WPApp.state.data.expenses.length > 0) {
       WPCharts.expenseDonut('chart-expense-donut', WPApp.state.data.expenses);
     }
