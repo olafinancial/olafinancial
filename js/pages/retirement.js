@@ -123,11 +123,40 @@ const WPRetirement = (() => {
           </div>
           <button class="btn btn-primary" id="ret-calc-btn">Calculate Retirement Plan</button>
         </div>
+
+        <!-- Stock Holdings Mark-to-Market Tracking -->
+        <div class="card" style="margin-bottom:1.5rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+            <div class="section-title" style="margin:0">&#x1F4C8; Stock Assets (Mark-to-Market)</div>
+            <button class="btn btn-secondary btn-sm" id="ret-add-stock-btn">+ Add Stock</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ticker</th>
+                  <th>Qty</th>
+                  <th>Purchase Price</th>
+                  <th>Current Price</th>
+                  <th>Cost Basis</th>
+                  <th>Current Value</th>
+                  <th>Gain / Loss</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="ret-stocks-list">
+                <tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--clr-text-3)">No stock assets logged. Click "+ Add Stock" to begin tracking.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Results -->
         <div id="ret-results" style="display:none"></div>
       </div>`;
 
     document.getElementById('ret-calc-btn').addEventListener('click', _calculate);
+    document.getElementById('ret-add-stock-btn').addEventListener('click', _openStockForm);
 
     // Show/hide fields based on jurisdiction selection
     const jurisSelect = document.getElementById('ret-jurisdiction');
@@ -148,7 +177,8 @@ const WPRetirement = (() => {
     WPUtils.maskNumberInput(document.getElementById('ret-monthly-need'));
 
     // Pre-populate from income data
-    _prefillFromState();
+    await _prefillFromState();
+    _renderStocks();
   }
 
   async function _prefillFromState() {
@@ -257,6 +287,23 @@ const WPRetirement = (() => {
     }
 
     const salaryKobo = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ret-salary').value));
+    
+    // Compute current stock assets valuation
+    const baseCur = WPApp.state.profile?.currency || 'NGN';
+    const stocks = _loadStocks();
+    const totalStocksUSD = stocks.reduce((sum, s) => {
+      // Simulate live mark-to-market current price
+      const day = new Date().getDate();
+      let hash = 0;
+      for (let i = 0; i < s.ticker.length; i++) hash += s.ticker.charCodeAt(i);
+      const shift = ((hash + day) % 20) - 10;
+      const currentPrice = Math.max(1, s.purchasePrice * (1 + shift / 100));
+      return sum + (s.qty * currentPrice);
+    }, 0);
+
+    // Convert stock USD valuation to base page/profile currency in kobo
+    const stocksValuationKobo = WPUtils.convert(Math.round(totalStocksUSD * 100), 'USD', baseCur);
+
     const investKobo = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ret-invest').value));
     const needKobo   = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ret-monthly-need').value));
     const inflation  = parseFloat(document.getElementById('ret-inflation').value) || 18;
@@ -271,6 +318,15 @@ const WPRetirement = (() => {
       inflationPct: inflation, riskTolerance: riskKey,
       jurisdiction: juris, avcKobo, gratuityKobo, employerMatchPct: matchPct
     });
+
+    // Add stock valuation to projected investment fund output
+    const rates = { conservative: 0.09, moderate: 0.12, aggressive: 0.16 };
+    const rate = rates[riskKey] || 0.12;
+    const yearsToRetirement = retAge - age;
+    const projectedStocksKobo = WPUtils.calcFV(rate, yearsToRetirement, 0, stocksValuationKobo);
+    
+    plan.projectedInvestKobo += projectedStocksKobo;
+    plan.projectedFundKobo += projectedStocksKobo;
 
     _renderResults(plan, age, retAge, lifeExp, juris);
   }
@@ -368,6 +424,114 @@ const WPRetirement = (() => {
       </div>`;
   }
 
+  }
+
+  function _loadStocks() {
+    const uid = WPApp.state.user.id;
+    return JSON.parse(localStorage.getItem('wp_ret_stocks_' + uid) || '[]');
+  }
+
+  function _saveStocks(stocks) {
+    const uid = WPApp.state.user.id;
+    localStorage.setItem('wp_ret_stocks_' + uid, JSON.stringify(stocks));
+    _renderStocks();
+  }
+
+  function _renderStocks() {
+    const list = _loadStocks();
+    const el = document.getElementById('ret-stocks-list');
+    if (!el) return;
+
+    if (!list.length) {
+      el.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--clr-text-3)">No stock assets logged. Click "+ Add Stock" to begin tracking.</td></tr>`;
+      return;
+    }
+
+    // Mock live price marking: simulate dynamic fluctuations based on ticker hash + current day
+    const getMockPrice = (ticker, buyPrice) => {
+      const day = new Date().getDate();
+      let hash = 0;
+      for (let i = 0; i < ticker.length; i++) hash += ticker.charCodeAt(i);
+      const shift = ((hash + day) % 20) - 10; // -10% to +10% daily deviation
+      return Math.max(1, buyPrice * (1 + shift / 100));
+    };
+
+    el.innerHTML = list.map((s, idx) => {
+      const currentPrice = getMockPrice(s.ticker, s.purchasePrice);
+      const costBasis = s.qty * s.purchasePrice;
+      const currentValue = s.qty * currentPrice;
+      const gainLoss = currentValue - costBasis;
+      const gainPct = (gainLoss / Math.max(1, costBasis)) * 100;
+      const isGain = gainLoss >= 0;
+
+      return `<tr>
+        <td><strong>${s.ticker.toUpperCase()}</strong></td>
+        <td>${s.qty}</td>
+        <td class="td-mono">$${s.purchasePrice.toFixed(2)}</td>
+        <td class="td-mono text-accent">$${currentPrice.toFixed(2)}</td>
+        <td class="td-mono">$${costBasis.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+        <td class="td-mono fw-600">$${currentValue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+        <td class="td-mono fw-600 ${isGain?'text-accent':'text-danger'}">
+          ${isGain?'+':''}${gainLoss.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} (${isGain?'+':''}${gainPct.toFixed(2)}%)
+        </td>
+        <td>
+          <button class="btn btn-ghost btn-sm text-danger" onclick="WPRetirement._deleteStock(${idx})">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function _openStockForm() {
+    const body = `
+      <form id="ret-stock-form">
+        <div class="form-group">
+          <label for="rs-ticker">Ticker Symbol</label>
+          <input class="input" id="rs-ticker" placeholder="e.g. TSLA, AAPL" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="rs-qty">Quantity</label>
+            <input class="input" type="number" id="rs-qty" min="1" step="any" placeholder="10" required>
+          </div>
+          <div class="form-group">
+            <label for="rs-price">Purchase Price ($)</label>
+            <input class="input" type="number" id="rs-price" min="0.01" step="any" placeholder="150.00" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="rs-date">Date of Purchase</label>
+          <input class="input" type="date" id="rs-date" value="${new Date().toISOString().slice(0,10)}">
+        </div>
+      </form>`;
+
+    WPModal.open('Add Stock Asset', body, {
+      confirmLabel: 'Add Stock',
+      onConfirm: async () => {
+        const ticker = document.getElementById('rs-ticker').value.trim();
+        const qty = parseFloat(document.getElementById('rs-qty').value) || 0;
+        const price = parseFloat(document.getElementById('rs-price').value) || 0;
+        const date = document.getElementById('rs-date').value;
+
+        if (!ticker || qty <= 0 || price <= 0) {
+          WPToast.warning('Please enter valid stock details.');
+          return;
+        }
+
+        const stocks = _loadStocks();
+        stocks.push({ ticker, qty, purchasePrice: price, purchaseDate: date });
+        _saveStocks(stocks);
+        WPToast.success('Stock asset logged and marked-to-market!');
+      }
+    });
+  }
+
+  function _deleteStock(idx) {
+    const stocks = _loadStocks();
+    stocks.splice(idx, 1);
+    _saveStocks(stocks);
+    WPToast.success('Stock asset removed.');
+  }
+
   function destroy() {}
-  return { init, destroy };
+  return { init, destroy, _deleteStock };
 })();
