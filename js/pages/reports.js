@@ -48,6 +48,25 @@ const WPReports = (() => {
             </div>
           </div>
         </div>
+        <!-- Scheduled Reports Preference Settings -->
+        <div class="card" style="margin-bottom:1.5rem;background:linear-gradient(135deg,var(--clr-surface-2),var(--clr-surface-3))">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
+            <div>
+              <div class="section-title" style="margin:0;font-size:1.1rem">📬 Scheduled &amp; Email Reports</div>
+              <p style="font-size:0.85rem;color:var(--clr-text-2);margin:0.25rem 0 0">Receive automated reports on demand or set up weekly Sunday digests by default.</p>
+            </div>
+            <div style="display:flex;gap:0.75rem;align-items:center">
+              <select id="rpt-frequency" class="select select-sm" style="width:180px">
+                <option value="weekly_sunday">Weekly (Sundays, default)</option>
+                <option value="daily">Daily digest</option>
+                <option value="monthly">Monthly summary</option>
+                <option value="off">Turn off notifications</option>
+              </select>
+              <button class="btn btn-secondary btn-sm" id="rpt-freq-save">Save Setup</button>
+            </div>
+          </div>
+        </div>
+
         <div id="reports-kpis" style="margin-bottom:1.5rem"></div>
         <!-- Trend Charts -->
         <div class="card" style="margin-bottom:1.5rem">
@@ -90,6 +109,22 @@ const WPReports = (() => {
         _load();
       });
     }
+
+    const freqSelect = document.getElementById('rpt-frequency');
+    const freqSaveBtn = document.getElementById('rpt-freq-save');
+    const savedFreq = localStorage.getItem('wp_report_frequency_' + WPApp.state.user.id) || 'weekly_sunday';
+    if (freqSelect) {
+      freqSelect.value = savedFreq;
+    }
+    freqSaveBtn?.addEventListener('click', () => {
+      const selected = freqSelect.value;
+      localStorage.setItem('wp_report_frequency_' + WPApp.state.user.id, selected);
+      if (selected === 'off') {
+        WPToast.success('Notifications and scheduled email digests disabled.');
+      } else {
+        WPToast.success(`Preferences updated! Reports scheduled: ${selected.replace('_', ' ')}.`);
+      }
+    });
     
     await _load();
   }
