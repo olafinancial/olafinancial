@@ -315,6 +315,10 @@ const WPUtils = (() => {
     monthlyIncomeNeededKobo,
     inflationPct,
     riskTolerance = 'moderate',
+    jurisdiction = 'NG',
+    avcKobo = 0,
+    gratuityKobo = 0,
+    employerMatchPct = 3,
   }) {
     const yearsToRetirement = retirementAge - currentAge;
     if (yearsToRetirement <= 0) {
@@ -335,11 +339,35 @@ const WPUtils = (() => {
     const rates = { conservative: 0.09, moderate: 0.12, aggressive: 0.16 };
     const rate = rates[riskTolerance] || 0.12;
 
-    // PENCOM CPS Monthly Pension (8% employee + 10% employer = 18%)
-    const monthlyPensionTotalKobo = Math.round(monthlyGrossKobo * 0.18);
+    // Monthly Pension total (employer + employee combined) depending on jurisdiction
+    let monthlyPensionTotalKobo = 0;
+    let initialRSA = currentRSAKobo;
+
+    if (jurisdiction === 'NG') {
+      // PENCOM CPS: 8% employee + 10% employer = 18% of gross
+      monthlyPensionTotalKobo = Math.round(monthlyGrossKobo * 0.18);
+      // Incorporate initial AVC and Gratuity balances into initial fund value
+      initialRSA = currentRSAKobo + avcKobo + gratuityKobo;
+    } else if (jurisdiction === 'US') {
+      // US 401k rules: assume 6% employee contribution, plus employer match up to match rate
+      const matchFrac = Math.min(6, employerMatchPct) / 100;
+      monthlyPensionTotalKobo = Math.round(monthlyGrossKobo * (0.06 + matchFrac));
+      // Cap at US 2025 limit $23,000 / 12 months (~ $1,916/month)
+      const usCapKobo = 1916_00;
+      if (monthlyPensionTotalKobo > usCapKobo) monthlyPensionTotalKobo = usCapKobo;
+    } else if (jurisdiction === 'UK') {
+      // UK auto-enrolment rules: combined 8% minimum pension contributions
+      monthlyPensionTotalKobo = Math.round(monthlyGrossKobo * 0.08);
+    } else if (jurisdiction === 'CA') {
+      // CA RRSP rules: 18% of earned income limits
+      monthlyPensionTotalKobo = Math.min(Math.round(monthlyGrossKobo * 0.18), 2600_00);
+    } else {
+      // Generic savings
+      monthlyPensionTotalKobo = Math.round(monthlyGrossKobo * 0.10);
+    }
 
     // Projected RSA & Investment
-    const projectedRSAKobo = calcFV(rate, yearsToRetirement, monthlyPensionTotalKobo, currentRSAKobo);
+    const projectedRSAKobo = calcFV(rate, yearsToRetirement, monthlyPensionTotalKobo, initialRSA);
     const projectedInvestKobo = calcFV(rate, yearsToRetirement, monthlyInvestmentKobo, 0);
     const projectedFundKobo = projectedRSAKobo + projectedInvestKobo;
 
@@ -368,11 +396,15 @@ const WPUtils = (() => {
     const recommendations = [];
     if (surplus >= 0) {
       recommendations.push("Your retirement plan is fully funded! Keep maintaining your current savings rate.");
-      recommendations.push("As you approach retirement, consider shifting a portion of your funds to more conservative, fixed-income assets to protect capital.");
     } else {
-      recommendations.push(`Increase your monthly savings by ${fmt(additionalMonthlyKobo)} to close your retirement gap of ${fmt(Math.abs(surplus))}.`);
+      recommendations.push(`Save an extra ${WPUtils.fmt(additionalMonthlyKobo)} monthly to close your gap.`);
+    }
+    recommendations.push("As you approach retirement, consider shifting a portion of your funds to more conservative, fixed-income assets to protect capital.");
+    if (surplus < 0) {
       recommendations.push("Review your monthly expenses to identify discretionary areas where you can save and invest more.");
-      recommendations.push("Verify that your PFA is generating competitive returns (e.g. above inflation/industry benchmark) to boost RSA growth.");
+      if (jurisdiction === 'NG') {
+        recommendations.push("Verify that your PFA is generating competitive returns (e.g. above inflation/industry benchmark) to boost RSA growth.");
+      }
     }
 
     return {
