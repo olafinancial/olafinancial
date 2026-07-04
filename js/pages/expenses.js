@@ -150,7 +150,11 @@ const WPExpenses = (() => {
           </td>
           <td><span class="badge badge-neutral">${e.category}</span></td>
           <td class="td-mono fw-600 ${convertedAmount>500000?'text-danger':''}">${WPUtils.fmt(convertedAmount, { currency: pageCurrency })}</td>
-          <td><span class="badge ${e.is_discretionary?'badge-gold':'badge-neutral'}">${e.is_discretionary?'Want':'Need'}</span>${e.is_recurring?`<span class="badge badge-info" style="margin-left:4px">Recurring${freqText?` (${freqText})`:''}</span>`:''}</td>
+          <td>
+            <span class="badge ${e.is_discretionary?'badge-gold':'badge-neutral'}">${e.is_discretionary?'Want':'Need'}</span>
+            ${e.is_recurring?`<span class="badge badge-info" style="margin-left:4px">Recurring${freqText?` (${freqText})`:''}</span>`:''}
+            ${e.category==='Investment'?`<span class="badge badge-accent" style="margin-left:4px" title="Double entry: Flowed to Asset Side">→ Asset</span>`:''}
+          </td>
           <td style="white-space:nowrap">
             <button class="btn btn-ghost btn-sm" onclick="WPExpenses._edit('${e.id}')">Edit</button>
             <button class="btn btn-ghost btn-sm text-danger" onclick="WPExpenses._delete('${e.id}')">Delete</button>
@@ -207,6 +211,7 @@ const WPExpenses = (() => {
       'Housing',
       'Insurance',
       'Interest & Debt',
+      'Investment',
       'Land Use Act/Tenement Rate',
       'Security',
       'Shopping',
@@ -216,6 +221,19 @@ const WPExpenses = (() => {
       'Utilities-Refuse',
       'Utilities-Water',
       'Other'
+    ];
+    const assetTypes = [
+      { value: 'alternative', label: 'Alternative Investments' },
+      { value: 'commodities', label: 'Commodities' },
+      { value: 'crypto', label: 'Crypto' },
+      { value: 'currency', label: 'Foreign Currency Account' },
+      { value: 'equity', label: 'Equities / Stocks / ETFs' },
+      { value: 'fixed_deposit', label: 'Fixed Deposit / CD / T-Bill' },
+      { value: 'forex', label: 'Forex' },
+      { value: 'retirement_contribution', label: 'Retirement Contribution (RSA / AVC / Gratuity)' },
+      { value: 'property', label: 'Property / Real Estate' },
+      { value: 'savings', label: 'Savings Account' },
+      { value: 'other', label: 'Other Asset' }
     ];
     const body = `
       <form id="exp-form">
@@ -227,6 +245,16 @@ const WPExpenses = (() => {
               <option value="USD" ${currencyCode==='USD'?'selected':''}>USD ($)</option>
               <option value="EUR" ${currencyCode==='EUR'?'selected':''}>EUR (€)</option>
               <option value="GBP" ${currencyCode==='GBP'?'selected':''}>GBP (£)</option>
+              <option value="AED" ${currencyCode==='AED'?'selected':''}>AED (د.إ)</option>
+              <option value="CNY" ${currencyCode==='CNY'?'selected':''}>CNY (¥)</option>
+              <option value="XOF" ${currencyCode==='XOF'?'selected':''}>XOF (CFA)</option>
+              <option value="XAF" ${currencyCode==='XAF'?'selected':''}>XAF (FCFA)</option>
+              <option value="KES" ${currencyCode==='KES'?'selected':''}>KES (KSh)</option>
+              <option value="GHS" ${currencyCode==='GHS'?'selected':''}>GHS (GH₵)</option>
+              <option value="CAD" ${currencyCode==='CAD'?'selected':''}>CAD (CA$)</option>
+              <option value="ZAR" ${currencyCode==='ZAR'?'selected':''}>ZAR (R)</option>
+              <option value="SAR" ${currencyCode==='SAR'?'selected':''}>SAR (ر.س)</option>
+              <option value="AUD" ${currencyCode==='AUD'?'selected':''}>AUD (A$)</option>
             </select>
           </div>
           <div class="form-group">
@@ -249,6 +277,35 @@ const WPExpenses = (() => {
             </select>
           </div>
         </div>
+        
+        <!-- Double Entry Asset Sub-form (shown only when Category === Investment) -->
+        <div id="exp-asset-subform" style="display:none; border: 1px dashed var(--clr-accent); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+          <h4 style="margin-top:0; color:var(--clr-accent); font-weight:700;">🌱 Double Entry: Create Asset</h4>
+          <p style="font-size:0.75rem; color:var(--clr-text-2); margin-bottom:1rem">Since you selected 'Investment', this expense will automatically flow to your Balance Sheet as an asset.</p>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="ef-asset-type">Asset Type</label>
+              <select class="select" id="ef-asset-type">
+                ${assetTypes.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group" id="ef-retirement-sub-container" style="display:none">
+              <label for="ef-retirement-sub">Retirement Sub-type</label>
+              <select class="select" id="ef-retirement-sub">
+                <option value="rsa">RSA (Regular Pension)</option>
+                <option value="avc">AVC (Additional Voluntary Contribution)</option>
+                <option value="gratuity">Gratuity</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="ef-asset-inst">Institution / Broker Name</label>
+              <input class="input" id="ef-asset-inst" placeholder="e.g. Stanbic IBTC, Bamboo, Cowrywise">
+            </div>
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="ef-desc">Description</label>
           <input class="input" id="ef-desc" value="${e.description?e.description.replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').replace(/\[freq:[^\]]+\]/g, '').trim():''}" placeholder="e.g. Monthly rent, Groceries">
@@ -316,6 +373,27 @@ const WPExpenses = (() => {
     const freqSelect = document.getElementById('ef-freq');
     const customContainer = document.getElementById('ef-freq-custom-container');
 
+    const catSelect = document.getElementById('ef-cat');
+    const assetSubform = document.getElementById('exp-asset-subform');
+    const assetTypeSelect = document.getElementById('ef-asset-type');
+    const retirementContainer = document.getElementById('ef-retirement-sub-container');
+
+    if (catSelect && assetSubform) {
+      const toggleSubform = () => {
+        assetSubform.style.display = catSelect.value === 'Investment' ? 'block' : 'none';
+      };
+      catSelect.addEventListener('change', toggleSubform);
+      toggleSubform();
+    }
+
+    if (assetTypeSelect && retirementContainer) {
+      const toggleRetirement = () => {
+        retirementContainer.style.display = assetTypeSelect.value === 'retirement_contribution' ? 'block' : 'none';
+      };
+      assetTypeSelect.addEventListener('change', toggleRetirement);
+      toggleRetirement();
+    }
+
     if (recurToggle && freqContainer) {
       recurToggle.addEventListener('change', (ev) => {
         freqContainer.style.display = ev.target.checked ? 'block' : 'none';
@@ -352,19 +430,51 @@ const WPExpenses = (() => {
     }
     const finalDesc = WPUtils.setEntryCurrency(cleanDesc, currency);
 
+    const cat = document.getElementById('ef-cat').value;
+    const isInvestment = cat === 'Investment';
+
     const row = {
       user_id:          WPApp.state.user.id,
       expense_date:     document.getElementById('ef-date').value,
       amount,
-      category:         document.getElementById('ef-cat').value,
-      description:      finalDesc,
+      category:         cat,
+      description:      isInvestment ? `[Investment] ${finalDesc}`.trim() : finalDesc,
       merchant:         document.getElementById('ef-merchant').value.trim(),
       is_discretionary: document.getElementById('ef-disc').checked,
       is_recurring:     document.getElementById('ef-recur').checked,
     };
     try {
-      if (existingId) await WPDb.update('expense_entries', existingId, row);
-      else            await WPDb.insert('expense_entries', row);
+      if (existingId) {
+        await WPDb.update('expense_entries', existingId, row);
+      } else {
+        await WPDb.insert('expense_entries', row);
+        
+        // Flow to Asset side on balance sheet if newly added investment
+        if (isInvestment) {
+          const typeVal = document.getElementById('ef-asset-type').value;
+          const instVal = document.getElementById('ef-asset-inst').value.trim() || 'Double Entry';
+          
+          let notes = `[Double Entry from Expense] [${currency}]`;
+          if (typeVal === 'retirement_contribution') {
+            const subType = document.getElementById('ef-retirement-sub').value;
+            notes = `[Double Entry from Expense] [sub:${subType}] [${currency}]`;
+          }
+
+          const assetRow = {
+            user_id:            WPApp.state.user.id,
+            asset_name:         descVal || 'Investment Asset',
+            asset_type:         typeVal,
+            institution_name:   instVal,
+            open_balance:       amount,
+            close_balance:      amount,
+            period_month:       row.expense_date.slice(0, 7) + '-01',
+            is_income_generating: true,
+            notes:              notes,
+          };
+          await WPDb.insert('assets', assetRow);
+          WPToast.success('Double-entry: Asset created on Balance Sheet!');
+        }
+      }
       WPToast.success(existingId ? 'Expense updated.' : 'Expense logged.');
       await _load();
     } catch (err) { WPToast.error('Could not save: ' + err.message); }

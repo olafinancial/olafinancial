@@ -157,7 +157,7 @@ const WPBalanceSheet = (() => {
       wrap.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--clr-text-2)">No assets recorded. Click "Add Asset" to begin.</div>';
       return;
     }
-    const typeIcon = { savings:'&#x1F3E6;', fixed_deposit:'&#x1F512;', equity:'&#x1F4C8;', property:'&#x1F3E0;', vehicle:'&#x1F697;', pension:'&#x1F334;', not_applicable:'&#x1F4BC;', other:'&#x1F4B0;' };
+    const typeIcon = { savings:'&#x1F3E6;', fixed_deposit:'&#x1F512;', equity:'&#x1F4C8;', property:'&#x1F3E0;', vehicle:'&#x1F697;', retirement_contribution:'🌴', not_applicable:'&#x1F4BC;', other:'&#x1F4B0;' };
     wrap.innerHTML = `<table>
       <thead><tr><th>Asset</th><th>Type</th><th>Institution</th><th>Opening</th><th>Closing</th><th>Rate</th><th>% of Total</th><th></th></tr></thead>
       <tbody>${_assets.map(a => {
@@ -166,13 +166,23 @@ const WPBalanceSheet = (() => {
         const balPage = WPUtils.convert(bal, cur, pageCurrency);
         const openBalPage = WPUtils.convert(a.open_balance||0, cur, pageCurrency);
         const isEFSource = a.notes && a.notes.includes('[Emergency Fund]');
-        const cleanNotes = (a.notes || '').replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').replace(/\[Emergency Fund\]/g, '').trim();
+        
+        let subTypeLabel = '';
+        if (a.asset_type === 'retirement_contribution' && a.notes) {
+          const match = a.notes.match(/\[sub:([^\]]+)\]/);
+          if (match) {
+            const sub = match[1];
+            subTypeLabel = sub === 'rsa' ? ' (RSA)' : sub === 'avc' ? ' (AVC)' : ' (Gratuity)';
+          }
+        }
+
+        const cleanNotes = (a.notes || '').replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').replace(/\[Emergency Fund\]/g, '').replace(/\[sub:[^\]]+\]/g, '').trim();
         return `<tr>
           <td><strong>${typeIcon[a.asset_type]||'&#x1F4B0;'} ${a.asset_name}</strong>
             ${isEFSource?'<span class="badge badge-gold" style="margin-left:4px">EF Source</span>':''}
             ${cleanNotes?`<br><span class="text-xs text-muted">${cleanNotes}</span>`:''}
           </td>
-          <td><span class="badge badge-neutral">${(a.asset_type||'').replace('_',' ')}</span></td>
+          <td><span class="badge badge-neutral">${(a.asset_type||'').replace('_',' ')}${subTypeLabel}</span></td>
           <td class="text-muted text-sm">${a.institution_name||'—'}</td>
           <td class="td-mono">${WPUtils.fmt(openBalPage, { currency: pageCurrency })}</td>
           <td class="td-mono fw-600">${WPUtils.fmt(balPage, { currency: pageCurrency })}</td>
@@ -260,7 +270,7 @@ const WPBalanceSheet = (() => {
               <option value="fixed_deposit" ${e.asset_type==='fixed_deposit'?'selected':''}>Fixed Deposit / T-Bill</option>
               <option value="forex"         ${e.asset_type==='forex'        ?'selected':''}>Forex</option>
               <option value="not_applicable" ${e.asset_type==='not_applicable'?'selected':''}>Not Applicable</option>
-              <option value="pension"       ${e.asset_type==='pension'      ?'selected':''}>Pension / RSA</option>
+              <option value="retirement_contribution" ${e.asset_type==='retirement_contribution'?'selected':''}>Retirement Contribution</option>
               <option value="property"      ${e.asset_type==='property'     ?'selected':''}>Property / Real Estate</option>
               <option value="savings"       ${e.asset_type==='savings'      ?'selected':''}>Savings Account</option>
               <option value="vehicle"       ${e.asset_type==='vehicle'      ?'selected':''}>Vehicle</option>
@@ -279,6 +289,25 @@ const WPBalanceSheet = (() => {
             </select>
           </div>
         </div>
+        
+        <!-- Retirement contributions sub-type selection -->
+        ${(() => {
+          let subType = '';
+          if (e.notes && typeof e.notes === 'string') {
+            const match = e.notes.match(/\[sub:([^\]]+)\]/);
+            if (match) subType = match[1];
+          }
+          return `
+          <div id="af-retirement-sub-container" class="form-group" style="display:${e.asset_type==='retirement_contribution'?'block':'none'}; margin-top:0.75rem">
+            <label for="af-retirement-sub">Retirement Sub-type</label>
+            <select class="select" id="af-retirement-sub">
+              <option value="rsa" ${subType==='rsa'||!subType?'selected':''}>RSA (Regular Pension)</option>
+              <option value="avc" ${subType==='avc'?'selected':''}>AVC (Additional Voluntary Contribution)</option>
+              <option value="gratuity" ${subType==='gratuity'?'selected':''}>Gratuity</option>
+            </select>
+          </div>`;
+        })()}
+
         <div class="form-group">
           <label for="af-inst">Institution / Bank Name</label>
           <input class="input" id="af-inst" value="${e.institution_name||''}" placeholder="e.g. Zenith Bank, Stanbic IBTC">
@@ -336,6 +365,8 @@ const WPBalanceSheet = (() => {
     const incomeToggle = document.getElementById('af-income');
     const yieldRow = document.getElementById('yield-details-row');
     const currencySelect = document.getElementById('af-currency');
+    const assetTypeSelect = document.getElementById('af-type');
+    const subContainer = document.getElementById('af-retirement-sub-container');
 
     WPUtils.maskNumberInput(openInput);
     WPUtils.maskNumberInput(incomeInput);
@@ -347,6 +378,12 @@ const WPBalanceSheet = (() => {
       document.querySelector('label[for="af-open"]').textContent = `Opening Balance (${newSym})`;
       document.querySelector('label[for="af-income-amt"]').textContent = `Expected Annual Income (${newSym})`;
     });
+
+    if (assetTypeSelect && subContainer) {
+      assetTypeSelect.addEventListener('change', () => {
+        subContainer.style.display = assetTypeSelect.value === 'retirement_contribution' ? 'block' : 'none';
+      });
+    }
 
     if (e.is_income_generating && e.interest_rate && e.open_balance) {
       const annualIncome = (e.interest_rate / 100) * (e.open_balance / 100);
@@ -400,13 +437,19 @@ const WPBalanceSheet = (() => {
 
     const isEFSource = document.getElementById('af-ef-source').checked;
     const currency = document.getElementById('af-currency').value;
+    const typeVal = document.getElementById('af-type').value;
+
     let finalNotes = isEFSource ? '[Emergency Fund]' : '';
-    finalNotes = WPUtils.setEntryCurrency(finalNotes, currency);
+    if (typeVal === 'retirement_contribution') {
+      const subVal = document.getElementById('af-retirement-sub').value;
+      finalNotes += ` [sub:${subVal}]`;
+    }
+    finalNotes = WPUtils.setEntryCurrency(finalNotes.trim(), currency);
 
     const row = {
       user_id:              WPApp.state.user.id,
       asset_name:           document.getElementById('af-name').value.trim(),
-      asset_type:           document.getElementById('af-type').value,
+      asset_type:           typeVal,
       institution_type:     document.getElementById('af-inst-type').value || null,
       institution_name:     document.getElementById('af-inst').value.trim(),
       open_balance:         rawOpen,

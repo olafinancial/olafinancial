@@ -97,10 +97,42 @@ const WPRetirement = (() => {
     try {
       const PERIOD = WPUtils.currentPeriod();
       const uid    = WPApp.state.user.id;
-      const income = await WPDb.getIncomeByPeriod(uid, PERIOD);
-      const monthlyGross = income.reduce((s,e) => s+(e.gross_amount||0), 0);
+      const baseCur = WPApp.state.profile?.currency || 'NGN';
+      const pageCurrency = WPApp.state.profile?.currency || 'NGN';
+
+      const [income, assets] = await Promise.all([
+        WPDb.getIncomeByPeriod(uid, PERIOD),
+        WPDb.getAssetsByPeriod(uid, PERIOD)
+      ]);
+
+      const monthlyGross = income.reduce((s,e) => {
+        const cur = WPUtils.getEntryCurrency(e.notes);
+        return s + WPUtils.convert(e.gross_amount||0, cur, pageCurrency);
+      }, 0);
       if (monthlyGross > 0) {
         document.getElementById('ret-salary').value = WPUtils.koboToNaira(monthlyGross).toFixed(0);
+      }
+
+      // Aggregate all assets of type pension or retirement_contribution
+      const rsaAssets = assets.filter(a => {
+        if (a.asset_type === 'pension') return true;
+        if (a.asset_type === 'retirement_contribution') {
+          // If notes specify avc or gratuity, skip it. If sub:rsa or no sub, count it
+          if (a.notes && (a.notes.includes('[sub:avc]') || a.notes.includes('[sub:gratuity]'))) {
+            return false;
+          }
+          return true;
+        }
+        return false;
+      });
+
+      const totalRSA = rsaAssets.reduce((s, a) => {
+        const cur = WPUtils.getEntryCurrency(a.notes);
+        return s + WPUtils.convert(a.close_balance || a.open_balance || 0, cur, pageCurrency);
+      }, 0);
+
+      if (totalRSA > 0) {
+        document.getElementById('ret-rsa').value = WPUtils.koboToNaira(totalRSA).toFixed(0);
       }
     } catch (e) {}
   }
