@@ -424,8 +424,6 @@ const WPRetirement = (() => {
       </div>`;
   }
 
-  }
-
   function _loadStocks() {
     const uid = WPApp.state.user.id;
     return JSON.parse(localStorage.getItem('wp_ret_stocks_' + uid) || '[]');

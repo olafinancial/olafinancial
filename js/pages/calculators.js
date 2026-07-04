@@ -466,8 +466,8 @@ const WPCalculators = (() => {
           }
         }
 
-        document.getElementById('cg-result').textContent = WPUtils.fmt(monthly * 100, { currency });
-        document.getElementById('cg-summary').innerHTML = `To reach a goal of <strong>${WPUtils.fmt(target * 100, { currency })}</strong> in <strong>${yearsVal} years</strong> (at ${rateVal}% interest), you need to save <strong>${WPUtils.fmt(monthly * 100, { currency })}</strong> per month.`;
+        document.getElementById('cg-result').textContent = WPUtils.fmt(monthly * 100, { currency: currency });
+        document.getElementById('cg-summary').innerHTML = `To reach a goal of <strong>${WPUtils.fmt(target * 100, { currency: currency })}</strong> in <strong>${yearsVal} years</strong> (at ${rateVal}% interest), you need to save <strong>${WPUtils.fmt(monthly * 100, { currency: currency })}</strong> per month.`;
       };
       document.getElementById('run-savings-goal').addEventListener('click', calc);
       calc();
@@ -496,9 +496,9 @@ const WPCalculators = (() => {
         const contributions = init + (monthly * months);
         const interest = Math.max(0, total - contributions);
 
-        document.getElementById('cs-res-total').textContent = WPUtils.fmt(total * 100, { currency });
-        document.getElementById('cs-res-contrib').textContent = WPUtils.fmt(contributions * 100, { currency });
-        document.getElementById('cs-res-interest').textContent = WPUtils.fmt(interest * 100, { currency });
+        document.getElementById('cs-res-total').textContent = WPUtils.fmt(total * 100, { currency: currency });
+        document.getElementById('cs-res-contrib').textContent = WPUtils.fmt(contributions * 100, { currency: currency });
+        document.getElementById('cs-res-interest').textContent = WPUtils.fmt(interest * 100, { currency: currency });
       };
       document.getElementById('run-savings-compound').addEventListener('click', calc);
       calc();
@@ -522,7 +522,7 @@ const WPCalculators = (() => {
           }
         }
 
-        document.getElementById('roi-res-gain').textContent = WPUtils.fmt(gain * 100, { currency });
+        document.getElementById('roi-res-gain').textContent = WPUtils.fmt(gain * 100, { currency: currency });
         document.getElementById('roi-res-pct').textContent = roiPct.toFixed(2) + '%';
         document.getElementById('roi-res-annual').textContent = years > 0 ? annualized.toFixed(2) + '%' : '—';
       };
@@ -541,9 +541,9 @@ const WPCalculators = (() => {
         const total = amount + interest;
         const monthly = months > 0 ? total / months : 0;
 
-        document.getElementById('ls-res-monthly').textContent = WPUtils.fmt(monthly * 100, { currency });
-        document.getElementById('ls-res-interest').textContent = WPUtils.fmt(interest * 100, { currency });
-        document.getElementById('ls-res-total').textContent = WPUtils.fmt(total * 100, { currency });
+        document.getElementById('ls-res-monthly').textContent = WPUtils.fmt(monthly * 100, { currency: currency });
+        document.getElementById('ls-res-interest').textContent = WPUtils.fmt(interest * 100, { currency: currency });
+        document.getElementById('ls-res-total').textContent = WPUtils.fmt(total * 100, { currency: currency });
       };
       document.getElementById('run-loan-simple').addEventListener('click', calc);
       calc();
@@ -571,9 +571,9 @@ const WPCalculators = (() => {
         const total = monthly * months;
         const interest = Math.max(0, total - amount);
 
-        document.getElementById('ld-res-monthly').textContent = WPUtils.fmt(monthly * 100, { currency });
-        document.getElementById('ld-res-interest').textContent = WPUtils.fmt(interest * 100, { currency });
-        document.getElementById('ld-res-total').textContent = WPUtils.fmt(total * 100, { currency });
+        document.getElementById('ld-res-monthly').textContent = WPUtils.fmt(monthly * 100, { currency: currency });
+        document.getElementById('ld-res-interest').textContent = WPUtils.fmt(interest * 100, { currency: currency });
+        document.getElementById('ld-res-total').textContent = WPUtils.fmt(total * 100, { currency: currency });
       };
       document.getElementById('run-loan-detailed').addEventListener('click', calc);
       calc();
@@ -603,9 +603,9 @@ const WPCalculators = (() => {
 
         const totalCost = (monthly * months) + down + trade;
 
-        document.getElementById('cl-res-monthly').textContent = WPUtils.fmt(monthly * 100, { currency });
-        document.getElementById('cl-res-financed').textContent = WPUtils.fmt(financed * 100, { currency });
-        document.getElementById('cl-res-total').textContent = WPUtils.fmt(totalCost * 100, { currency });
+        document.getElementById('cl-res-monthly').textContent = WPUtils.fmt(monthly * 100, { currency: currency });
+        document.getElementById('cl-res-financed').textContent = WPUtils.fmt(financed * 100, { currency: currency });
+        document.getElementById('cl-res-total').textContent = WPUtils.fmt(totalCost * 100, { currency: currency });
       };
       document.getElementById('run-car-loan').addEventListener('click', calc);
       calc();
@@ -637,10 +637,10 @@ const WPCalculators = (() => {
         const monthlyIns = ins / 12;
         const total = monthlyPI + monthlyTax + monthlyIns;
 
-        document.getElementById('mc-res-total').textContent = WPUtils.fmt(total * 100, { currency });
-        document.getElementById('mc-res-pi').textContent = WPUtils.fmt(monthlyPI * 100, { currency });
-        document.getElementById('mc-res-tax').textContent = WPUtils.fmt(monthlyTax * 100, { currency });
-        document.getElementById('mc-res-ins').textContent = WPUtils.fmt(monthlyIns * 100, { currency });
+        document.getElementById('mc-res-total').textContent = WPUtils.fmt(total * 100, { currency: currency });
+        document.getElementById('mc-res-pi').textContent = WPUtils.fmt(monthlyPI * 100, { currency: currency });
+        document.getElementById('mc-res-tax').textContent = WPUtils.fmt(monthlyTax * 100, { currency: currency });
+        document.getElementById('mc-res-ins').textContent = WPUtils.fmt(monthlyIns * 100, { currency: currency });
       };
       document.getElementById('run-mortgage').addEventListener('click', calc);
       calc();
@@ -726,8 +726,8 @@ const WPCalculators = (() => {
         // EAY = (1 + r/n)^n - 1
         const eay = (Math.pow(1 + (r / compound), compound) - 1) * 100;
 
-        document.getElementById('fd-res-maturity').textContent = WPUtils.fmt(maturity * 100, { currency });
-        document.getElementById('fd-res-interest').textContent = WPUtils.fmt(interest * 100, { currency });
+        document.getElementById('fd-res-maturity').textContent = WPUtils.fmt(maturity * 100, { currency: currency });
+        document.getElementById('fd-res-interest').textContent = WPUtils.fmt(interest * 100, { currency: currency });
         document.getElementById('fd-res-eay').textContent = eay.toFixed(3) + '%';
       };
 
@@ -746,8 +746,8 @@ const WPCalculators = (() => {
         const loss = amount - future;
         const pct = (future / Math.max(1, amount)) * 100;
 
-        document.getElementById('inf-res-future').textContent = WPUtils.fmt(future * 100, { currency });
-        document.getElementById('inf-res-loss').textContent = WPUtils.fmt(loss * 100, { currency });
+        document.getElementById('inf-res-future').textContent = WPUtils.fmt(future * 100, { currency: currency });
+        document.getElementById('inf-res-loss').textContent = WPUtils.fmt(loss * 100, { currency: currency });
         document.getElementById('inf-res-pct').textContent = pct.toFixed(2) + '%';
       };
       document.getElementById('run-inflation').addEventListener('click', calc);
