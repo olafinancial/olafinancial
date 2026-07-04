@@ -40,6 +40,14 @@ const WPDebt = (() => {
       </div>
       <div class="page-body">
         <div class="disclaimer mb-6">${APP_CONFIG.disclaimer}</div>
+        <!-- Mini Goal Widget -->
+        <div class="card" style="margin-bottom:1.5rem;display:flex;justify-content:space-between;align-items:center;padding:1.5rem">
+          <div>
+            <div class="section-title" style="margin:0;font-size:1.1rem">🎯 Debt Paydown Goal</div>
+            <p style="font-size:0.85rem;color:var(--clr-text-2);margin:0.25rem 0 0">Set targets to pay off specific loans and liabilities.</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="location.hash='#/goals'">Manage Debt Goals</button>
+        </div>
         <div class="kpi-grid" id="debt-kpis" style="margin-bottom:1.5rem"></div>
         <!-- Extra Payment & Strategy Simulator -->
         <div class="card" style="margin-bottom:1.5rem">

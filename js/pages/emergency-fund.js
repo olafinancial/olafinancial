@@ -123,6 +123,9 @@ const WPEmergencyFund = (() => {
             <span>Target: ${WPUtils.fmt(targetPage, {currency: pageCurrency})}</span>
           </div>
         </div>
+        <div style="margin-top:1.5rem">
+          <button class="btn btn-ghost btn-sm" onclick="WPGoals._share('Emergency Fund Milestone', ${pct}, '${pageCurrency}', ${currentPage})">📢 Share Progress</button>
+        </div>
       </div>
 
       <!-- KPIs -->

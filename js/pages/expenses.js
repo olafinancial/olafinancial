@@ -40,6 +40,14 @@ const WPExpenses = (() => {
         </div>
       </div>
       <div class="page-body">
+        <!-- Mini Goal Widget -->
+        <div class="card" style="margin-bottom:1.5rem;display:flex;justify-content:space-between;align-items:center;padding:1.5rem">
+          <div>
+            <div class="section-title" style="margin:0;font-size:1.1rem">🎯 Expense Minimisation Goal</div>
+            <p style="font-size:0.85rem;color:var(--clr-text-2);margin:0.25rem 0 0">Control your discretionary spending: track targets dynamically.</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="location.hash='#/goals'">Manage Budget Goals</button>
+        </div>
         <div class="kpi-grid" id="expense-kpis" style="margin-bottom:1.5rem"></div>
         <div class="grid-2" style="margin-bottom:1.5rem">
           <div class="chart-wrap">

@@ -149,6 +149,7 @@ const WPGoals = (() => {
         ${done ? '🎉 Completed!' : daysLeft > 0 ? `${daysLeft} days remaining` : `<span class="text-danger">⚠️ ${Math.abs(daysLeft)} days overdue</span>`}
       </div>` : ''}
       <div style="margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end">
+        <button class="btn btn-ghost btn-sm" onclick="WPGoals._share('${g.goal_name}', ${pct}, '${pageCurrency}', ${savedPage})">📢 Share</button>
         <button class="btn btn-ghost btn-sm" onclick="WPGoals._update('${g.id}')">&#x2B06; Update</button>
         <button class="btn btn-ghost btn-sm" onclick="WPGoals._edit('${g.id}')">Edit</button>
         <button class="btn btn-ghost btn-sm text-danger" onclick="WPGoals._delete('${g.id}')">Delete</button>
@@ -307,6 +308,37 @@ const WPGoals = (() => {
     });
   }
 
+  function _share(name, pct, currency, savedAmt) {
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', AED: 'د.إ', CNY: '¥', XOF: 'CFA', XAF: 'FCFA', KES: 'KSh', GHS: 'GH₵', ZAR: 'R', SAR: 'ر.س' };
+    const sym = symbols[currency] || '';
+    const amtStr = sym + (savedAmt / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    
+    const text = pct >= 100 
+      ? `🎉 Goal Achieved! I just completed my goal "${name}" on Ola Financial! ${amtStr} fully saved! 🚀 #OlaFinancial #FinancialFreedom`
+      : `📈 Stacking gains! I am now ${pct.toFixed(1)}% of the way to my goal "${name}" on Ola Financial! ${sym} ${amtStr} saved! 💪 #OlaFinancial`;
+
+    const body = `
+      <div style="padding:1rem;text-align:center">
+        <div style="font-size:2.5rem;margin-bottom:1rem">📢 Share Your Progress!</div>
+        <p style="font-size:0.95rem;color:var(--clr-text-2);margin-bottom:1.5rem">Inspire your network and track your milestones by sharing this goal status.</p>
+        <textarea class="textarea" readonly style="width:100%;height:100px;font-size:0.92rem;margin-bottom:1.5rem">${text}</textarea>
+        <div style="display:flex;gap:0.75rem;justify-content:center">
+          <button class="btn btn-primary" id="btn-share-copy">📋 Copy Message</button>
+          <a class="btn btn-secondary" href="https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}" target="_blank" rel="noopener noreferrer">🐦 Share on Twitter</a>
+        </div>
+      </div>`;
+
+    WPModal.open('Bragging Rights!', body, {
+      confirmLabel: 'Done',
+      onConfirm: async () => {},
+    });
+
+    document.getElementById('btn-share-copy')?.addEventListener('click', () => {
+      navigator.clipboard.writeText(text);
+      WPToast.success('Copied to clipboard! Go ahead and paste to share.');
+    });
+  }
+
   function destroy() {}
-  return { init, destroy, _edit, _delete, _update };
+  return { init, destroy, _edit, _delete, _update, _share };
 })();

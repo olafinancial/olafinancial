@@ -325,7 +325,8 @@ const WPDashboard = (() => {
           </td></tr>` : ''}</tfoot>
         </table>
       </div>
-      <div style="margin-top:1rem;text-align:right">
+      <div style="margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end">
+        <button class="btn btn-primary btn-sm" id="pyf-flow-btn">💰 Flow to Goals</button>
         <button class="btn btn-secondary btn-sm" id="pyf-save-btn">💾 Save Allocation</button>
         <button class="btn btn-ghost btn-sm" id="pyf-reset-btn">Reset to Defaults</button>
       </div>`;
@@ -357,6 +358,41 @@ const WPDashboard = (() => {
       localStorage.removeItem('wp_pyf_' + uid);
       _renderPYF(s);
     });
+
+    document.getElementById('pyf-flow-btn')?.addEventListener('click', async () => {
+      try {
+        const activeGoals = await WPDb.fetchAll('goals', { user_id: uid });
+        if (!activeGoals.length) {
+          WPToast.warning('You do not have any active goals yet. Please create goals first!');
+          return;
+        }
+
+        let totalFlowed = 0;
+        for (const alloc of allocs) {
+          if (alloc.pct <= 0) continue;
+          
+          // Match by bucket goal_type mapping
+          const matched = activeGoals.find(g => g.goal_type === alloc.key && g.current_savings < g.target_amount);
+          if (matched) {
+            const amountToAdd = Math.round(s.cf.netCashFlow * (alloc.pct / 100));
+            const newAmt = matched.current_savings + amountToAdd;
+            await WPDb.update('goals', matched.id, { current_savings: newAmt });
+            totalFlowed += amountToAdd;
+          }
+        }
+
+        if (totalFlowed > 0) {
+          WPToast.success(`🎉 Successfully allocated ${WPUtils.fmt(totalFlowed, {currency: baseCur})} across your matched goals!`);
+          await WPApp.loadData();
+          _renderPYF(WPApp.computeSummary());
+        } else {
+          WPToast.info('No active goals matched your allocated surplus buckets.');
+        }
+      } catch (err) {
+        WPToast.error('Could not allocate: ' + err.message);
+      }
+    });
+  }
   }
 
   function destroy() {}
