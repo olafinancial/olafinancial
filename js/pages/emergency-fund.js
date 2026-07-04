@@ -8,18 +8,45 @@ const WPEmergencyFund = (() => {
   let _currentBalance = 0;
   let _monthlyExpenses = 0;
 
-  async function init(container) {
+    const baseCur = WPApp.state.profile?.currency || 'NGN';
+    const pageCurrency = localStorage.getItem('wp_page_currency_emergency') || baseCur;
+
     container.innerHTML = `
       <div class="page-header">
         <div>
           <h1 class="page-title">Emergency Fund</h1>
           <p class="page-subtitle">3 months of essential expenses — your financial safety net</p>
         </div>
+        <select id="ef-page-currency" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
+          <option value="NGN">NGN (₦)</option>
+          <option value="USD">USD ($)</option>
+          <option value="EUR">EUR (€)</option>
+          <option value="GBP">GBP (£)</option>
+          <option value="AED">AED (د.إ)</option>
+          <option value="CNY">CNY (¥)</option>
+          <option value="XOF">XOF (CFA)</option>
+          <option value="XAF">XAF (FCFA)</option>
+          <option value="KES">KES (KSh)</option>
+          <option value="GHS">GHS (GH₵)</option>
+          <option value="CAD">CAD (CA$)</option>
+          <option value="ZAR">ZAR (R)</option>
+          <option value="SAR">SAR (ر.س)</option>
+          <option value="AUD">AUD (A$)</option>
+        </select>
       </div>
       <div class="page-body">
         <div id="ef-main"></div>
         <div class="disclaimer" style="margin-top:1.5rem">${APP_CONFIG.disclaimer}</div>
       </div>`;
+
+    const curSelect = document.getElementById('ef-page-currency');
+    if (curSelect) {
+      curSelect.value = pageCurrency;
+      curSelect.addEventListener('change', (e) => {
+        localStorage.setItem('wp_page_currency_emergency', e.target.value);
+        _load();
+      });
+    }
 
     await _load();
   }
@@ -37,22 +64,39 @@ const WPEmergencyFund = (() => {
         WPDb.getExpensesByDateRange(uid, start, end),
       ]);
 
-      _efAssets = assets.filter(a => a.notes && a.notes.includes('[Emergency Fund]'));
-      _currentBalance = _efAssets.reduce((s, a) => s + (a.close_balance || a.open_balance || 0), 0);
+      const baseCur = WPApp.state.profile?.currency || 'NGN';
+      const pageCurrency = localStorage.getItem('wp_page_currency_emergency') || baseCur;
 
-      const nonDisc = expenses.filter(e => !e.is_discretionary).reduce((s,e) => s+(e.amount||0), 0);
-      _monthlyExpenses = nonDisc;
-      _render();
+      _efAssets = assets.filter(a => a.notes && a.notes.includes('[Emergency Fund]'));
+      
+      // Calculate current balance in baseCur
+      _currentBalance = _efAssets.reduce((s, a) => {
+        const cur = WPUtils.getEntryCurrency(a.notes);
+        return s + WPUtils.convert(a.close_balance || a.open_balance || 0, cur, baseCur);
+      }, 0);
+
+      // Calculate monthly essential expenses in baseCur
+      _monthlyExpenses = expenses.filter(e => !e.is_discretionary).reduce((s,e) => {
+        const cur = WPUtils.getEntryCurrency(e.description);
+        return s + WPUtils.convert(e.amount||0, cur, baseCur);
+      }, 0);
+
+      _render(baseCur, pageCurrency);
     } catch (err) { WPToast.error('Failed to load emergency fund data.'); }
   }
 
-  function _render() {
+  function _render(baseCur, pageCurrency) {
     const target  = WPUtils.emergencyFundTarget(_monthlyExpenses);
     const current = _currentBalance;
     const status  = WPUtils.emergencyFundStatus(current, target);
     const gap     = Math.max(0, target - current);
     const months  = _monthlyExpenses > 0 ? (current / _monthlyExpenses).toFixed(1) : '—';
     const pct     = Math.min(100, status.pct);
+
+    const targetPage = WPUtils.convert(target, baseCur, pageCurrency);
+    const currentPage = WPUtils.convert(current, baseCur, pageCurrency);
+    const gapPage = WPUtils.convert(gap, baseCur, pageCurrency);
+    const expensesPage = WPUtils.convert(_monthlyExpenses, baseCur, pageCurrency);
 
     const statusColors = { on_track:'accent', building:'gold', warning:'gold', critical:'danger', no_target:'text-muted' };
     const color = statusColors[status.status] || 'accent';
@@ -61,7 +105,7 @@ const WPEmergencyFund = (() => {
       <!-- Big status card -->
       <div class="card" style="text-align:center;padding:3rem;margin-bottom:1.5rem;background:linear-gradient(135deg,var(--clr-surface-3),var(--clr-surface-2))">
         <div class="card-title">Emergency Fund Balance</div>
-        <div class="card-value ${color}" style="font-size:3.5rem;margin:0.5rem 0">${WPUtils.fmt(current)}</div>
+        <div class="card-value ${color}" style="font-size:3.5rem;margin:0.5rem 0">${WPUtils.fmt(currentPage, {currency: pageCurrency})}</div>
         <div class="card-meta" style="font-size:1rem">
           ${status.label || 'Set up your emergency fund'} &bull; ${months} months of expenses covered
         </div>
@@ -75,8 +119,8 @@ const WPEmergencyFund = (() => {
               style="width:${pct}%;transition:width 1s ease"></div>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--clr-text-3);margin-top:0.5rem">
-            <span>${WPUtils.fmt(current)}</span>
-            <span>Target: ${WPUtils.fmt(target)}</span>
+            <span>${WPUtils.fmt(currentPage, {currency: pageCurrency})}</span>
+            <span>Target: ${WPUtils.fmt(targetPage, {currency: pageCurrency})}</span>
           </div>
         </div>
       </div>
@@ -85,17 +129,17 @@ const WPEmergencyFund = (() => {
       <div class="kpi-grid" style="margin-bottom:1.5rem">
         <div class="card">
           <div class="card-title">3-Month Target</div>
-          <div class="card-value">${WPUtils.fmt(target)}</div>
+          <div class="card-value">${WPUtils.fmt(targetPage, {currency: pageCurrency})}</div>
           <div class="card-meta">3× monthly essential expenses</div>
         </div>
         <div class="card">
           <div class="card-title">Gap to Target</div>
-          <div class="card-value ${gap>0?'danger':'accent'}">${gap > 0 ? WPUtils.fmt(gap) : 'Funded!'}</div>
+          <div class="card-value ${gap>0?'danger':'accent'}">${gap > 0 ? WPUtils.fmt(gapPage, {currency: pageCurrency}) : 'Funded!'}</div>
           <div class="card-meta">${gap > 0 ? 'Still needed' : '&#x1F389; Target reached'}</div>
         </div>
         <div class="card">
           <div class="card-title">Monthly Essential Expenses</div>
-          <div class="card-value">${WPUtils.fmt(_monthlyExpenses)}</div>
+          <div class="card-value">${WPUtils.fmt(expensesPage, {currency: pageCurrency})}</div>
           <div class="card-meta">Non-discretionary spending this month</div>
         </div>
         <div class="card">
@@ -106,7 +150,7 @@ const WPEmergencyFund = (() => {
       </div>
 
       <!-- Status guidance -->
-      ${_renderGuidance(status, gap, current, target)}
+      ${_renderGuidance(status, gapPage, currentPage, targetPage, pageCurrency)}
 
       <!-- Sources Table -->
       <div class="card" style="margin-top:1.5rem">
@@ -122,14 +166,18 @@ const WPEmergencyFund = (() => {
               </tr>
             </thead>
             <tbody>
-              ${_efAssets.map(a => `
-                <tr>
-                  <td><strong>${a.asset_name}</strong></td>
-                  <td>${a.institution_name || '—'}</td>
-                  <td style="text-transform:capitalize">${a.asset_type.replace('_',' ')}</td>
-                  <td class="td-mono fw-700" style="text-align:right">${WPUtils.fmt(a.close_balance || a.open_balance || 0)}</td>
-                </tr>
-              `).join('')}
+              ${_efAssets.map(a => {
+                const aCur = WPUtils.getEntryCurrency(a.notes);
+                const aBalPage = WPUtils.convert(a.close_balance || a.open_balance || 0, aCur, pageCurrency);
+                return `
+                  <tr>
+                    <td><strong>${a.asset_name}</strong></td>
+                    <td>${a.institution_name || '—'}</td>
+                    <td style="text-transform:capitalize">${a.asset_type.replace('_',' ')}</td>
+                    <td class="td-mono fw-700" style="text-align:right">${WPUtils.fmt(aBalPage, {currency: pageCurrency})}</td>
+                  </tr>
+                `;
+              }).join('')}
             </tbody>
           </table></div>
         ` : `
@@ -188,11 +236,11 @@ const WPEmergencyFund = (() => {
     document.getElementById('ef-main').innerHTML = html;
   }
 
-  function _renderGuidance(status, gap, current, target) {
+  function _renderGuidance(status, gapPage, currentPage, targetPage, pageCurrency) {
     const guides = {
-      critical:   { type:'danger',  msg:`Your fund is critically low. Focus all available surplus on building this before other investments. Set up a standing order to save at least ${WPUtils.fmt(Math.round(gap/6))} per month.` },
-      warning:    { type:'warning', msg:`You have 1–2 months covered. Keep going — aim to add ${WPUtils.fmt(Math.round(gap/3))} per month for the next 3 months to reach the 3-month target.` },
-      building:   { type:'info',    msg:`Good progress! You have 2–3 months covered. A small monthly top-up of ${WPUtils.fmt(Math.round(gap/3))} will get you to full funding.` },
+      critical:   { type:'danger',  msg:`Your fund is critically low. Focus all available surplus on building this before other investments. Set up a standing order to save at least ${WPUtils.fmt(Math.round(gapPage/6), {currency: pageCurrency})} per month.` },
+      warning:    { type:'warning', msg:`You have 1–2 months covered. Keep going — aim to add ${WPUtils.fmt(Math.round(gapPage/3), {currency: pageCurrency})} per month for the next 3 months to reach the 3-month target.` },
+      building:   { type:'info',    msg:`Good progress! You have 2–3 months covered. A small monthly top-up of ${WPUtils.fmt(Math.round(gapPage/3), {currency: pageCurrency})} will get you to full funding.` },
       on_track:   { type:'success', msg:`Excellent! Your emergency fund is fully funded. Consider topping up to 6 months if your employment is variable or if you have dependents.` },
       no_target:  { type:'info',    msg:'Log your monthly expenses in the Expenses tab to calculate your target automatically.' },
     };

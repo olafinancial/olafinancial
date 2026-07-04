@@ -21,6 +21,16 @@ const WPBalanceSheet = (() => {
             <option value="USD">USD ($)</option>
             <option value="EUR">EUR (€)</option>
             <option value="GBP">GBP (£)</option>
+            <option value="AED">AED (د.إ)</option>
+            <option value="CNY">CNY (¥)</option>
+            <option value="XOF">XOF (CFA)</option>
+            <option value="XAF">XAF (FCFA)</option>
+            <option value="KES">KES (KSh)</option>
+            <option value="GHS">GHS (GH₵)</option>
+            <option value="CAD">CAD (CA$)</option>
+            <option value="ZAR">ZAR (R)</option>
+            <option value="SAR">SAR (ر.س)</option>
+            <option value="AUD">AUD (A$)</option>
           </select>
           <button class="btn btn-secondary" id="add-asset-btn">&#x2795; Add Asset</button>
           <button class="btn btn-primary"   id="add-liab-btn">&#x2795; Add Liability</button>
@@ -156,7 +166,7 @@ const WPBalanceSheet = (() => {
         const balPage = WPUtils.convert(bal, cur, pageCurrency);
         const openBalPage = WPUtils.convert(a.open_balance||0, cur, pageCurrency);
         const isEFSource = a.notes && a.notes.includes('[Emergency Fund]');
-        const cleanNotes = (a.notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').replace(/\[Emergency Fund\]/g, '').trim();
+        const cleanNotes = (a.notes || '').replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').replace(/\[Emergency Fund\]/g, '').trim();
         return `<tr>
           <td><strong>${typeIcon[a.asset_type]||'&#x1F4B0;'} ${a.asset_name}</strong>
             ${isEFSource?'<span class="badge badge-gold" style="margin-left:4px">EF Source</span>':''}
@@ -198,7 +208,7 @@ const WPBalanceSheet = (() => {
         const cur = WPUtils.getEntryCurrency(l.notes);
         const balPage = WPUtils.convert(bal, cur, pageCurrency);
         const pmtPage = WPUtils.convert(l.monthly_payment||0, cur, pageCurrency);
-        const cleanNotes = (l.notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
+        const cleanNotes = (l.notes || '').replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').trim();
         return `<tr>
           <td><strong>${l.liability_name}</strong>${cleanNotes?`<br><span class="text-xs text-muted">${cleanNotes}</span>`:''}</td>
           <td><span class="badge badge-danger">${(l.liability_type||'').replace('_',' ')}</span></td>
@@ -218,7 +228,7 @@ const WPBalanceSheet = (() => {
   function _openAssetForm(existing = null) {
     const e = existing || {};
     const currencyCode = WPUtils.getEntryCurrency(e.notes);
-    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', AED: 'د.إ', CNY: '¥', XOF: 'CFA', XAF: 'FCFA', KES: 'KSh', GHS: 'GH₵', ZAR: 'R', SAR: 'ر.س' };
     const symbol = symbols[currencyCode] || '₦';
 
     const body = `
@@ -419,7 +429,7 @@ const WPBalanceSheet = (() => {
   function _openLiabForm(existing = null) {
     const e = existing || {};
     const currencyCode = WPUtils.getEntryCurrency(e.notes);
-    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', AED: 'د.إ', CNY: '¥', XOF: 'CFA', XAF: 'FCFA', KES: 'KSh', GHS: 'GH₵', ZAR: 'R', SAR: 'ر.س' };
     const symbol = symbols[currencyCode] || '₦';
 
     const body = `

@@ -96,6 +96,16 @@ const WPOnboarding = (() => {
           <option value="USD" ${_data.currency==='USD'?'selected':''}>USD ($) — US Dollar</option>
           <option value="EUR" ${_data.currency==='EUR'?'selected':''}>EUR (€) — Euro</option>
           <option value="GBP" ${_data.currency==='GBP'?'selected':''}>GBP (£) — British Pound</option>
+          <option value="AED" ${_data.currency==='AED'?'selected':''}>AED (د.إ) — UAE Dirham</option>
+          <option value="CNY" ${_data.currency==='CNY'?'selected':''}>CNY (¥) — Chinese Yuan</option>
+          <option value="XOF" ${_data.currency==='XOF'?'selected':''}>XOF (CFA) — West African CFA Franc</option>
+          <option value="XAF" ${_data.currency==='XAF'?'selected':''}>XAF (FCFA) — Central African CFA Franc</option>
+          <option value="KES" ${_data.currency==='KES'?'selected':''}>KES (KSh) — Kenyan Shilling</option>
+          <option value="GHS" ${_data.currency==='GHS'?'selected':''}>GHS (GH₵) — Ghanaian Cedi</option>
+          <option value="CAD" ${_data.currency==='CAD'?'selected':''}>CAD (CA$) — Canadian Dollar</option>
+          <option value="ZAR" ${_data.currency==='ZAR'?'selected':''}>ZAR (R) — South African Rand</option>
+          <option value="SAR" ${_data.currency==='SAR'?'selected':''}>SAR (ر.س) — Saudi Riyal</option>
+          <option value="AUD" ${_data.currency==='AUD'?'selected':''}>AUD (A$) — Australian Dollar</option>
         </select>
       </div>`;
   }

@@ -11,7 +11,7 @@ const WPRetirement = (() => {
     const risk    = profile.risk_tolerance || 'moderate';
 
     const currencyCode = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
-    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', AED: 'د.إ', CNY: '¥', XOF: 'CFA', XAF: 'FCFA', KES: 'KSh', GHS: 'GH₵', ZAR: 'R', SAR: 'ر.س' };
     const symbol = symbols[currencyCode] || '₦';
 
     container.innerHTML = `

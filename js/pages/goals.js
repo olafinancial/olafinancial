@@ -7,19 +7,50 @@ const WPGoals = (() => {
   let _goals = [];
 
   async function init(container) {
+    const baseCur = WPApp.state.profile?.currency || 'NGN';
+    const pageCurrency = localStorage.getItem('wp_page_currency_goals') || baseCur;
+
     container.innerHTML = `
       <div class="page-header">
         <div>
           <h1 class="page-title">Financial Goals</h1>
           <p class="page-subtitle">Track progress toward your most important financial milestones</p>
         </div>
-        <button class="btn btn-primary" id="add-goal-btn">&#x2795; Add Goal</button>
+        <div class="flex gap-4" style="align-items:center">
+          <select id="goals-page-currency" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
+            <option value="NGN">NGN (₦)</option>
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="GBP">GBP (£)</option>
+            <option value="AED">AED (د.إ)</option>
+            <option value="CNY">CNY (¥)</option>
+            <option value="XOF">XOF (CFA)</option>
+            <option value="XAF">XAF (FCFA)</option>
+            <option value="KES">KES (KSh)</option>
+            <option value="GHS">GHS (GH₵)</option>
+            <option value="CAD">CAD (CA$)</option>
+            <option value="ZAR">ZAR (R)</option>
+            <option value="SAR">SAR (ر.س)</option>
+            <option value="AUD">AUD (A$)</option>
+          </select>
+          <button class="btn btn-primary" id="add-goal-btn">&#x2795; Add Goal</button>
+        </div>
       </div>
       <div class="page-body">
         <div id="goals-list"></div>
       </div>`;
 
     document.getElementById('add-goal-btn').addEventListener('click', () => _openForm());
+    
+    const curSelect = document.getElementById('goals-page-currency');
+    if (curSelect) {
+      curSelect.value = pageCurrency;
+      curSelect.addEventListener('change', (e) => {
+        localStorage.setItem('wp_page_currency_goals', e.target.value);
+        _render();
+      });
+    }
+
     await _load();
   }
 
@@ -33,6 +64,7 @@ const WPGoals = (() => {
 
   function _render() {
     const el = document.getElementById('goals-list');
+    if (!el) return;
     if (!_goals.length) {
       el.innerHTML = `<div class="card" style="text-align:center;padding:4rem;color:var(--clr-text-2)">
         <div style="font-size:3rem;margin-bottom:1rem">&#x1F3AF;</div>
@@ -43,22 +75,35 @@ const WPGoals = (() => {
       return;
     }
 
-    const completed = _goals.filter(g => g.current_savings >= g.target_amount);
-    const active    = _goals.filter(g => g.current_savings <  g.target_amount);
+    const baseCur = WPApp.state.profile?.currency || 'NGN';
+    const pageCurrency = localStorage.getItem('wp_page_currency_goals') || baseCur;
+
+    const completed = _goals.filter(g => {
+      const cur = WPUtils.getEntryCurrency(g.notes);
+      const savedBase = WPUtils.convert(g.current_savings||0, cur, baseCur);
+      const targetBase = WPUtils.convert(g.target_amount||0, cur, baseCur);
+      return savedBase >= targetBase;
+    });
+    const active    = _goals.filter(g => {
+      const cur = WPUtils.getEntryCurrency(g.notes);
+      const savedBase = WPUtils.convert(g.current_savings||0, cur, baseCur);
+      const targetBase = WPUtils.convert(g.target_amount||0, cur, baseCur);
+      return savedBase < targetBase;
+    });
 
     let html = '';
     if (active.length) {
       html += `<div class="goals-header">Active Goals (${active.length})</div>`;
-      html += `<div class="goals-grid">${active.map(_goalCard).join('')}</div>`;
+      html += `<div class="goals-grid">${active.map(g => _goalCard(g, false, pageCurrency)).join('')}</div>`;
     }
     if (completed.length) {
       html += `<div class="goals-header" style="margin-top:2rem;color:var(--clr-accent)">&#x2714; Completed (${completed.length})</div>`;
-      html += `<div class="goals-grid">${completed.map(g => _goalCard(g, true)).join('')}</div>`;
+      html += `<div class="goals-grid">${completed.map(g => _goalCard(g, true, pageCurrency)).join('')}</div>`;
     }
     el.innerHTML = html;
   }
 
-  function _goalCard(g, done = false) {
+  function _goalCard(g, done = false, pageCurrency) {
     const pct      = Math.min(100, ((g.current_savings||0) / Math.max(1, g.target_amount)) * 100);
     const gap      = Math.max(0, g.target_amount - (g.current_savings||0));
     const daysLeft = g.target_date ? Math.ceil((new Date(g.target_date) - new Date()) / 86400000) : null;
@@ -76,7 +121,11 @@ const WPGoals = (() => {
       custom:      '🎯',
     };
     const cur      = WPUtils.getEntryCurrency(g.notes);
-    const cleanNotes = (g.notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
+    const cleanNotes = (g.notes || '').replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').trim();
+
+    const savedPage = WPUtils.convert(g.current_savings||0, cur, pageCurrency);
+    const gapPage = WPUtils.convert(gap, cur, pageCurrency);
+    const targetPage = WPUtils.convert(g.target_amount||0, cur, pageCurrency);
 
     return `<div class="card goal-card ${done?'goal-done':''}">
       <div class="goal-icon">${icons[g.goal_type]||'&#x1F3AF;'}</div>
@@ -92,12 +141,12 @@ const WPGoals = (() => {
         </div>
       </div>
       <div class="goal-amounts">
-        <div><div class="text-muted text-xs">Saved</div><div class="fw-700 text-accent">${WPUtils.fmt(g.current_savings||0, {compact:true, currency: cur})}</div></div>
-        <div style="text-align:center"><div class="text-muted text-xs">Gap</div><div class="fw-600">${WPUtils.fmt(gap, {compact:true, currency: cur})}</div></div>
-        <div style="text-align:right"><div class="text-muted text-xs">Target</div><div class="fw-700">${WPUtils.fmt(g.target_amount, {compact:true, currency: cur})}</div></div>
+        <div><div class="text-muted text-xs">Saved</div><div class="fw-700 text-accent">${WPUtils.fmt(savedPage, {compact:true, currency: pageCurrency})}</div></div>
+        <div style="text-align:center"><div class="text-muted text-xs">Gap</div><div class="fw-600">${WPUtils.fmt(gapPage, {compact:true, currency: pageCurrency})}</div></div>
+        <div style="text-align:right"><div class="text-muted text-xs">Target</div><div class="fw-700">${WPUtils.fmt(targetPage, {compact:true, currency: pageCurrency})}</div></div>
       </div>
       ${daysLeft !== null ? `<div class="text-xs text-muted" style="margin-top:0.75rem">
-        ${done ? '&#x1F389; Completed!' : daysLeft > 0 ? `${daysLeft} days remaining` : `<span class="text-danger">&#x26A0;&#xFE0F; ${Math.abs(daysLeft)} days overdue</span>`}
+        ${done ? '🎉 Completed!' : daysLeft > 0 ? `${daysLeft} days remaining` : `<span class="text-danger">⚠️ ${Math.abs(daysLeft)} days overdue</span>`}
       </div>` : ''}
       <div style="margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end">
         <button class="btn btn-ghost btn-sm" onclick="WPGoals._update('${g.id}')">&#x2B06; Update</button>
@@ -110,7 +159,7 @@ const WPGoals = (() => {
   function _openForm(existing = null) {
     const e = existing || {};
     const currencyCode = WPUtils.getEntryCurrency(e.notes);
-    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', AED: 'د.إ', CNY: '¥', XOF: 'CFA', XAF: 'FCFA', KES: 'KSh', GHS: 'GH₵', ZAR: 'R', SAR: 'ر.س' };
     const symbol = symbols[currencyCode] || '₦';
 
     const body = `
@@ -169,7 +218,7 @@ const WPGoals = (() => {
         </div>
         <div class="form-group">
           <label for="gf-notes">Notes (optional)</label>
-          <textarea class="textarea" id="gf-notes" placeholder="e.g. 3-bedroom apartment in Lekki Phase 1">${e.notes?e.notes.replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim():''}</textarea>
+          <textarea class="textarea" id="gf-notes" placeholder="e.g. 3-bedroom apartment in Lekki Phase 1">${e.notes?e.notes.replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').trim():''}</textarea>
         </div>
       </form>`;
 
@@ -220,7 +269,7 @@ const WPGoals = (() => {
     const g = _goals.find(x => x.id === id);
     if (!g) return;
     const currencyCode = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
-    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', AED: 'د.إ', CNY: '¥', XOF: 'CFA', XAF: 'FCFA', KES: 'KSh', GHS: 'GH₵', ZAR: 'R', SAR: 'ر.س' };
     const symbol = symbols[currencyCode] || '₦';
 
     const body = `

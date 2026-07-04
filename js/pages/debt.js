@@ -7,14 +7,36 @@ const WPDebt = (() => {
   let _liabilities = [];
   const PERIOD = WPUtils.currentPeriod();
 
-  async function init(container) {
+    const baseCur = WPApp.state.profile?.currency || 'NGN';
+    const pageCurrency = localStorage.getItem('wp_page_currency_debt') || baseCur;
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', AED: 'د.إ', CNY: '¥', XOF: 'CFA', XAF: 'FCFA', KES: 'KSh', GHS: 'GH₵', ZAR: 'R', SAR: 'ر.س' };
+    const symbol = symbols[pageCurrency] || '₦';
+
     container.innerHTML = `
       <div class="page-header">
         <div>
           <h1 class="page-title">Debt Planner</h1>
           <p class="page-subtitle">Choose between Debt Avalanche (highest APR first) or Debt Snowball (lowest balance first)</p>
         </div>
-        <button class="btn btn-primary" id="add-debt-btn">&#x2795; Add Debt</button>
+        <div class="flex gap-4" style="align-items:center">
+          <select id="debt-page-currency" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
+            <option value="NGN">NGN (₦)</option>
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="GBP">GBP (£)</option>
+            <option value="AED">AED (د.إ)</option>
+            <option value="CNY">CNY (¥)</option>
+            <option value="XOF">XOF (CFA)</option>
+            <option value="XAF">XAF (FCFA)</option>
+            <option value="KES">KES (KSh)</option>
+            <option value="GHS">GHS (GH₵)</option>
+            <option value="CAD">CAD (CA$)</option>
+            <option value="ZAR">ZAR (R)</option>
+            <option value="SAR">SAR (ر.س)</option>
+            <option value="AUD">AUD (A$)</option>
+          </select>
+          <button class="btn btn-primary" id="add-debt-btn">&#x2795; Add Debt</button>
+        </div>
       </div>
       <div class="page-body">
         <div class="disclaimer mb-6">${APP_CONFIG.disclaimer}</div>
@@ -24,9 +46,9 @@ const WPDebt = (() => {
           <div class="section-title" style="margin-bottom:1rem">&#x1F4B8; Extra Payment & Strategy Simulator</div>
           <div class="form-row">
             <div class="form-group" style="margin:0;flex:1;min-width:200px">
-              <label for="extra-payment">Extra Monthly Payment (&#x20A6;)</label>
+              <label for="extra-payment-label" id="extra-payment-label">Extra Monthly Payment (${symbol})</label>
               <div class="input-prefix-group">
-                <span class="input-prefix">&#x20A6;</span>
+                <span class="input-prefix">${symbol}</span>
                 <input class="input" type="text" inputmode="decimal" id="extra-payment" placeholder="0" value="0">
               </div>
             </div>
@@ -57,6 +79,22 @@ const WPDebt = (() => {
     document.getElementById('add-debt-btn').addEventListener('click', () => _openForm());
     document.getElementById('simulate-btn').addEventListener('click', _simulate);
     WPUtils.maskNumberInput(document.getElementById('extra-payment'));
+
+    const curSelect = document.getElementById('debt-page-currency');
+    if (curSelect) {
+      curSelect.value = pageCurrency;
+      curSelect.addEventListener('change', (e) => {
+        const newCur = e.target.value;
+        const newSym = symbols[newCur] || '₦';
+        localStorage.setItem('wp_page_currency_debt', newCur);
+        const lbl = document.getElementById('extra-payment-label');
+        if (lbl) lbl.textContent = `Extra Monthly Payment (${newSym})`;
+        const pfx = document.querySelector('.input-prefix');
+        if (pfx) pfx.textContent = newSym;
+        _load();
+      });
+    }
+
     await _load();
   }
 
@@ -64,35 +102,41 @@ const WPDebt = (() => {
     try {
       _liabilities = await WPDb.getLiabilitiesByPeriod(WPApp.state.user.id, PERIOD);
       _liabilities = _liabilities.filter(l => l.is_interest_bearing && (l.close_balance || l.open_balance) > 0);
-      _renderKPIs();
-      _renderDebtCards();
+      
+      const baseCur = WPApp.state.profile?.currency || 'NGN';
+      const pageCurrency = localStorage.getItem('wp_page_currency_debt') || baseCur;
+
+      _renderKPIs(baseCur, pageCurrency);
+      _renderDebtCards(baseCur, pageCurrency);
       if (_liabilities.length > 0) _simulate();
     } catch (err) { WPToast.error('Failed to load debts.'); }
   }
 
-  function _renderKPIs() {
-    const baseCurrency = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
+  function _renderKPIs(baseCur, pageCurrency) {
     const totalDebt = _liabilities.reduce((s,l) => {
       const cur = WPUtils.getEntryCurrency(l.notes);
-      return s + WPUtils.convert(l.close_balance||l.open_balance||0, cur, baseCurrency);
+      return s + WPUtils.convert(l.close_balance||l.open_balance||0, cur, baseCur);
     }, 0);
     const totalPmt  = _liabilities.reduce((s,l) => {
       const cur = WPUtils.getEntryCurrency(l.notes);
-      return s + WPUtils.convert(l.monthly_payment||0, cur, baseCurrency);
+      return s + WPUtils.convert(l.monthly_payment||0, cur, baseCur);
     }, 0);
     const avgAPR    = _liabilities.length
       ? (_liabilities.reduce((s,l) => s + (l.apr||0), 0) / _liabilities.length).toFixed(1)
       : 0;
     const highestAPR = _liabilities.reduce((max,l) => Math.max(max, l.apr||0), 0);
 
+    const totalDebtPage = WPUtils.convert(totalDebt, baseCur, pageCurrency);
+    const totalPmtPage = WPUtils.convert(totalPmt, baseCur, pageCurrency);
+
     document.getElementById('debt-kpis').innerHTML = `
-      <div class="card"><div class="card-title">Total Debt</div><div class="card-value danger">${WPUtils.fmt(totalDebt)}</div><div class="card-meta">${_liabilities.length} active debt${_liabilities.length!==1?'s':''}</div></div>
-      <div class="card"><div class="card-title">Monthly Payments</div><div class="card-value">${WPUtils.fmt(totalPmt)}</div><div class="card-meta">Minimum payments</div></div>
+      <div class="card"><div class="card-title">Total Debt</div><div class="card-value danger">${WPUtils.fmt(totalDebtPage, {currency: pageCurrency})}</div><div class="card-meta">${_liabilities.length} active debt${_liabilities.length!==1?'s':''}</div></div>
+      <div class="card"><div class="card-title">Monthly Payments</div><div class="card-value">${WPUtils.fmt(totalPmtPage, {currency: pageCurrency})}</div><div class="card-meta">Minimum payments</div></div>
       <div class="card"><div class="card-title">Average APR</div><div class="card-value ${avgAPR>25?'danger':'gold'}">${avgAPR}%</div><div class="card-meta">Across all debts</div></div>
       <div class="card"><div class="card-title">Highest APR</div><div class="card-value danger">${highestAPR}%</div><div class="card-meta">Avalanche target first</div></div>`;
   }
 
-  function _renderDebtCards() {
+  function _renderDebtCards(baseCur, pageCurrency) {
     const sorted = [..._liabilities].sort((a,b) => (b.apr||0) - (a.apr||0));
     const el = document.getElementById('debt-list');
     if (!sorted.length) {
@@ -105,7 +149,11 @@ const WPDebt = (() => {
       const bal = l.close_balance || l.open_balance || 0;
       const cur = WPUtils.getEntryCurrency(l.notes);
       const priorityClass = i === 0 ? 'priority-1' : i === 1 ? 'priority-2' : 'priority-3';
-      const cleanNotes = (l.notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
+      const cleanNotes = (l.notes || '').replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').trim();
+
+      const balPage = WPUtils.convert(bal, cur, pageCurrency);
+      const pmtPage = WPUtils.convert(l.monthly_payment||0, cur, pageCurrency);
+
       return `<div class="debt-card ${priorityClass}">
         <div class="debt-header">
           <div>
@@ -120,8 +168,8 @@ const WPDebt = (() => {
           <div class="debt-apr">${l.apr||0}% APR</div>
         </div>
         <div class="debt-stats">
-          <div><div class="debt-stat-label">Balance</div><div class="debt-stat-value text-danger">${WPUtils.fmt(bal, { currency: cur })}</div></div>
-          <div><div class="debt-stat-label">Monthly Payment</div><div class="debt-stat-value">${WPUtils.fmt(l.monthly_payment||0, { currency: cur })}</div></div>
+          <div><div class="debt-stat-label">Balance</div><div class="debt-stat-value text-danger">${WPUtils.fmt(balPage, { currency: pageCurrency })}</div></div>
+          <div><div class="debt-stat-label">Monthly Payment</div><div class="debt-stat-value">${WPUtils.fmt(pmtPage, { currency: pageCurrency })}</div></div>
           <div><div class="debt-stat-label">Type</div><div class="debt-stat-value">${(l.liability_type||'').replace('_',' ')}</div></div>
         </div>
         <div style="margin-top:0.75rem;text-align:right">
@@ -134,17 +182,23 @@ const WPDebt = (() => {
 
   function _simulate() {
     if (!_liabilities.length) return;
-    const baseCurrency = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
-    const extra = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('extra-payment')?.value));
+    const baseCur = WPApp.state.profile?.currency || 'NGN';
+    const pageCurrency = localStorage.getItem('wp_page_currency_debt') || baseCur;
+
+    // The simulation runs in baseCur (using the converted user extra payment in baseCur)
+    const extraRaw = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('extra-payment')?.value));
+    const extra = WPUtils.convert(extraRaw, pageCurrency, baseCur);
+
     const strategy = document.getElementById('payoff-strategy').value;
+
 
     const debts = _liabilities.map(l => {
       const cur = WPUtils.getEntryCurrency(l.notes);
       return {
         id: l.id, name: l.liability_name,
-        balanceKobo:      WPUtils.convert(l.close_balance || l.open_balance || 0, cur, baseCurrency),
+        balanceKobo:      WPUtils.convert(l.close_balance || l.open_balance || 0, cur, baseCur),
         apr:              l.apr || 0,
-        monthlyPaymentKobo: WPUtils.convert(l.monthly_payment || 0, cur, baseCurrency),
+        monthlyPaymentKobo: WPUtils.convert(l.monthly_payment || 0, cur, baseCur),
       };
     });
     const results = WPUtils.calcDebtStrategy(debts, extra, strategy);
@@ -160,33 +214,40 @@ const WPDebt = (() => {
 
     // Show savings table
     document.getElementById('debt-savings-wrap').style.display = '';
-    const tbody = results.map(r => `<tr>
-      <td><strong>${r.name}</strong></td>
-      <td class="td-mono text-danger">${WPUtils.fmt(r.balanceKobo)}</td>
-      <td class="td-mono">${r.apr}%</td>
-      <td>${r.monthsToPayoff ? r.monthsToPayoff + ' months' : '—'}</td>
-      <td class="td-mono text-accent fw-600">${WPUtils.fmt(r.interestSaved)}</td>
-    </tr>`).join('');
+    const tbody = results.map(r => {
+      const balPage = WPUtils.convert(r.balanceKobo, baseCur, pageCurrency);
+      const savedPage = WPUtils.convert(r.interestSaved||0, baseCur, pageCurrency);
+      return `<tr>
+        <td><strong>${r.name}</strong></td>
+        <td class="td-mono text-danger">${WPUtils.fmt(balPage, {currency: pageCurrency})}</td>
+        <td class="td-mono">${r.apr}%</td>
+        <td>${r.monthsToPayoff ? r.monthsToPayoff + ' months' : '—'}</td>
+        <td class="td-mono text-accent fw-600">${WPUtils.fmt(savedPage, {currency: pageCurrency})}</td>
+      </tr>`;
+    }).join('');
+    
     const totalSaved = results.reduce((s,r) => s + (r.interestSaved||0), 0);
+    const totalSavedPage = WPUtils.convert(totalSaved, baseCur, pageCurrency);
+    
     document.getElementById('debt-savings-table').innerHTML = `
       <table>
         <thead><tr><th>Debt</th><th>Balance</th><th>APR</th><th>Payoff (${stratLabel})</th><th>Interest Saved</th></tr></thead>
         <tbody>${tbody}</tbody>
         <tfoot><tr style="border-top:2px solid var(--clr-accent)">
           <td colspan="4" class="fw-700">Total Interest Saved with ${stratLabel}</td>
-          <td class="td-mono text-accent fw-700">${WPUtils.fmt(totalSaved)}</td>
+          <td class="td-mono text-accent fw-700">${WPUtils.fmt(totalSavedPage, {currency: pageCurrency})}</td>
         </tr></tfoot>
       </table>`;
 
     if (totalSaved > 0) {
-      WPToast.success(`${stratLabel} saves you ${WPUtils.fmt(totalSaved, {compact:true})} in interest!`);
+      WPToast.success(`${stratLabel} saves you ${WPUtils.fmt(totalSavedPage, {compact:true, currency: pageCurrency})} in interest!`);
     }
   }
 
   function _openForm(existing = null) {
     const e = existing || {};
     const currencyCode = WPUtils.getEntryCurrency(e.notes);
-    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', AED: 'د.إ', CNY: '¥', XOF: 'CFA', XAF: 'FCFA', KES: 'KSh', GHS: 'GH₵', ZAR: 'R', SAR: 'ر.س' };
     const symbol = symbols[currencyCode] || '₦';
 
     const body = `

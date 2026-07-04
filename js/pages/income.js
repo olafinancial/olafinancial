@@ -20,6 +20,16 @@ const WPIncome = (() => {
             <option value="USD">USD ($)</option>
             <option value="EUR">EUR (€)</option>
             <option value="GBP">GBP (£)</option>
+            <option value="AED">AED (د.إ)</option>
+            <option value="CNY">CNY (¥)</option>
+            <option value="XOF">XOF (CFA)</option>
+            <option value="XAF">XAF (FCFA)</option>
+            <option value="KES">KES (KSh)</option>
+            <option value="GHS">GHS (GH₵)</option>
+            <option value="CAD">CAD (CA$)</option>
+            <option value="ZAR">ZAR (R)</option>
+            <option value="SAR">SAR (ر.س)</option>
+            <option value="AUD">AUD (A$)</option>
           </select>
           <button class="btn btn-primary" id="add-income-btn">&#x2795; Add Income Source</button>
         </div>
@@ -166,7 +176,7 @@ const WPIncome = (() => {
         const net = (e.gross_amount||0)-(e.paye_tax||0)-(e.pension_contrib||0)-(e.nhf_contrib||0)-(e.other_deductions||0);
         const typeBadge = {active:'badge-info',passive:'badge-gold',investment:'badge-accent'}[e.income_type]||'badge-neutral';
         const cur = WPUtils.getEntryCurrency(e.notes);
-        const cleanNotes = (e.notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
+        const cleanNotes = (e.notes || '').replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').trim();
 
         const convertedGross = WPUtils.convert(e.gross_amount||0, cur, pageCurrency);
         const convertedTax   = WPUtils.convert(e.paye_tax||0, cur, pageCurrency);
@@ -229,7 +239,7 @@ const WPIncome = (() => {
     const isEdit = !!existing;
     const e = existing || {};
     const currencyCode = WPUtils.getEntryCurrency(e.notes);
-    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', AED: 'د.إ', CNY: '¥', XOF: 'CFA', XAF: 'FCFA', KES: 'KSh', GHS: 'GH₵', ZAR: 'R', SAR: 'ر.س' };
     const symbol = symbols[currencyCode] || '₦';
 
     const body = `
@@ -294,7 +304,7 @@ const WPIncome = (() => {
         </div>
         <div class="form-group">
           <label for="if-notes">Notes (optional)</label>
-          <textarea class="textarea" id="if-notes" placeholder="e.g. Includes ₦80,000 transport allowance">${e.notes?e.notes.replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim():''}</textarea>
+          <textarea class="textarea" id="if-notes" placeholder="e.g. Includes ₦80,000 transport allowance">${e.notes?e.notes.replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').trim():''}</textarea>
         </div>
       </form>`;
 

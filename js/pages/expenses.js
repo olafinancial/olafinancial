@@ -25,6 +25,16 @@ const WPExpenses = (() => {
             <option value="USD">USD ($)</option>
             <option value="EUR">EUR (€)</option>
             <option value="GBP">GBP (£)</option>
+            <option value="AED">AED (د.إ)</option>
+            <option value="CNY">CNY (¥)</option>
+            <option value="XOF">XOF (CFA)</option>
+            <option value="XAF">XAF (FCFA)</option>
+            <option value="KES">KES (KSh)</option>
+            <option value="GHS">GHS (GH₵)</option>
+            <option value="CAD">CAD (CA$)</option>
+            <option value="ZAR">ZAR (R)</option>
+            <option value="SAR">SAR (ر.س)</option>
+            <option value="AUD">AUD (A$)</option>
           </select>
           <button class="btn btn-primary" id="add-expense-btn">&#x2795; Log Expense</button>
         </div>
@@ -122,7 +132,7 @@ const WPExpenses = (() => {
       </tr></thead>
       <tbody>${sorted.map(e => {
         const cur = WPUtils.getEntryCurrency(e.description);
-        const cleanDesc = (e.description || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').replace(/\[freq:[^\]]+\]/g, '').trim();
+        const cleanDesc = (e.description || '').replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').replace(/\[freq:[^\]]+\]/g, '').trim();
         const convertedAmount = WPUtils.convert(e.amount||0, cur, pageCurrency);
 
         const freqMatch = (e.description || '').match(/\[freq:([^\]]+)\]/);
@@ -182,7 +192,7 @@ const WPExpenses = (() => {
   function _openForm(existing = null) {
     const e = existing || {};
     const currencyCode = WPUtils.getEntryCurrency(e.description);
-    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', AED: 'د.إ', CNY: '¥', XOF: 'CFA', XAF: 'FCFA', KES: 'KSh', GHS: 'GH₵', ZAR: 'R', SAR: 'ر.س' };
     const symbol = symbols[currencyCode] || '₦';
 
     const cats = [
@@ -241,7 +251,7 @@ const WPExpenses = (() => {
         </div>
         <div class="form-group">
           <label for="ef-desc">Description</label>
-          <input class="input" id="ef-desc" value="${e.description?e.description.replace(/\[(USD|NGN|EUR|GBP)\]/g, '').replace(/\[freq:[^\]]+\]/g, '').trim():''}" placeholder="e.g. Monthly rent, Groceries">
+          <input class="input" id="ef-desc" value="${e.description?e.description.replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').replace(/\[freq:[^\]]+\]/g, '').trim():''}" placeholder="e.g. Monthly rent, Groceries">
         </div>
         <div class="form-group">
           <label for="ef-merchant">Merchant / Payee (optional)</label>

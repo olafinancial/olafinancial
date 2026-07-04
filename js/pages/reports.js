@@ -5,13 +5,34 @@
 const WPReports = (() => {
 
   async function init(container) {
+    const baseCur = WPApp.state.profile?.currency || 'NGN';
+    const pageCurrency = localStorage.getItem('wp_page_currency_reports') || baseCur;
+
     container.innerHTML = `
       <div class="page-header">
         <div>
           <h1 class="page-title">Reports &amp; Insights</h1>
           <p class="page-subtitle">Financial health history and trend analysis</p>
         </div>
-        <button class="btn btn-primary" id="export-btn">&#x1F4E5; Export PDF</button>
+        <div class="flex gap-4" style="align-items:center">
+          <select id="reports-page-currency" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
+            <option value="NGN">NGN (₦)</option>
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="GBP">GBP (£)</option>
+            <option value="AED">AED (د.إ)</option>
+            <option value="CNY">CNY (¥)</option>
+            <option value="XOF">XOF (CFA)</option>
+            <option value="XAF">XAF (FCFA)</option>
+            <option value="KES">KES (KSh)</option>
+            <option value="GHS">GHS (GH₵)</option>
+            <option value="CAD">CAD (CA$)</option>
+            <option value="ZAR">ZAR (R)</option>
+            <option value="SAR">SAR (ر.س)</option>
+            <option value="AUD">AUD (A$)</option>
+          </select>
+          <button class="btn btn-primary" id="export-btn">&#x1F4E5; Export PDF</button>
+        </div>
       </div>
       <div class="page-body">
         <!-- Print Header (only visible when printing) -->
@@ -60,6 +81,16 @@ const WPReports = (() => {
       </div>`;
 
     document.getElementById('export-btn').addEventListener('click', _exportPDF);
+    
+    const curSelect = document.getElementById('reports-page-currency');
+    if (curSelect) {
+      curSelect.value = pageCurrency;
+      curSelect.addEventListener('change', (e) => {
+        localStorage.setItem('wp_page_currency_reports', e.target.value);
+        _load();
+      });
+    }
+    
     await _load();
   }
 
@@ -77,28 +108,45 @@ const WPReports = (() => {
         WPDb.getAssetsByPeriod(uid, PERIOD),
         WPDb.getLiabilitiesByPeriod(uid, PERIOD),
       ]);
-      _renderKPIs(snapshots, income, expenses, assets, liabs);
-      _renderCharts(snapshots);
-      _renderTable(snapshots);
-      _renderRatios(income, expenses, assets, liabs);
+      const baseCur = WPApp.state.profile?.currency || 'NGN';
+      const pageCurrency = localStorage.getItem('wp_page_currency_reports') || baseCur;
+
+      _renderKPIs(snapshots, income, expenses, assets, liabs, baseCur, pageCurrency);
+      _renderCharts(snapshots); // WPCharts handles inside canvas
+      _renderTable(snapshots, baseCur, pageCurrency);
+      _renderRatios(income, expenses, assets, liabs, baseCur, pageCurrency);
     } catch (err) { WPToast.error('Failed to load report data.'); }
   }
 
-  function _renderKPIs(snapshots, income, expenses, assets, liabs) {
+  function _renderKPIs(snapshots, income, expenses, assets, liabs, baseCur, pageCurrency) {
     const latest   = snapshots[snapshots.length - 1];
     const oldest   = snapshots[0];
+    
+    // latest / oldest snapshots are stored in the user profile base currency
     const nwChange = latest && oldest ? latest.net_worth - oldest.net_worth : 0;
-    const totalAssets  = assets.reduce((s,a)  => s+(a.close_balance||a.open_balance||0), 0);
-    const totalLiab    = liabs.reduce((s,l)   => s+(l.close_balance||l.open_balance||0), 0);
-    const cf = WPUtils.calcCashFlow(income, expenses);
+    
+    const totalAssets  = assets.reduce((s,a)  => {
+      const cur = WPUtils.getEntryCurrency(a.notes);
+      return s + WPUtils.convert(a.close_balance||a.open_balance||0, cur, baseCur);
+    }, 0);
+    const totalLiab    = liabs.reduce((s,l)   => {
+      const cur = WPUtils.getEntryCurrency(l.notes);
+      return s + WPUtils.convert(l.close_balance||l.open_balance||0, cur, baseCur);
+    }, 0);
+    
+    const avgSavings = snapshots.length ? snapshots.reduce((s,x)=>s+(x.net_cash_flow||0),0)/snapshots.length : 0;
+
+    const nwPage = WPUtils.convert(totalAssets - totalLiab, baseCur, pageCurrency);
+    const nwChangePage = WPUtils.convert(nwChange, baseCur, pageCurrency);
+    const avgSavingsPage = WPUtils.convert(avgSavings, baseCur, pageCurrency);
 
     document.getElementById('reports-kpis').innerHTML = `
       <div class="card"><div class="card-title">Net Worth (This Month)</div>
-        <div class="card-value ${totalAssets-totalLiab>=0?'accent':'danger'}">${WPUtils.fmt(totalAssets-totalLiab, {compact:true})}</div></div>
+        <div class="card-value ${totalAssets-totalLiab>=0?'accent':'danger'}">${WPUtils.fmt(nwPage, {compact:true, currency: pageCurrency})}</div></div>
       <div class="card"><div class="card-title">Net Worth Change (12M)</div>
-        <div class="card-value ${nwChange>=0?'accent':'danger'}">${WPUtils.fmt(nwChange,{compact:true,signed:true})}</div></div>
+        <div class="card-value ${nwChange>=0?'accent':'danger'}">${WPUtils.fmt(nwChangePage,{compact:true,signed:true, currency: pageCurrency})}</div></div>
       <div class="card"><div class="card-title">Avg Monthly Savings</div>
-        <div class="card-value">${snapshots.length?WPUtils.fmt(snapshots.reduce((s,x)=>s+(x.net_cash_flow||0),0)/snapshots.length,{compact:true}):'—'}</div></div>
+        <div class="card-value">${snapshots.length?WPUtils.fmt(avgSavingsPage,{compact:true, currency: pageCurrency}):'—'}</div></div>
       <div class="card"><div class="card-title">Snapshots Recorded</div>
         <div class="card-value">${snapshots.length}</div><div class="card-meta">out of 12 months</div></div>`;
   }
@@ -117,7 +165,7 @@ const WPReports = (() => {
     WPCharts.savingsRateLine('rpt-chart-sr', snapshots);
   }
 
-  function _renderTable(snapshots) {
+  function _renderTable(snapshots, baseCur, pageCurrency) {
     const wrap = document.getElementById('rpt-snapshot-table');
     if (!snapshots.length) {
       wrap.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--clr-text-2)">No snapshots yet. Use the Dashboard to save monthly snapshots.</div>';
@@ -125,14 +173,21 @@ const WPReports = (() => {
     }
     const rows = [...snapshots].reverse().map(s => {
       const sr = s.total_income ? (s.net_cash_flow / s.total_income * 100).toFixed(1) : '—';
+      
+      const nwPage = WPUtils.convert(s.net_worth||0, baseCur, pageCurrency);
+      const incPage = WPUtils.convert(s.total_income||0, baseCur, pageCurrency);
+      const expPage = WPUtils.convert(s.total_expenses||0, baseCur, pageCurrency);
+      const cfPage = WPUtils.convert(s.net_cash_flow||0, baseCur, pageCurrency);
+      const pasPage = WPUtils.convert(s.passive_income_amt||0, baseCur, pageCurrency);
+
       return `<tr>
         <td class="text-muted">${WPUtils.periodLabel(s.period_month)}</td>
-        <td class="td-mono fw-600 ${s.net_worth>=0?'text-accent':'text-danger'}">${WPUtils.fmt(s.net_worth,{compact:true})}</td>
-        <td class="td-mono">${WPUtils.fmt(s.total_income,{compact:true})}</td>
-        <td class="td-mono">${WPUtils.fmt(s.total_expenses,{compact:true})}</td>
-        <td class="td-mono ${s.net_cash_flow>=0?'text-accent':'text-danger'}">${WPUtils.fmt(s.net_cash_flow,{compact:true,signed:true})}</td>
+        <td class="td-mono fw-600 ${s.net_worth>=0?'text-accent':'text-danger'}">${WPUtils.fmt(nwPage,{compact:true, currency: pageCurrency})}</td>
+        <td class="td-mono">${WPUtils.fmt(incPage,{compact:true, currency: pageCurrency})}</td>
+        <td class="td-mono">${WPUtils.fmt(expPage,{compact:true, currency: pageCurrency})}</td>
+        <td class="td-mono ${s.net_cash_flow>=0?'text-accent':'text-danger'}">${WPUtils.fmt(cfPage,{compact:true,signed:true, currency: pageCurrency})}</td>
         <td class="td-mono">${sr !== '—' ? sr+'%' : '—'}</td>
-        <td class="td-mono text-gold">${WPUtils.fmt(s.passive_income_amt||0,{compact:true})}</td>
+        <td class="td-mono text-gold">${WPUtils.fmt(pasPage,{compact:true, currency: pageCurrency})}</td>
       </tr>`;
     }).join('');
     wrap.innerHTML = `<table>
@@ -144,9 +199,15 @@ const WPReports = (() => {
     </table>`;
   }
 
-  function _renderRatios(income, expenses, assets, liabs) {
-    const totalAssets  = assets.reduce((s,a)  => s+(a.close_balance||a.open_balance||0), 0);
-    const totalLiab    = liabs.reduce((s,l)   => s+(l.close_balance||l.open_balance||0), 0);
+  function _renderRatios(income, expenses, assets, liabs, baseCur, pageCurrency) {
+    const totalAssets  = assets.reduce((s,a)  => {
+      const cur = WPUtils.getEntryCurrency(a.notes);
+      return s + WPUtils.convert(a.close_balance||a.open_balance||0, cur, baseCur);
+    }, 0);
+    const totalLiab    = liabs.reduce((s,l)   => {
+      const cur = WPUtils.getEntryCurrency(l.notes);
+      return s + WPUtils.convert(l.close_balance||l.open_balance||0, cur, baseCur);
+    }, 0);
     const cf           = WPUtils.calcCashFlow(income, expenses);
     const dta          = WPUtils.debtToAssetRatio(totalLiab, totalAssets);
     const coverage     = WPUtils.coverageRatio(totalAssets, totalLiab);

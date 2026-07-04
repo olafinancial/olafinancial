@@ -52,7 +52,7 @@ const WPCalculators = (() => {
     if (!wrap) return;
 
     const baseCurrency = WPApp.state.profile?.currency || 'NGN';
-    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$' };
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', AED: 'د.إ', CNY: '¥', XOF: 'CFA', XAF: 'FCFA', KES: 'KSh', GHS: 'GH₵', ZAR: 'R', SAR: 'ر.س' };
     const symbol = symbols[baseCurrency] || '₦';
 
     let html = '';

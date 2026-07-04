@@ -477,14 +477,14 @@ const WPUtils = (() => {
 
   function getEntryCurrency(notes) {
     if (notes && typeof notes === 'string') {
-      const match = notes.match(/\[(USD|NGN|EUR|GBP)\]/);
+      const match = notes.match(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/);
       if (match) return match[1];
     }
     return WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
   }
 
   function setEntryCurrency(notes, currency) {
-    let cleanNotes = (notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
+    let cleanNotes = (notes || '').replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').trim();
     return currency ? `${cleanNotes} [${currency}]`.trim() : cleanNotes;
   }
 

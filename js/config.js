@@ -20,12 +20,21 @@ const APP_CONFIG = {
   currencySymbol:'₦',
   locale:        'en-NG',
 
-  // ── EXCHANGE RATES (Indicative to NGN) ──────────────────────
   exchangeRates: {
     NGN: 1,
     USD: 1500,
     EUR: 1600,
     GBP: 1900,
+    AED: 408,
+    CNY: 207,
+    XOF: 2.44,
+    XAF: 2.44,
+    KES: 11.6,
+    GHS: 101,
+    CAD: 1100,
+    ZAR: 82.5,
+    SAR: 400,
+    AUD: 980,
   },
 
   // ── NIGERIA TAX ACT 2025 — PERSONAL INCOME TAX ────────────
