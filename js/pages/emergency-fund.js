@@ -144,24 +144,44 @@ const WPEmergencyFund = (() => {
 
       <!-- How to build it -->
       <div class="card" style="margin-top:1.5rem">
-        <div class="section-title" style="margin-bottom:1rem">&#x1F4A1; How to Build Your Emergency Fund</div>
-        <div style="display:flex;flex-direction:column;gap:0.75rem;font-size:0.9rem">
+        <div class="section-title" style="margin-bottom:0.75rem">&#x1F4A1; How to Create an Emergency Fund</div>
+        <p style="font-size:0.85rem;color:var(--clr-text-2);margin-bottom:1.25rem;line-height:1.6">
+          Building an emergency fund isn't optional — it's your financial shield against life's unexpected punches
+          (job loss, medical bills, car repairs). Here's the no-nonsense way to do it right:
+        </p>
+        <div style="display:flex;flex-direction:column;gap:1rem;font-size:0.9rem">
           <div class="flex gap-4">
-            <span style="width:24px;height:24px;background:var(--clr-accent-dim);color:var(--clr-accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">1</span>
-            <span>Open a <strong>high-yield savings account</strong> — look for accounts paying high interest in your base currency.</span>
+            <span style="min-width:28px;height:28px;background:var(--clr-accent-dim);color:var(--clr-accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">1</span>
+            <div>
+              <strong>List out ALL your expenses</strong><br>
+              <span style="color:var(--clr-text-2)">Track every naira/dollar you spend for 1–2 months. Be brutally honest — rent, food, transport, subscriptions, everything.</span>
+            </div>
           </div>
           <div class="flex gap-4">
-            <span style="width:24px;height:24px;background:var(--clr-accent-dim);color:var(--clr-accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">2</span>
-            <span>Keep it <strong>separate</strong> from your daily spending account to avoid dipping into it.</span>
+            <span style="min-width:28px;height:28px;background:var(--clr-accent-dim);color:var(--clr-accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">2</span>
+            <div>
+              <strong>Separate discretionary from essential expenses</strong><br>
+              <span style="color:var(--clr-text-2)">
+                <strong>Essentials:</strong> Rent, groceries, utilities, minimum debt payments, transportation.<br>
+                <strong>Discretionary:</strong> Eating out, entertainment, shopping, luxuries. <em>Cut the fat here first.</em>
+              </span>
+            </div>
           </div>
           <div class="flex gap-4">
-            <span style="width:24px;height:24px;background:var(--clr-accent-dim);color:var(--clr-accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">3</span>
-            <span>Check deposit insurance limits in your region (e.g. NDIC in Nigeria covers up to ₦5,000,000 for DMBs).</span>
+            <span style="min-width:28px;height:28px;background:var(--clr-accent-dim);color:var(--clr-accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">3</span>
+            <div>
+              <strong>Open a dedicated Savings or Money Market Fund</strong><br>
+              <span style="color:var(--clr-text-2)">
+                Park it somewhere liquid, safe, and separate from your daily spending account.<br>
+                <strong>Target:</strong> Save <em>3–6 months</em> of your essential expenses as the minimum.<br>
+                Aim higher (6–12 months) if you're self-employed or in a volatile industry.
+              </span>
+            </div>
           </div>
-          <div class="flex gap-4">
-            <span style="width:24px;height:24px;background:var(--clr-accent-dim);color:var(--clr-accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">4</span>
-            <span>Automate monthly transfers to this account — treat it like a bill.</span>
-          </div>
+        </div>
+        <div style="margin-top:1.25rem;padding:1rem;background:var(--clr-accent-dim);border-radius:8px;font-size:0.87rem;color:var(--clr-accent);line-height:1.6">
+          💡 Start small if you must — even ₦10k/$50 weekly adds up. Automate the transfers so you don't "forget."<br>
+          <strong>Your emergency fund = sleeping better at night.</strong> No more panic borrowing or selling assets at a loss.
         </div>
       </div>`;
 

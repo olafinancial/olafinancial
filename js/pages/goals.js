@@ -63,7 +63,18 @@ const WPGoals = (() => {
     const gap      = Math.max(0, g.target_amount - (g.current_savings||0));
     const daysLeft = g.target_date ? Math.ceil((new Date(g.target_date) - new Date()) / 86400000) : null;
     const color    = done ? 'accent' : pct > 75 ? 'accent' : pct > 40 ? 'gold' : 'danger';
-    const icons    = { retirement:'&#x1F334;', mortgage:'&#x1F3E0;', emergency:'&#x1F6E1;&#xFE0F;', college:'&#x1F393;', custom:'&#x1F3AF;' };
+    const icons = {
+      emergency:   '🛡️',
+      retirement:  '🌴',
+      college:     '🎓',
+      mortgage:    '🏠',
+      debt:        '✂️',
+      investment:  '📈',
+      travel:      '✈️',
+      business:    '💼',
+      spend:       '🎉',
+      custom:      '🎯',
+    };
     const cur      = WPUtils.getEntryCurrency(g.notes);
     const cleanNotes = (g.notes || '').replace(/\[(USD|NGN|EUR|GBP)\]/g, '').trim();
 
@@ -123,11 +134,16 @@ const WPGoals = (() => {
           <div class="form-group">
             <label for="gf-type">Goal Type</label>
             <select class="select" id="gf-type">
-              <option value="mortgage"   ${e.goal_type==='mortgage'  ?'selected':''}>&#x1F3E0; Buy a Home</option>
-              <option value="emergency"  ${e.goal_type==='emergency' ?'selected':''}>&#x1F6E1; Emergency Fund</option>
-              <option value="retirement" ${e.goal_type==='retirement'?'selected':''}>&#x1F334; Retirement</option>
-              <option value="college"    ${e.goal_type==='college'   ?'selected':''}>&#x1F393; Education</option>
-              <option value="custom"     ${e.goal_type==='custom'    ?'selected':''}>Custom / Other</option>
+              <option value="emergency"  ${e.goal_type==='emergency'  ?'selected':''}>🛡️ Emergency Fund</option>
+              <option value="retirement" ${e.goal_type==='retirement' ?'selected':''}>🌴 Retirement Savings</option>
+              <option value="college"    ${e.goal_type==='college'    ?'selected':''}>🎓 College / Education Fund</option>
+              <option value="mortgage"   ${e.goal_type==='mortgage'   ?'selected':''}>🏠 Mortgage / Home Purchase</option>
+              <option value="debt"       ${e.goal_type==='debt'       ?'selected':''}>✂️ Pay Down Debt</option>
+              <option value="investment" ${e.goal_type==='investment' ?'selected':''}>📈 Investment</option>
+              <option value="travel"     ${e.goal_type==='travel'     ?'selected':''}>✈️ Travel</option>
+              <option value="business"   ${e.goal_type==='business'   ?'selected':''}>💼 Business / Side Hustle</option>
+              <option value="spend"      ${e.goal_type==='spend'      ?'selected':''}>🎉 Spend at Will</option>
+              <option value="custom"     ${e.goal_type==='custom'     ?'selected':''}>🎯 Custom / Other</option>
             </select>
           </div>
           <div class="form-group">

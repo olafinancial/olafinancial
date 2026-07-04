@@ -24,6 +24,10 @@ const WPDashboard = (() => {
       </div>
       <div class="page-body">
         <div class="kpi-grid" id="dash-kpis">${_skeletons(5)}</div>
+        <!-- Insights & Alerts — above charts so visible on login -->
+        <div class="card dashboard-full" id="dash-alerts" style="display:none"></div>
+        <!-- Pay Yourself First surplus allocator -->
+        <div class="card dashboard-full" id="dash-pyf" style="display:none"></div>
         <div class="dashboard-grid" id="dash-grid">
           <div class="card dashboard-wide">
             <div class="section-header">
@@ -44,7 +48,7 @@ const WPDashboard = (() => {
           </div>
           <div class="card dashboard-wide">
             <div class="section-header">
-              <span class="section-title">Monthly Income vs Expenses</span>
+              <span class="section-title">Income vs Expenses</span>
               <span class="badge badge-neutral">Trend</span>
             </div>
             <div class="chart-container" style="height:240px"><canvas id="chart-income-exp"></canvas></div>
@@ -53,7 +57,6 @@ const WPDashboard = (() => {
             <div class="section-title" style="margin-bottom:1rem">Expense Breakdown</div>
             <div class="chart-container" style="height:220px"><canvas id="chart-expense-donut"></canvas></div>
           </div>
-          <div class="card dashboard-full" id="dash-alerts" style="display:none"></div>
           <div class="card dashboard-full">
             <div class="section-header"><span class="section-title">Quick Actions</span></div>
             <div class="quick-actions">
@@ -101,7 +104,11 @@ const WPDashboard = (() => {
 
   function _setPeriod() {
     const el = document.getElementById('dash-period');
-    if (el) el.textContent = 'Financial overview · ' + WPUtils.periodLabel(WPUtils.currentPeriod());
+    if (el) {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      el.textContent = 'Financial overview \u00b7 ' + dateStr;
+    }
   }
 
   async function _load() {
@@ -111,6 +118,7 @@ const WPDashboard = (() => {
       _renderKPIs(s);
       _renderCharts(s);
       _renderAlerts(s);
+      _renderPYF(s);
     } catch (err) {
       WPToast.error('Failed to load dashboard data.');
       console.error(err);
@@ -237,6 +245,108 @@ const WPDashboard = (() => {
       });
       WPToast.success('Monthly snapshot saved!');
     } catch (err) { WPToast.error('Could not save snapshot: ' + err.message); }
+  }
+
+  function _renderPYF(s) {
+    const el = document.getElementById('dash-pyf');
+    if (!el) return;
+
+    const surplus = WPUtils.koboToNaira(s.cf.netCashFlow);
+    if (surplus <= 0) { el.style.display = 'none'; return; }
+
+    const baseCur = WPApp.state.profile?.currency || 'NGN';
+    const pageCurrency = localStorage.getItem('wp_page_currency_dashboard') || baseCur;
+    const surplusConverted = WPUtils.koboToNaira(WPUtils.convert(s.cf.netCashFlow, baseCur, pageCurrency));
+
+    // Load saved PYF allocations or defaults
+    const uid = WPApp.state.user.id;
+    const saved = JSON.parse(localStorage.getItem('wp_pyf_' + uid) || 'null');
+    const allocs = saved || [
+      { key:'emergency',   label:'Emergency Fund',          pct: 5,  icon:'🛡️' },
+      { key:'retirement',  label:'Extra Retirement Savings', pct: 5,  icon:'🌴' },
+      { key:'college',     label:'College Fund',             pct: 0,  icon:'🎓' },
+      { key:'mortgage',    label:'Mortgage / Rent',          pct: 0,  icon:'🏠' },
+      { key:'debt',        label:'Pay Down Debt / Interest', pct: 0,  icon:'✂️' },
+      { key:'investment',  label:'Investment',               pct: 10, icon:'📈' },
+      { key:'spend',       label:'Spend at Will',            pct: 0,  icon:'🎉' },
+    ];
+
+    const totalPct = allocs.reduce((s, a) => s + (parseFloat(a.pct) || 0), 0);
+    const remaining = Math.max(0, 100 - totalPct);
+
+    el.style.display = '';
+    el.innerHTML = `
+      <div class="section-header" style="margin-bottom:1rem">
+        <span class="section-title">💰 Pay Yourself First (PYF)</span>
+        <span class="badge ${totalPct > 100 ? 'badge-danger' : totalPct === 100 ? 'badge-accent' : 'badge-neutral'}">${totalPct}% allocated</span>
+      </div>
+      <p style="font-size:0.85rem;color:var(--clr-text-2);margin-bottom:1rem">
+        You have a surplus of <strong style="color:var(--clr-accent)">${WPUtils.fmt(WPUtils.nairaToKobo(surplusConverted), {currency: pageCurrency})}</strong> this period.
+        Allocate it intentionally — edit the % column to customise.
+      </p>
+      <div class="table-wrap">
+        <table id="pyf-table">
+          <thead><tr>
+            <th>Allocation Bucket</th>
+            <th style="text-align:center">% of Net Income</th>
+            <th style="text-align:right">Amount</th>
+          </tr></thead>
+          <tbody>
+            ${allocs.map((a, i) => `<tr>
+              <td><span style="margin-right:6px">${a.icon}</span>${a.label}</td>
+              <td style="text-align:center">
+                <input type="number" class="input pyf-pct-input" data-i="${i}" min="0" max="100" step="1"
+                  value="${a.pct}" style="width:70px;text-align:center;padding:4px 8px">
+              </td>
+              <td class="td-mono fw-600 text-accent" style="text-align:right" id="pyf-amt-${i}">
+                ${WPUtils.fmt(WPUtils.nairaToKobo(surplusConverted * (a.pct / 100)), {currency: pageCurrency})}
+              </td>
+            </tr>`).join('')}
+          </tbody>
+          <tfoot><tr style="border-top:2px solid var(--clr-border)">
+            <td><strong>Total PYF</strong></td>
+            <td style="text-align:center"><strong id="pyf-total-pct" class="${totalPct > 100 ? 'text-danger' : 'text-accent'}">${totalPct}%</strong></td>
+            <td class="td-mono fw-700 text-accent" style="text-align:right" id="pyf-total-amt">
+              ${WPUtils.fmt(WPUtils.nairaToKobo(surplusConverted * totalPct / 100), {currency: pageCurrency})}
+            </td>
+          </tr>
+          ${remaining > 0 ? `<tr><td colspan="3" style="font-size:0.8rem;color:var(--clr-text-3);padding-top:4px">
+            ⚠️ ${remaining}% unallocated — consider adding to a bucket above.
+          </td></tr>` : ''}</tfoot>
+        </table>
+      </div>
+      <div style="margin-top:1rem;text-align:right">
+        <button class="btn btn-secondary btn-sm" id="pyf-save-btn">💾 Save Allocation</button>
+        <button class="btn btn-ghost btn-sm" id="pyf-reset-btn">Reset to Defaults</button>
+      </div>`;
+
+    // Live update on pct change
+    document.querySelectorAll('.pyf-pct-input').forEach(input => {
+      input.addEventListener('input', () => {
+        const inputs = document.querySelectorAll('.pyf-pct-input');
+        let total = 0;
+        inputs.forEach((inp, i) => {
+          const pct = parseFloat(inp.value) || 0;
+          allocs[i].pct = pct;
+          total += pct;
+          const amtEl = document.getElementById('pyf-amt-' + i);
+          if (amtEl) amtEl.textContent = WPUtils.fmt(WPUtils.nairaToKobo(surplusConverted * pct / 100), {currency: pageCurrency});
+        });
+        const totalPctEl = document.getElementById('pyf-total-pct');
+        const totalAmtEl = document.getElementById('pyf-total-amt');
+        if (totalPctEl) { totalPctEl.textContent = total + '%'; totalPctEl.className = total > 100 ? 'text-danger' : 'text-accent'; }
+        if (totalAmtEl) totalAmtEl.textContent = WPUtils.fmt(WPUtils.nairaToKobo(surplusConverted * total / 100), {currency: pageCurrency});
+      });
+    });
+
+    document.getElementById('pyf-save-btn')?.addEventListener('click', () => {
+      localStorage.setItem('wp_pyf_' + uid, JSON.stringify(allocs));
+      WPToast.success('PYF allocation saved!');
+    });
+    document.getElementById('pyf-reset-btn')?.addEventListener('click', () => {
+      localStorage.removeItem('wp_pyf_' + uid);
+      _renderPYF(s);
+    });
   }
 
   function destroy() {}

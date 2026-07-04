@@ -69,7 +69,7 @@ const WPIncome = (() => {
         <div class="card" style="margin-top:1.5rem">
           <div class="section-title" style="margin-bottom:1rem">&#x1F4CA; Nigeria Tax Act 2025 — Tax Estimator</div>
           <div style="padding:1.5rem;background:rgba(255,255,255,0.01);border-radius:8px;border:1px solid var(--clr-border);line-height:1.6;font-size:0.92rem;color:var(--clr-text-2)">
-            ℹ️ <strong>Disclaimer</strong>: PAYE Tax and tax estimator features only apply to Nigerian Residents. Since your residency is configured as Non-Resident, tax calculations are not applicable.
+            ℹ️ <strong>Disclaimer</strong>: Tax and tax estimator features only apply to Nigerian Residents. Since your residency is configured as Non-Resident, tax calculations are not applicable.
           </div>
         </div>`}
       </div>`;
@@ -138,12 +138,12 @@ const WPIncome = (() => {
     }, 0);
 
     const taxFmt = isResident ? WPUtils.fmt(totalTax, { currency: baseCurrency }) : 'N/A (Non-Resident)';
-    const taxMeta = isResident ? `Effective rate: ${WPUtils.fmtPct(totalTax/Math.max(1,totalGross))}` : 'PAYE applies to Residents only';
+    const taxMeta = isResident ? `Effective rate: ${WPUtils.fmtPct(totalTax/Math.max(1,totalGross))}` : 'Tax applies to Nigerian Residents only';
 
     document.getElementById('income-kpis').innerHTML = `
       <div class="card"><div class="card-title">Total Gross Income</div><div class="card-value">${WPUtils.fmt(totalGross, { currency: baseCurrency })}</div><div class="card-meta">${_entries.length} source${_entries.length!==1?'s':''}</div></div>
       <div class="card"><div class="card-title">Total Net Income</div><div class="card-value accent">${WPUtils.fmt(totalNet, { currency: baseCurrency })}</div><div class="card-meta">After all deductions</div></div>
-      <div class="card"><div class="card-title">PAYE Tax</div><div class="card-value danger">${taxFmt}</div><div class="card-meta">${taxMeta}</div></div>
+      <div class="card"><div class="card-title">Tax</div><div class="card-value danger">${taxFmt}</div><div class="card-meta">${taxMeta}</div></div>
       <div class="card"><div class="card-title">Pension (8%)</div><div class="card-value gold">${WPUtils.fmt(totalPen, { currency: baseCurrency })}</div><div class="card-meta">PENCOM contributory scheme</div></div>
       <div class="card"><div class="card-title">Passive Income</div><div class="card-value gold">${WPUtils.fmt(passive, { currency: baseCurrency })}</div><div class="card-meta">${WPUtils.fmtPct(passive/Math.max(1,totalGross))} of total income</div></div>`;
   }
@@ -160,7 +160,7 @@ const WPIncome = (() => {
     }
     wrap.innerHTML = `<table>
       <thead><tr>
-        <th>Source</th><th>Type</th><th>Gross</th><th>PAYE Tax</th><th>Pension</th><th>Net Income</th><th>Frequency</th><th></th>
+        <th>Source</th><th>Type</th><th>Gross</th><th>Tax</th><th>Pension</th><th>Net Income</th><th>Frequency</th><th></th>
       </tr></thead>
       <tbody>${filtered.map(e => {
         const net = (e.gross_amount||0)-(e.paye_tax||0)-(e.pension_contrib||0)-(e.nhf_contrib||0)-(e.other_deductions||0);
@@ -214,7 +214,7 @@ const WPIncome = (() => {
 
     document.getElementById('te-result').innerHTML = `
       <div class="grid-3" style="gap:1rem">
-        <div class="card"><div class="card-title">Annual PAYE Tax</div><div class="card-value danger">${WPUtils.fmt(tax, { currency: pageCurrency })}</div><div class="card-meta">Effective rate: ${WPUtils.fmtPct(effective)}</div></div>
+        <div class="card"><div class="card-title">Annual Tax</div><div class="card-value danger">${WPUtils.fmt(tax, { currency: pageCurrency })}</div><div class="card-meta">Effective rate: ${WPUtils.fmtPct(effective)}</div></div>
         <div class="card"><div class="card-title">Pension Contribution</div><div class="card-value gold">${WPUtils.fmt(pension, { currency: pageCurrency })}</div><div class="card-meta">8% of emoluments (PENCOM)</div></div>
         <div class="card"><div class="card-title">Annual Net Income</div><div class="card-value accent">${WPUtils.fmt(net, { currency: pageCurrency })}</div><div class="card-meta">Monthly: ${WPUtils.fmt(Math.round(net/12), { currency: pageCurrency })}</div></div>
       </div>
@@ -277,7 +277,7 @@ const WPIncome = (() => {
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="if-tax">PAYE Tax (${symbol})</label>
+            <label for="if-tax">Tax (${symbol})</label>
             <div class="input-prefix-group">
               <span class="input-prefix">${symbol}</span>
               <input class="input" type="text" inputmode="decimal" id="if-tax" value="${e.paye_tax?WPUtils.koboToNaira(e.paye_tax):''}" placeholder="0">
@@ -319,7 +319,7 @@ const WPIncome = (() => {
         span.textContent = newSym;
       });
       document.querySelector('label[for="if-gross"]').textContent = `Gross Amount (${newSym})`;
-      document.querySelector('label[for="if-tax"]').textContent = `PAYE Tax (${newSym})`;
+      document.querySelector('label[for="if-tax"]').textContent = `Tax (${newSym})`;
       document.querySelector('label[for="if-pension"]').textContent = `Pension 8% (${newSym})`;
     });
 
