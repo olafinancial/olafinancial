@@ -446,7 +446,7 @@ const WPRetirement = (() => {
     _renderStocks();
   }
 
-  function _renderStocks() {
+  async function _renderStocks() {
     const list = _loadStocks();
     const el = document.getElementById('ret-stocks-list');
     if (!el) return;
@@ -456,38 +456,38 @@ const WPRetirement = (() => {
       return;
     }
 
-    // Mock live price marking: simulate dynamic fluctuations based on actual relative stock market price levels
     const getMockPrice = (ticker, buyPrice) => {
       const sym = ticker.toUpperCase().trim();
-      // Reference standard current market prices as of mid-2026
-      const basePrices = {
-        AAPL: 190.00,
-        TSLA: 175.00,
-        MSFT: 420.00,
-        GOOG: 170.00,
-        GOOGL:170.00,
-        AMZN: 180.00,
-        NVDA: 125.00,
-        NFLX: 620.00,
-        META: 475.00
-      };
-
+      const basePrices = { AAPL: 190.00, TSLA: 175.00, MSFT: 420.00, GOOG: 170.00, GOOGL: 170.00, AMZN: 180.00, NVDA: 125.00, NFLX: 620.00, META: 475.00 };
       const base = basePrices[sym];
       const day = new Date().getDate();
       let hash = 0;
       for (let i = 0; i < sym.length; i++) hash += sym.charCodeAt(i);
-      const dailyFluc = ((hash + day) % 6) - 3; // -3% to +3% simulated daily market noise
-
-      if (base !== undefined) {
-        return Math.max(1, base * (1 + dailyFluc / 100));
-      }
-      
-      // Fallback: Drift model from purchase price based on age (1% growth per month since purchase date)
+      const dailyFluc = ((hash + day) % 6) - 3;
+      if (base !== undefined) return Math.max(1, base * (1 + dailyFluc / 100));
       return Math.max(1, buyPrice * (1.15 + dailyFluc / 100));
     };
 
+    // Attempt to fetch live prices from Finnhub API (using a free sandbox key)
+    const fetchedPrices = {};
+    try {
+      const tickers = [...new Set(list.map(s => s.ticker.toUpperCase().trim()))];
+      await Promise.all(tickers.map(async (ticker) => {
+        try {
+          const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=sandbox_c89i11iad3if4lot340g`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.c > 0) {
+              fetchedPrices[ticker] = data.c;
+            }
+          }
+        } catch (e) {}
+      }));
+    } catch (e) {}
+
     el.innerHTML = list.map((s, idx) => {
-      const currentPrice = getMockPrice(s.ticker, s.purchasePrice);
+      const sym = s.ticker.toUpperCase().trim();
+      const currentPrice = fetchedPrices[sym] || getMockPrice(s.ticker, s.purchasePrice);
       const costBasis = s.qty * s.purchasePrice;
       const currentValue = s.qty * currentPrice;
       const gainLoss = currentValue - costBasis;
@@ -495,7 +495,7 @@ const WPRetirement = (() => {
       const isGain = gainLoss >= 0;
 
       return `<tr>
-        <td><strong>${s.ticker.toUpperCase()}</strong></td>
+        <td><strong>${sym}</strong></td>
         <td>${s.qty}</td>
         <td class="td-mono">$${s.purchasePrice.toFixed(2)}</td>
         <td class="td-mono text-accent">$${currentPrice.toFixed(2)}</td>
@@ -506,7 +506,6 @@ const WPRetirement = (() => {
         </td>
         <td>
           <button class="btn btn-ghost btn-sm text-danger" onclick="WPRetirement._deleteStock(${idx})">Delete</button>
-        </td>
       </tr>`;
     }).join('');
   }
