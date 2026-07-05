@@ -472,11 +472,27 @@ const WPRetirement = (() => {
       return Math.max(1, buyPrice * (1.15 + dailyFluc / 100));
     };
 
-    // Attempt to fetch live prices from Finnhub API (using a free sandbox key)
+    // Attempt to fetch live prices from Yahoo Finance public API (via CORS proxy)
+    // with fallbacks to Finnhub API and then mock data
     _fetchedPrices = {};
     try {
       const tickers = [...new Set(list.map(s => s.ticker.toUpperCase().trim()))];
       await Promise.all(tickers.map(async (ticker) => {
+        try {
+          // Attempt Yahoo Finance API first via a public CORS proxy
+          const yahooRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}`)}`);
+          if (yahooRes.ok) {
+            const wrapper = await yahooRes.json();
+            const data = JSON.parse(wrapper.contents);
+            const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+            if (price && price > 0) {
+              _fetchedPrices[ticker] = price;
+              return;
+            }
+          }
+        } catch (e) {}
+
+        // Fallback to Finnhub if Yahoo Finance fails
         try {
           const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=c89i11iad3if4lot340g`);
           if (res.ok) {
