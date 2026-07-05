@@ -474,7 +474,7 @@ const WPRetirement = (() => {
       const tickers = [...new Set(list.map(s => s.ticker.toUpperCase().trim()))];
       await Promise.all(tickers.map(async (ticker) => {
         try {
-          const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=sandbox_c89i11iad3if4lot340g`);
+          const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=c89i11iad3if4lot340g`);
           if (res.ok) {
             const data = await res.json();
             if (data && data.c > 0) {
