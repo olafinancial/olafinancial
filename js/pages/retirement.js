@@ -4,6 +4,8 @@
 
 const WPRetirement = (() => {
 
+  let _fetchedPrices = {};
+
   async function init(container) {
     const profile = WPApp.state.profile || {};
     const age     = profile.age || 35;
@@ -303,11 +305,13 @@ const WPRetirement = (() => {
       for (let i = 0; i < sym.length; i++) hash += sym.charCodeAt(i);
       const dailyFluc = ((hash + day) % 6) - 3;
 
-      let currentPrice = 0;
-      if (base !== undefined) {
-        currentPrice = Math.max(1, base * (1 + dailyFluc / 100));
-      } else {
-        currentPrice = Math.max(1, s.purchasePrice * (1.15 + dailyFluc / 100));
+      let currentPrice = _fetchedPrices[sym];
+      if (currentPrice === undefined) {
+        if (base !== undefined) {
+          currentPrice = Math.max(1, base * (1 + dailyFluc / 100));
+        } else {
+          currentPrice = Math.max(1, s.purchasePrice * (1.15 + dailyFluc / 100));
+        }
       }
       return sum + (s.qty * currentPrice);
     }, 0);
@@ -469,7 +473,7 @@ const WPRetirement = (() => {
     };
 
     // Attempt to fetch live prices from Finnhub API (using a free sandbox key)
-    const fetchedPrices = {};
+    _fetchedPrices = {};
     try {
       const tickers = [...new Set(list.map(s => s.ticker.toUpperCase().trim()))];
       await Promise.all(tickers.map(async (ticker) => {
@@ -478,7 +482,7 @@ const WPRetirement = (() => {
           if (res.ok) {
             const data = await res.json();
             if (data && data.c > 0) {
-              fetchedPrices[ticker] = data.c;
+              _fetchedPrices[ticker] = data.c;
             }
           }
         } catch (e) {}
@@ -487,7 +491,7 @@ const WPRetirement = (() => {
 
     el.innerHTML = list.map((s, idx) => {
       const sym = s.ticker.toUpperCase().trim();
-      const currentPrice = fetchedPrices[sym] || getMockPrice(s.ticker, s.purchasePrice);
+      const currentPrice = _fetchedPrices[sym] || getMockPrice(s.ticker, s.purchasePrice);
       const costBasis = s.qty * s.purchasePrice;
       const currentValue = s.qty * currentPrice;
       const gainLoss = currentValue - costBasis;
