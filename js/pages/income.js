@@ -361,14 +361,31 @@ const WPIncome = (() => {
     const currency = document.getElementById('if-currency').value;
     const finalNotes = WPUtils.setEntryCurrency(notesVal, currency);
 
+    const hasTaxInput = document.getElementById('if-tax').value.trim() !== '';
+    const hasPensionInput = document.getElementById('if-pension').value.trim() !== '';
+
+    let pensionVal = 0;
+    if (hasPensionInput) {
+      pensionVal = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-pension').value));
+    } else {
+      pensionVal = WPUtils.calcPensionEmployee(grossKobo);
+    }
+
+    let taxVal = 0;
+    if (hasTaxInput) {
+      taxVal = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-tax').value));
+    } else {
+      taxVal = WPUtils.calcPIT(grossKobo, pensionVal);
+    }
+
     const row = {
       user_id:         WPApp.state.user.id,
       source_name:     document.getElementById('if-name').value.trim(),
       income_type:     document.getElementById('if-type').value,
       frequency:       document.getElementById('if-freq').value,
       gross_amount:    grossKobo,
-      paye_tax:        WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-tax').value)||0),
-      pension_contrib: WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-pension').value)||0),
+      paye_tax:        taxVal,
+      pension_contrib: pensionVal,
       period_month:    PERIOD,
       notes:           finalNotes,
     };
