@@ -1,0 +1,41 @@
+name: "🐛 Bug Report"
+description: "File a bug report to help us fix issues in Ola Financial"
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the form below.
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: "Bug Description"
+      description: "A clear and concise description of what the bug is."
+      placeholder: "When I click X, Y happens instead of Z."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: "Steps to Reproduce"
+      description: "How do we trigger this bug? Describe the steps."
+      placeholder: "1. Go to '/#/retirement'\n2. Click on...\n3. See error"
+    validations:
+      required: true
+  - type: textarea
+    id: visual-proof
+    attributes:
+      label: "Screenshots or Screen Recordings"
+      description: "Paste, drag & drop, or upload images/recordings showing the issue!"
+      placeholder: "(Paste your screenshots/images here!)"
+    validations:
+      required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: "Environment Details"
+      description: "e.g., Browser (Chrome/Safari), OS, Device (Mobile/Desktop)"
+      placeholder: "Chrome v124, iOS 17 on iPhone 15"
+    validations:
+      required: false

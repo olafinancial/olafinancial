@@ -1,0 +1,40 @@
+name: "🚀 Feature Request"
+description: "Suggest a new feature or enhancement for Ola Financial"
+title: "[Feature Request]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a new feature! Please provide as much detail as possible to help us understand your request.
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: "Feature Description"
+      description: "A clear and concise description of what you want to happen."
+      placeholder: "I would like to be able to..."
+    validations:
+      required: true
+  - type: textarea
+    id: problem-solved
+    attributes:
+      label: "Problem Solved"
+      description: "What problem does this feature solve? How does it help users?"
+      placeholder: "Currently, users struggle with..."
+    validations:
+      required: false
+  - type: textarea
+    id: user-flow
+    attributes:
+      label: "Proposed User Flow / UI Mockup Description"
+      description: "Walk us through how a user would interact with this feature. If you have images, paste or upload them below!"
+      placeholder: "1. User navigates to page X\n2. User clicks on button Y...\n\n(Drag and drop or paste your screenshots/images here!)"
+    validations:
+      required: true
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: "Additional Context"
+      description: "Add any other context, links, or attachments about the feature request here."
+    validations:
+      required: false
