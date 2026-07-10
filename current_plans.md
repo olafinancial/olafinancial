@@ -224,7 +224,7 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 #### R24. Branded Watermarks & Macroeconomic Dashboard
 * **Status**: 🔲 Not Started
 * **Description**:
-  * Add watermarks (`Pull.com`) to printable reports for sharing.
+  * Add watermarks (`pul.llc`) to printable reports for sharing.
   * Create an **Economic Dashboard** pulling Nigeria's GDP growth rate, monthly inflation, FX rates ($ and GBP), MPR (Monetary Policy Rate), and reserves using data from the CBN and NBS.
   * Include a Sharia-compliant (Takaful) insurance preference question during onboarding.
 
