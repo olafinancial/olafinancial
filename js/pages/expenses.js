@@ -413,10 +413,9 @@ const WPExpenses = (() => {
       });
     }
   }
-
   async function _save(existingId) {
     const amount = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ef-amount').value));
-    if (!amount) { WPToast.warning('Please enter an amount.'); return; }
+    if (!amount) { WPToast.warning('Please enter an amount.'); return false; }
     const descVal = document.getElementById('ef-desc').value.trim();
     const currency = document.getElementById('ef-currency').value;
 
@@ -485,7 +484,7 @@ const WPExpenses = (() => {
       }
       WPToast.success(existingId ? 'Expense updated.' : 'Expense logged.');
       await _load();
-    } catch (err) { WPToast.error('Could not save: ' + err.message); }
+    } catch (err) { WPToast.error('Could not save: ' + err.message); return false; }
   }
 
   async function _edit(id) {

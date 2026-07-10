@@ -389,13 +389,13 @@ const WPIncome = (() => {
       period_month:    PERIOD,
       notes:           finalNotes,
     };
-    if (!row.source_name || !row.gross_amount) { WPToast.warning('Name and amount are required.'); return; }
+    if (!row.source_name || !row.gross_amount) { WPToast.warning('Name and amount are required.'); return false; }
     try {
       if (existingId) await WPDb.update('income_entries', existingId, row);
       else            await WPDb.insert('income_entries', row);
       WPToast.success(existingId ? 'Income updated.' : 'Income added.');
       await _load();
-    } catch (err) { WPToast.error('Could not save: ' + err.message); }
+    } catch (err) { WPToast.error('Could not save: ' + err.message); return false; }
   }
 
   async function _edit(id) {

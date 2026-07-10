@@ -337,7 +337,7 @@ const WPBalanceSheet = (() => {
         <div class="form-row" id="yield-details-row" style="display: ${e.is_income_generating ? 'grid' : 'none'}; grid-template-columns: 1fr 1fr; gap: var(--sp-4);">
           <div class="form-group">
             <label for="af-rate">Interest Rate (% p.a.)</label>
-            <input class="input" type="number" id="af-rate" min="0" step="0.1" value="${e.interest_rate||''}" placeholder="e.g. 8.5">
+            <input class="input" type="number" id="af-rate" min="0" max="30" step="0.1" value="${e.interest_rate||''}" placeholder="e.g. 8.5">
           </div>
           <div class="form-group">
             <label for="af-income-amt">Expected Annual Income (${symbol})</label>
@@ -460,13 +460,13 @@ const WPBalanceSheet = (() => {
       notes:                finalNotes,
       period_month:         periodMonth,
     };
-    if (!row.asset_name) { WPToast.warning('Please enter an asset name.'); return; }
+    if (!row.asset_name) { WPToast.warning('Please enter an asset name.'); return false; }
     try {
       if (existingId) await WPDb.update('assets', existingId, row);
       else            await WPDb.insert('assets', row);
       WPToast.success(existingId ? 'Asset updated.' : 'Asset added.');
       await _load();
-    } catch (err) { WPToast.error('Could not save: ' + err.message); }
+    } catch (err) { WPToast.error('Could not save: ' + err.message); return false; }
   }
 
   function _openLiabForm(existing = null) {
@@ -619,13 +619,13 @@ const WPBalanceSheet = (() => {
       period_month:     PERIOD,
       notes:            finalNotes,
     };
-    if (!row.liability_name) { WPToast.warning('Please enter a liability name.'); return; }
+    if (!row.liability_name) { WPToast.warning('Please enter a liability name.'); return false; }
     try {
       if (existingId) await WPDb.update('liabilities', existingId, row);
       else            await WPDb.insert('liabilities', row);
       WPToast.success(existingId ? 'Liability updated.' : 'Liability added.');
       await _load();
-    } catch (err) { WPToast.error('Could not save: ' + err.message); }
+    } catch (err) { WPToast.error('Could not save: ' + err.message); return false; }
   }
 
   async function _editAsset(id) {

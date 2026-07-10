@@ -414,7 +414,17 @@ const WPModal = (() => {
     const close = () => { overlay.classList.remove('open'); setTimeout(() => overlay.remove(), 300); };
     overlay.querySelector('#modal-close').addEventListener('click', close);
     overlay.querySelector('#modal-cancel')?.addEventListener('click', close);
-    overlay.querySelector('#modal-confirm')?.addEventListener('click', () => { onConfirm && onConfirm(overlay); close(); });
+    overlay.querySelector('#modal-confirm')?.addEventListener('click', async () => {
+      if (onConfirm) {
+        try {
+          const result = await onConfirm(overlay);
+          if (result === false) return; // Keep modal open if confirm handler explicitly signals false/error
+        } catch (err) {
+          return; // Keep modal open on exceptions
+        }
+      }
+      close();
+    });
     overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
     return { close, overlay };
   }

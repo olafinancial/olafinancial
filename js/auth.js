@@ -131,7 +131,10 @@ const WPAuth = (() => {
             </div>
             <div class="form-group">
               <label for="login-password">Password</label>
-              <input class="input" type="password" id="login-password" placeholder="Your password" required autocomplete="current-password">
+              <div class="input-suffix-group">
+                <input class="input" type="password" id="login-password" placeholder="Your password" required autocomplete="current-password">
+                <button type="button" class="input-suffix-btn" id="login-password-toggle" aria-label="Toggle Password Visibility">&#x1F441;</button>
+              </div>
             </div>
             <div style="text-align:right;margin-bottom:1.5rem">
               <a id="forgot-link" style="font-size:0.82rem;color:var(--clr-accent);cursor:pointer">Forgot password?</a>
@@ -144,6 +147,16 @@ const WPAuth = (() => {
         </div>
       </div>
     </div>`;
+
+    const loginPwInput = document.getElementById('login-password');
+    const loginPwToggle = document.getElementById('login-password-toggle');
+    if (loginPwInput && loginPwToggle) {
+      loginPwToggle.addEventListener('click', () => {
+        const isPw = loginPwInput.type === 'password';
+        loginPwInput.type = isPw ? 'text' : 'password';
+        loginPwToggle.innerHTML = isPw ? '&#x1F443;' : '&#x1F441;'; // closed eye vs open eye
+      });
+    }
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -207,7 +220,10 @@ const WPAuth = (() => {
             </div>
             <div class="form-group">
               <label for="signup-password">Password</label>
-              <input class="input" type="password" id="signup-password" placeholder="Min 12 chars, uppercase, number, symbol" required autocomplete="new-password">
+              <div class="input-suffix-group">
+                <input class="input" type="password" id="signup-password" placeholder="Min 12 chars, uppercase, number, symbol" required autocomplete="new-password">
+                <button type="button" class="input-suffix-btn" id="signup-password-toggle" aria-label="Toggle Password Visibility">&#x1F441;</button>
+              </div>
               <div id="pw-strength" class="input-hint"></div>
             </div>
             <p style="font-size:0.72rem;color:var(--clr-text-3);margin-bottom:1.25rem">By signing up you agree to our Terms of Service and Privacy Policy. Your data is encrypted and never shared.</p>
@@ -217,6 +233,16 @@ const WPAuth = (() => {
         </div>
       </div>
     </div>`;
+
+    const signupPwInput = document.getElementById('signup-password');
+    const signupPwToggle = document.getElementById('signup-password-toggle');
+    if (signupPwInput && signupPwToggle) {
+      signupPwToggle.addEventListener('click', () => {
+        const isPw = signupPwInput.type === 'password';
+        signupPwInput.type = isPw ? 'text' : 'password';
+        signupPwToggle.innerHTML = isPw ? '&#x1F443;' : '&#x1F441;';
+      });
+    }
 
     document.getElementById('signup-password').addEventListener('input', (e) => {
       const s = WPAuth.passwordStrength(e.target.value);
