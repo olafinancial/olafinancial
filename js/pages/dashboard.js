@@ -34,6 +34,8 @@ const WPDashboard = (() => {
       </div>
       <div class="page-body">
         <div class="kpi-grid" id="dash-kpis">${_skeletons(5)}</div>
+        <!-- Dashboard Insights -->
+        <div id="dash-insights" style="display:none"></div>
         <!-- Insights & Alerts — above charts so visible on login -->
         <div class="card dashboard-full" id="dash-alerts" style="display:none"></div>
         <!-- Pay Yourself First surplus allocator -->
@@ -87,31 +89,31 @@ const WPDashboard = (() => {
             <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-top: 1rem; gap: 1rem;">
               <div style="background:var(--clr-bg); padding:1rem; border-radius:8px; border:1px solid var(--clr-border);">
                 <div class="card-title" style="font-size:0.8rem">Inflation Rate</div>
-                <div class="card-value text-danger" style="font-size:1.5rem; font-weight:700">32.15%</div>
-                <div class="card-meta" style="font-size:0.75rem">NBS, May 2026</div>
+                <div class="card-value text-danger" style="font-size:1.5rem; font-weight:700" data-econ="inflation-val">32.15%</div>
+                <div class="card-meta" style="font-size:0.75rem" data-econ="inflation-meta">NBS, May 2026</div>
               </div>
               <div style="background:var(--clr-bg); padding:1rem; border-radius:8px; border:1px solid var(--clr-border);">
                 <div class="card-title" style="font-size:0.8rem">Monetary Policy Rate</div>
-                <div class="card-value text-gold" style="font-size:1.5rem; font-weight:700">27.25%</div>
+                <div class="card-value text-gold" style="font-size:1.5rem; font-weight:700" data-econ="mpr-val">27.25%</div>
                 <div class="card-meta" style="font-size:0.75rem">CBN Policy Anchor</div>
               </div>
               <div style="background:var(--clr-bg); padding:1rem; border-radius:8px; border:1px solid var(--clr-border);">
-                <div class="card-title" style="font-size:0.8rem">GDP Growth</div>
-                <div class="card-value text-accent" style="font-size:1.5rem; font-weight:700">+3.46%</div>
-                <div class="card-meta" style="font-size:0.75rem">Q1 2026 YoY</div>
+                <div class="card-title" style="font-size:0.8rem">GDP Growth (Per Capita)</div>
+                <div class="card-value text-accent" style="font-size:1.5rem; font-weight:700" data-econ="gdp-val">+3.46%</div>
+                <div class="card-meta" style="font-size:0.75rem" data-econ="gdp-meta">Q1 2026 YoY</div>
               </div>
               <div style="background:var(--clr-bg); padding:1rem; border-radius:8px; border:1px solid var(--clr-border);">
                 <div class="card-title" style="font-size:0.8rem">Foreign Reserves</div>
-                <div class="card-value text-white" style="font-size:1.5rem; font-weight:700">$36.89B</div>
+                <div class="card-value text-white" style="font-size:1.5rem; font-weight:700" data-econ="res-val">$36.89B</div>
                 <div class="card-meta" style="font-size:0.75rem">CBN Liquid Buffer</div>
               </div>
               <div style="background:var(--clr-bg); padding:1rem; border-radius:8px; border:1px solid var(--clr-border);">
                 <div class="card-title" style="font-size:0.8rem">Exchange Rates</div>
-                <div class="card-value text-white" style="font-size:1.2rem; font-weight:600; line-height:1.2;">
+                <div class="card-value text-white" style="font-size:1.2rem; font-weight:600; line-height:1.2;" data-econ="fx-val">
                   $1 = ₦1,485<br>
                   £1 = ₦1,890
                 </div>
-                <div class="card-meta" style="font-size:0.75rem">Nafem Reference</div>
+                <div class="card-meta" style="font-size:0.75rem" data-econ="fx-meta">NAFEM Reference</div>
               </div>
             </div>
           </div>
@@ -166,10 +168,41 @@ const WPDashboard = (() => {
       _renderCharts(s);
       _renderAlerts(s);
       _renderPYF(s);
+
+      // Fetch live econ data and update macro card
+      try {
+        const econRes = await fetch('/api/econ');
+        if (econRes.ok) {
+          const econ = await econRes.json();
+          _updateEconCard(econ);
+          // Pass inflation to WPInsights for dashboard rules
+          WPInsights.evaluate('dashboard', {
+            netWorthKobo:    s.netWorth,
+            hasEmergencyFund: s.efBalance > 0,
+            inflation:       econ.inflation?.value || 0,
+            netWorthTrend:   'stable', // Future: compute from snapshots
+            incomeCount:     WPApp.state.data.income?.length || 0,
+          }, document.getElementById('dash-insights'));
+        }
+      } catch (_) { /* econ fetch optional — don't fail the page */ }
     } catch (err) {
       WPToast.error('Failed to load dashboard data.');
       console.error(err);
     }
+  }
+
+  function _updateEconCard(econ) {
+    const card = document.getElementById('macroeconomic-card');
+    if (!card) return;
+    const inf = econ.inflation; const mpr = econ.mpr; const gdp = econ.gdpPerCapita; const res = econ.reserves; const fx = econ.fx;
+    card.querySelector('[data-econ="inflation-val"]')  && (card.querySelector('[data-econ="inflation-val"]').textContent  = inf  ? inf.value + '%'  : '—');
+    card.querySelector('[data-econ="inflation-meta"]') && (card.querySelector('[data-econ="inflation-meta"]').textContent = inf  ? `NBS, ${inf.period}` : '—');
+    card.querySelector('[data-econ="mpr-val"]')        && (card.querySelector('[data-econ="mpr-val"]').textContent        = mpr  ? mpr.value + '%'  : '—');
+    card.querySelector('[data-econ="gdp-val"]')        && (card.querySelector('[data-econ="gdp-val"]').textContent        = gdp  ? `+${gdp.value}%` : '—');
+    card.querySelector('[data-econ="gdp-meta"]')       && (card.querySelector('[data-econ="gdp-meta"]').textContent       = gdp  ? gdp.period : '—');
+    card.querySelector('[data-econ="res-val"]')        && (card.querySelector('[data-econ="res-val"]').textContent        = res  ? `$${res.value}B` : '—');
+    card.querySelector('[data-econ="fx-val"]')         && (card.querySelector('[data-econ="fx-val"]').innerHTML           = fx   ? `$1 = ₦${fx.usd?.toLocaleString()}<br>£1 = ₦${fx.gbp?.toLocaleString()}` : '—');
+    card.querySelector('[data-econ="fx-meta"]')        && (card.querySelector('[data-econ="fx-meta"]').textContent        = fx   ? `${fx.source} · ${fx.period}` : '—');
   }
 
   function _renderKPIs(s) {

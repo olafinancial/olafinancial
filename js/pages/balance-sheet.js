@@ -43,6 +43,10 @@ const WPBalanceSheet = (() => {
           <div class="card-value" id="nw-value" style="font-size:3rem">—</div>
           <div class="card-meta" id="nw-meta"></div>
         </div>
+        <!-- Insights Strip -->
+        <div id="bs-insights" style="display:none"></div>
+        <!-- Sponsor Slot: Insurance -->
+        <div id="bs-sponsor-insurance"></div>
         <!-- KPIs -->
         <div class="kpi-grid" id="bs-kpis" style="margin-bottom:1.5rem"></div>
         <!-- NDIC Alert -->
@@ -89,6 +93,27 @@ const WPBalanceSheet = (() => {
         WPDb.getLiabilitiesByPeriod(uid, PERIOD),
       ]);
       _render();
+
+      // Insights
+      const baseCur = WPApp.state.profile?.currency || 'NGN';
+      const totalAssets = _assets.reduce((s,a) => s + WPUtils.convert(a.close_balance||a.open_balance||0, WPUtils.getEntryCurrency(a.notes), baseCur), 0);
+      const totalLiab = _liabilities.reduce((s,l) => s + WPUtils.convert(l.close_balance||l.open_balance||0, WPUtils.getEntryCurrency(l.notes), baseCur), 0);
+      const liquidTypes = ['savings','cash','current_account'];
+      const liquidTotal = _assets.filter(a => liquidTypes.includes((a.asset_type||'').toLowerCase()))
+        .reduce((s,a) => s + WPUtils.convert(a.close_balance||a.open_balance||0, WPUtils.getEntryCurrency(a.notes), baseCur), 0);
+      const categoryCounts = {};
+      _assets.forEach(a => { categoryCounts[a.asset_type||'other'] = (categoryCounts[a.asset_type||'other']||0) + WPUtils.convert(a.close_balance||a.open_balance||0, WPUtils.getEntryCurrency(a.notes), baseCur); });
+      const topCatVal = Math.max(0, ...Object.values(categoryCounts));
+      WPInsights.evaluate('balance-sheet', {
+        netWorthKobo:        totalAssets - totalLiab,
+        hasInsurance:        false, // Future: check insurance module data
+        liquidRatio:         totalAssets > 0 ? liquidTotal / totalAssets : 0,
+        topAssetCategoryRatio: totalAssets > 0 ? topCatVal / totalAssets : 0,
+        totalAssetsKobo:     totalAssets,
+      }, document.getElementById('bs-insights'));
+
+      // Sponsor: show insurance sponsor if user has no insurance logged
+      WPSponsor.render('insurance', document.getElementById('bs-sponsor-insurance'), false);
     } catch (err) { WPToast.error('Failed to load balance sheet.'); }
   }
 

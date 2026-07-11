@@ -10,7 +10,7 @@ test.use({ storageState: '.playwright/auth-state.json' });
 
 test.describe('Financial Reports', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`${BASE}/#reports`);
+    await page.goto(`${BASE}/#/reports`);
     await page.waitForLoadState('networkidle');
   });
 
@@ -19,7 +19,7 @@ test.describe('Financial Reports', () => {
   });
 
   test('generate report button is visible', async ({ page }) => {
-    const genBtn = page.locator('button:has-text("Generate"), button:has-text("Print"), [data-action="generate-report"]').first();
+    const genBtn = page.locator('#export-btn, button:has-text("Export PDF")').first();
     await expect(genBtn).toBeVisible();
   });
 
@@ -33,7 +33,7 @@ test.describe('Financial Reports', () => {
   });
 
   test('watermark element present in report DOM', async ({ page }) => {
-    const genBtn = page.locator('button:has-text("Generate"), [data-action="generate-report"]').first();
+    const genBtn = page.locator('#export-btn, button:has-text("Export PDF")').first();
     if (await genBtn.isVisible()) {
       await genBtn.click();
       await page.waitForTimeout(1000);
@@ -48,7 +48,7 @@ test.describe('Financial Reports', () => {
   test('no JS errors on report page', async ({ page }) => {
     const errors = [];
     page.on('pageerror', err => errors.push(err.message));
-    await page.goto(`${BASE}/#reports`);
+    await page.goto(`${BASE}/#/reports`);
     await page.waitForLoadState('networkidle');
     expect(errors).toHaveLength(0);
   });
@@ -56,7 +56,7 @@ test.describe('Financial Reports', () => {
 
 test.describe('Estate Planner Report', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`${BASE}/#estate-planner`);
+    await page.goto(`${BASE}/#/estate-planner`);
     await page.waitForLoadState('networkidle');
   });
 
@@ -65,7 +65,7 @@ test.describe('Estate Planner Report', () => {
   });
 
   test('print report button is visible', async ({ page }) => {
-    const printBtn = page.locator('button:has-text("Print"), button:has-text("Report"), [data-action="print-estate"]').first();
+    const printBtn = page.locator('#estate-audit-btn, button:has-text("Generate Report")').first();
     await expect(printBtn).toBeVisible();
   });
 

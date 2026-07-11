@@ -80,6 +80,10 @@ const WPInsurance = (() => {
       </div>
       <div class="page-body">
         <div class="disclaimer mb-6">${APP_CONFIG.disclaimer}</div>
+        <!-- Insights Strip -->
+        <div id="insurance-insights" style="display:none"></div>
+        <!-- Sponsor Slot -->
+        <div id="ins-sponsor-slot"></div>
 
         <div class="grid-3" id="ins-layout-grid">
           <!-- Step Form Column (span 2) -->
@@ -119,6 +123,15 @@ const WPInsurance = (() => {
 
     _renderStep();
     _updateRecommendation();
+
+    // Evaluate insights
+    WPInsights.evaluate('insurance', {
+      hasLife:   (_data.answers?.hasCurrentLife === 'yes') || (_data.policies || []).some(p => p.type === 'life'),
+      hasHealth: (_data.policies || []).some(p => p.type === 'health'),
+    }, document.getElementById('insurance-insights'));
+    // Show sponsor if no policies logged yet
+    const hasPolicies = (_data.policies || []).length > 0;
+    WPSponsor.render('insurance', document.getElementById('ins-sponsor-slot'), hasPolicies);
   }
 
   function _renderStep() {

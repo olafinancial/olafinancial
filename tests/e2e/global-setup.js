@@ -35,12 +35,47 @@ export default async function globalSetup() {
       const currentUrl = page.url();
       console.log(`ℹ️  Global setup: redirected to ${currentUrl}`);
       
-      // If we got redirected to onboarding, complete it or proceed
+      // If we got redirected to onboarding, complete it to allow future tests to proceed
       if (currentUrl.includes('/onboarding') || await page.locator('.onboarding-shell').count() > 0) {
-        console.log('ℹ️  Global setup: user onboarding is required. Attempting to bypass or complete.');
+        console.log('ℹ️  Global setup: user onboarding is required. Filling out onboarding wizard.');
+        
+        // Step 1: Profile Info (Name, Age, State, Currency)
+        await page.fill('#ob-name', 'Test User');
+        await page.fill('#ob-age', '30');
+        await page.selectOption('#ob-state', 'LA');
+        await page.click('#ob-next');
+        await page.waitForTimeout(500);
+
+        // Step 2: Employment
+        await page.selectOption('#ob-emp', 'salaried');
+        await page.fill('#ob-dependents', '2');
+        await page.click('#ob-next');
+        await page.waitForTimeout(500);
+
+        // Step 3: Retirement and goals target
+        await page.fill('#ob-ret-age', '60');
+        await page.selectOption('#ob-risk', 'moderate');
+        // Click a target goal chip
+        const chip = page.locator('.goal-chip').first();
+        if (await chip.isVisible()) await chip.click();
+        await page.click('#ob-next');
+        await page.waitForTimeout(500);
+
+        // Step 4: Estate Wills
+        await page.selectOption('#ob-will', 'no');
+        await page.selectOption('#ob-guardians', 'no');
+        await page.click('#ob-next');
+        await page.waitForTimeout(500);
+
+        // Step 5: Summary
+        await page.click('#ob-next'); // Click "Get Started"
+        
+        // Wait for redirect to Dashboard
+        await page.waitForSelector('[data-page="dashboard"], #dashboard-page, .dashboard', { timeout: 15_000 });
+        console.log('✅  Global setup: Onboarding successfully completed!');
       }
     } catch (err) {
-      console.error(`❌ Global setup failed to redirect. Current URL: ${page.url()}`);
+      console.error(`❌ Global setup failed to redirect or complete onboarding. Current URL: ${page.url()}`);
       throw err;
     }
 

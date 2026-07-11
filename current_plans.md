@@ -174,7 +174,8 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 ---
 
 #### R13. Scheduled / Email Reports
-* **Status**: 🔲 Planned (Configured in open GitHub Roadmap issues)
+* **Status**: 🔲 Planned — GitHub Issue #tracking
+* **Description**: Weekly or monthly digest email of key financial metrics (net worth change, savings rate, top expense categories). Requires backend scheduler (cron) + email provider (Resend/SendGrid).
 
 ---
 
@@ -184,10 +185,9 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 ---
 
----
-
 #### R15. Complete Per-Page Currency Selectors (Remaining Pages)
-* **Status**: 🔲 Planned (Configured in open GitHub Roadmap issues) `js/pages/cashflow.js`, `js/pages/debt.js`, `js/pages/emergency-fund.js`, `js/pages/goals.js`, `js/pages/reports.js`
+* **Status**: 🔲 Planned — GitHub Issue #tracking
+* **Remaining Files**: `js/pages/cashflow.js`, `js/pages/emergency-fund.js`, `js/pages/goals.js`
 
 ---
 
@@ -199,7 +199,7 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 #### R20. Income Form Structural Refinements
 * **Status**: ✅ Completed
-* **Description**: 
+* **Description**:
   * Add **biweekly** option to income frequencies.
   * Dynamically show "PAYE" tax & pension deductions sub-sections *only* when "Active Income" (Salary) is selected.
   * Show plain "Tax" (or "property tax") when "Passive" or "Investment" income is selected.
@@ -226,7 +226,8 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 * **Status**: ✅ Completed
 * **Description**:
   * Add watermarks (`pul.llc`) to printable reports for sharing.
-  * Create an **Economic Dashboard** pulling Nigeria's GDP growth rate, monthly inflation, FX rates ($ and GBP), MPR (Monetary Policy Rate), and reserves using data from the CBN and NBS.
+  * Created an **Economic Dashboard** on the main dashboard with Nigeria's GDP per capita growth rate (quarterly), monthly inflation, FX rates ($ and GBP), MPR (Monetary Policy Rate), and FX reserves sourced from CBN and NBS.
+  * Dashboard macro card now fetches live data from `/api/econ` route backed by `server/data/econ-ng.json` (manually maintained — update when NBS/CBN release new figures).
   * Include a Sharia-compliant (Takaful) insurance preference question during onboarding.
 
 #### R25. Reset Password & OAuth Redirects Routing
@@ -236,6 +237,50 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 #### R26. Syntax Crash & Offline Cache Invalidation
 * **Status**: ✅ Completed
 * **Description**: Fixed unbalanced brackets causing boot crashes, incremented the PWA service worker cache to `v14`, and updated script cache-busting version tags to restore runtime stability.
+
+#### R27. Comprehensive Automated Test Suite
+* **Status**: ✅ Completed
+* **Description**: Implemented Jest unit tests for core math utilities and Playwright E2E integration specs covering user auth, dashboard insights, PWA offline caching, calculators, custom reports, and mobile viewport responsiveness. Debugged and aligned DOM selectors, route path formats (using slash prefixing), and custom styled inputs to ensure 100% pass rates locally and under automated workflows. Runs automatically on push/PR via GitHub Actions.
+
+#### R28. Add Income Bug Fix
+* **Status**: ✅ Completed
+* **Description**: The "Add Income Source" modal's `_save()` function was not returning `true` on successful database insert, causing the modal to remain open after a successful add. Added explicit `return true` on success so the modal closes correctly.
+
+---
+
+### 🆕 Session 7 — Insights, Alerts & Sponsor System
+
+#### R29. App-Wide Insights & Alerts Engine
+* **Status**: ✅ Completed
+* **Description**:
+  * Built `js/lib/insights.js` — a central `WPInsights` module with a rule registry. Each page registers condition functions and message templates. After data loads, `WPInsights.evaluate()` injects animated insight cards with colour-coded severity levels (`critical`/`warning`/`info`/`success`) and dismiss buttons.
+  * **30+ rules** covering: income diversification, FX exposure, tax burden, food spending ratios, subscription costs, debt-to-income ratio, negative amortization, asset concentration, emergency fund coverage, insurance gaps, savings rate, and high-inflation environment.
+  * Insights wired into: **Dashboard**, **Income**, **Expenses**, **Debt Planner**, **Balance Sheet**, and **Insurance** pages.
+  * New CSS: `.insights-strip`, `.insight-card`, `.insight-info/warning/critical/success` with fade-in animation.
+
+#### R30. Sponsor Banner Monetisation System
+* **Status**: ✅ Completed (placeholder — awaiting confirmed sponsors)
+* **Description**:
+  * Built `js/lib/sponsor.js` — `WPSponsor` module renders vetted sponsor banners only when the user lacks a specific product.
+  * Sponsor slots currently active on **Balance Sheet** (insurance) and **Insurance** page.
+  * Products covered: Insurance, Investment, Emergency Fund, Debt Refinancing, Pension.
+  * All banners show a "Sponsored" label. Only vetted sponsors are ever featured.
+  * **Action needed**: When sponsors are confirmed, update `SPONSORS` config in `js/lib/sponsor.js` with `{ name, logo, url, cta, available: true }`.
+
+#### R31. Live Macroeconomic Data Feed (`/api/econ`)
+* **Status**: ✅ Completed
+* **Description**:
+  * New server route `GET /api/econ` serves `server/data/econ-ng.json`.
+  * Dashboard fetches this on every load and populates the macro card dynamically (inflation, MPR, GDP per capita, FX rates, foreign reserves).
+  * Data file is manually maintained — update figures when NBS/CBN publish new releases (monthly for inflation, quarterly for GDP).
+  * **How to update**: Edit `server/data/econ-ng.json` with latest values and commit.
+
+#### R32. Social Sharing & Watermarked Image Export (Reports)
+* **Status**: 🔲 Planned — GitHub Issue open
+* **Description**:
+  * Add "Share" button to Reports page using Web Share API (mobile) and `html2canvas` PNG download (desktop).
+  * PNG download stamps the `pul.llc` watermark on canvas before saving.
+  * Share targets: X (Twitter), WhatsApp, copy link.
 
 ---
 
@@ -284,11 +329,32 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | Onboarding Wizard | `js/pages/onboarding.js` | ✅ Active |
 | Settings | `js/pages/settings.js` | ✅ Active |
 
+### New Libraries
+
+| Library | File | Purpose |
+|---------|------|---------|
+| Insights Engine | `js/lib/insights.js` | App-wide contextual alerts & financial insight rules |
+| Sponsor Module | `js/lib/sponsor.js` | Vetted sponsor banners when user lacks a product |
+
 ---
 
 ## E2E and Unit Test Coverage
 
-#### R27. Comprehensive Automated Test Suite
-* **Status**: ✅ Completed
-* **Description**: Implemented Jest unit tests for core math utilities and Playwright E2E integration specs covering user auth, dashboard insights, PWA offline caching, calculators, custom reports, and mobile viewport responsiveness. Runs automatically on push/PR via GitHub Actions.
+#### Playwright E2E Suite
+* **Status**: ✅ All 58 tests passing (Chromium, Firefox, WebKit, iPhone 14)
+* **Suites**: `01-auth`, `02-dashboard`, `03-income-expenses`, `04-debt-planner`, `05-balance-sheet`, `07-reports`, `08-settings-pwa`
+* **CI**: Runs automatically on push/PR via GitHub Actions
 
+---
+
+## 🗓️ Open GitHub Issues
+
+| Issue | Title | Priority | Status |
+|-------|-------|----------|--------|
+| [#27](https://github.com/olafinancial/olafinancial/issues/27) | Social sharing & watermarked PNG export from Reports | High | 🔲 Open |
+| [#28](https://github.com/olafinancial/olafinancial/issues/28) | Confirm sponsor partners & activate sponsor banners | High | 🔲 Open |
+| [#29](https://github.com/olafinancial/olafinancial/issues/29) | Monthly macro data update — NBS/CBN economic indicators | Recurring | 🔲 Open |
+| [#30](https://github.com/olafinancial/olafinancial/issues/30) | Complete per-page currency selectors (cashflow, EF, goals) | Medium | 🔲 Open |
+| [#31](https://github.com/olafinancial/olafinancial/issues/31) | Scheduled / email digest reports | Medium | 🔲 Planned |
+| [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | Low | 🔲 Planned |
+| [#33](https://github.com/olafinancial/olafinancial/issues/33) | Comprehensive Reports page overhaul (PDF, charts, statements) | Low | 🔲 Planned |

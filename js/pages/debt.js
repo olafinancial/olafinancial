@@ -50,6 +50,8 @@ const WPDebt = (() => {
           <button class="btn btn-secondary btn-sm" onclick="location.hash='#/goals'">Manage Debt Goals</button>
         </div>
         <div class="kpi-grid" id="debt-kpis" style="margin-bottom:1.5rem"></div>
+        <!-- Insights Strip -->
+        <div id="debt-insights" style="display:none"></div>
         <!-- Extra Payment & Strategy Simulator -->
         <div class="card" style="margin-bottom:1.5rem">
           <div class="section-title" style="margin-bottom:1rem">&#x1F4B8; Extra Payment & Strategy Simulator</div>
@@ -118,6 +120,21 @@ const WPDebt = (() => {
       _renderKPIs(baseCur, pageCurrency);
       _renderDebtCards(baseCur, pageCurrency);
       if (_liabilities.length > 0) _simulate();
+
+      // Insights
+      const totalDebt = _liabilities.reduce((s,l) => s + WPUtils.convert(l.close_balance||l.open_balance||0, WPUtils.getEntryCurrency(l.notes), baseCur), 0);
+      const totalPmt  = _liabilities.reduce((s,l) => s + WPUtils.convert(l.monthly_payment||0, WPUtils.getEntryCurrency(l.notes), baseCur), 0);
+      const incomeEntries = await WPDb.getIncomeByPeriod(WPApp.state.user.id, PERIOD).catch(() => []);
+      const totalIncome = incomeEntries.reduce((s,e) => s + WPUtils.convert(e.gross_amount||0, WPUtils.getEntryCurrency(e.notes), baseCur), 0);
+      WPInsights.evaluate('debt', {
+        debtCount:            _liabilities.length,
+        debtToIncomeRatio:    totalIncome > 0 ? totalPmt / totalIncome : 0,
+        highInterestCount:    _liabilities.filter(l => (l.apr||0) > 20).length,
+        hasNegativeAmortization: _liabilities.some(l => {
+          const monthlyInterest = (l.close_balance||l.open_balance||0) * ((l.apr||0)/100/12);
+          return (l.monthly_payment||0) < monthlyInterest && monthlyInterest > 0;
+        }),
+      }, document.getElementById('debt-insights'));
     } catch (err) { WPToast.error('Failed to load debts.'); }
   }
 

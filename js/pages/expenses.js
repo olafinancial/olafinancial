@@ -49,6 +49,8 @@ const WPExpenses = (() => {
           <button class="btn btn-secondary btn-sm" onclick="location.hash='#/goals'">Manage Budget Goals</button>
         </div>
         <div class="kpi-grid" id="expense-kpis" style="margin-bottom:1.5rem"></div>
+        <!-- Insights Strip -->
+        <div id="expense-insights" style="display:none"></div>
         <div class="grid-2" style="margin-bottom:1.5rem">
           <div class="chart-wrap">
             <div class="chart-title">By Category</div>
@@ -100,6 +102,22 @@ const WPExpenses = (() => {
       _renderKPIs();
       _renderTable();
       if (_entries.length > 0) { WPCharts.expenseDonut('chart-exp-donut', _entries); _renderBudgetRule(); }
+      // Insights
+      const baseCur = WPApp.state.profile?.currency || 'NGN';
+      const total = _entries.reduce((s,e) => s + WPUtils.convert(e.amount||0, WPUtils.getEntryCurrency(e.description), baseCur), 0);
+      const foodCats = ['food','dining','restaurant','grocery','groceries'];
+      const foodTotal = _entries.filter(e => foodCats.includes((e.category||'').toLowerCase()))
+        .reduce((s,e) => s + WPUtils.convert(e.amount||0, WPUtils.getEntryCurrency(e.description), baseCur), 0);
+      const subCats = ['subscription','subscriptions'];
+      const subTotal = _entries.filter(e => subCats.includes((e.category||'').toLowerCase()))
+        .reduce((s,e) => s + WPUtils.convert(e.amount||0, WPUtils.getEntryCurrency(e.description), baseCur), 0);
+      WPInsights.evaluate('expenses', {
+        expenseCount:      _entries.length,
+        foodRatio:         total > 0 ? foodTotal / total : 0,
+        subscriptionTotal: subTotal,
+        hasBudgetGoal:     true, // Future: check goals table for expense targets
+        spendingGrowth:    0,    // Future: compare vs prior month snapshot
+      }, document.getElementById('expense-insights'));
     } catch (err) { WPToast.error('Failed to load expenses.'); }
   }
 

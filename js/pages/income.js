@@ -36,6 +36,8 @@ const WPIncome = (() => {
       </div>
       <div class="page-body">
         <div class="disclaimer mb-6">${APP_CONFIG.disclaimer}</div>
+        <!-- Insights Strip -->
+        <div id="income-insights" style="display:none"></div>
 
         <!-- Mini Goal Widget -->
         <div class="card" style="margin-bottom:1.5rem;display:flex;justify-content:space-between;align-items:center;padding:1.5rem">
@@ -128,6 +130,17 @@ const WPIncome = (() => {
       _renderKPIs();
       _renderTable('all');
       if (_entries.length > 0) WPCharts.incomeBreakdown('chart-income-breakdown', _entries);
+      // Insights
+      const currencies = [...new Set(_entries.map(e => WPUtils.getEntryCurrency(e.notes)))];
+      const baseCur = WPApp.state.profile?.currency || 'NGN';
+      const totalGross = _entries.reduce((s,e) => s + WPUtils.convert(e.gross_amount||0, WPUtils.getEntryCurrency(e.notes), baseCur), 0);
+      const totalTax   = _entries.reduce((s,e) => s + WPUtils.convert(e.paye_tax||0, WPUtils.getEntryCurrency(e.notes), baseCur), 0);
+      WPInsights.evaluate('income', {
+        sourceCount:        _entries.length,
+        hasForeignCurrency: currencies.some(c => c !== 'NGN'),
+        hasPassive:         _entries.some(e => e.income_type === 'passive' || e.income_type === 'investment'),
+        effectiveTaxRate:   totalGross > 0 ? totalTax / totalGross : 0,
+      }, document.getElementById('income-insights'));
     } catch (err) { WPToast.error('Failed to load income data.'); }
   }
 
@@ -425,6 +438,7 @@ const WPIncome = (() => {
       else            await WPDb.insert('income_entries', row);
       WPToast.success(existingId ? 'Income updated.' : 'Income added.');
       await _load();
+      return true;
     } catch (err) { WPToast.error('Could not save: ' + err.message); return false; }
   }
 

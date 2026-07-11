@@ -14,6 +14,7 @@ import { handleProfile }       from "./routes/profile.js"
 import { handleSnapshot }      from "./routes/snapshot.js"
 import { handleAdminUsers }    from "./routes/admin-users.js"
 import { handleHealth }        from "./routes/health.js"
+import { handleEcon }          from "./routes/econ.js"
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url))
 const PROJECT_ROOT = join(__dirname, "..")
@@ -37,6 +38,7 @@ const API_ROUTES = {
   "GET  /api/profile":         handleProfile,
   "POST /api/snapshot":        handleSnapshot,
   "GET  /api/admin/users":     handleAdminUsers,
+  "GET  /api/econ":            handleEcon,
 }
 
 // ── REQUEST HANDLER ───────────────────────────────────────────
