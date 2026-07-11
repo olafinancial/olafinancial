@@ -996,13 +996,15 @@ tbody td {
     position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%) rotate(-45deg);
-    font-size: 8rem;
-    font-weight: 900;
-    color: rgba(0, 0, 0, 0.05) !important;
-    z-index: -9999;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    font-size: 10rem;
+    font-weight: 800;
+    color: rgba(0, 0, 0, 0.035) !important;
+    z-index: 9999 !important;
     pointer-events: none;
     text-transform: lowercase;
-    letter-spacing: 0.2rem;
+    letter-spacing: 0.3rem;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
