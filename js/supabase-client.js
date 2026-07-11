@@ -40,13 +40,13 @@ const WPDb = (() => {
 
   async function signInWithGoogle() {
     return client().auth.signInWithOAuth({ provider: 'google',
-      options: { redirectTo: window.location.origin + window.location.pathname }
+      options: { redirectTo: 'https://pul.llc/index.html' }
     });
   }
 
   async function resetPassword(email) {
     return client().auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + window.location.pathname + '#/reset-password'
+      redirectTo: 'https://pul.llc/index.html#/reset-password'
     });
   }
 
