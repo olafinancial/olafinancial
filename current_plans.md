@@ -283,3 +283,12 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | Calculators Hub | `js/pages/calculators.js` | ✅ Active |
 | Onboarding Wizard | `js/pages/onboarding.js` | ✅ Active |
 | Settings | `js/pages/settings.js` | ✅ Active |
+
+---
+
+## E2E and Unit Test Coverage
+
+#### R27. Comprehensive Automated Test Suite
+* **Status**: ✅ Completed
+* **Description**: Implemented Jest unit tests for core math utilities and Playwright E2E integration specs covering user auth, dashboard insights, PWA offline caching, calculators, custom reports, and mobile viewport responsiveness. Runs automatically on push/PR via GitHub Actions.
+
