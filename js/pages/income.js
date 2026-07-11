@@ -277,8 +277,10 @@ const WPIncome = (() => {
           <div class="form-group">
             <label for="if-freq">Frequency</label>
             <select class="select" id="if-freq">
+              <option value="biweekly"  ${e.frequency==='biweekly'?'selected':''}>Bi-Weekly</option>
               <option value="monthly"   ${(!e.frequency||e.frequency==='monthly')?'selected':''}>Monthly</option>
               <option value="quarterly" ${e.frequency==='quarterly'?'selected':''}>Quarterly</option>
+              <option value="semiannual" ${e.frequency==='semiannual'?'selected':''}>Semi-Annual</option>
               <option value="annual"    ${e.frequency==='annual'   ?'selected':''}>Annual</option>
               <option value="one_time"  ${e.frequency==='one_time' ?'selected':''}>One-Time</option>
             </select>
@@ -296,15 +298,15 @@ const WPIncome = (() => {
           </div>
         </div>
         <div class="form-row">
-          <div class="form-group">
-            <label for="if-tax">Tax (${symbol})</label>
+          <div class="form-group" id="if-tax-group">
+            <label for="if-tax" id="if-tax-label">PAYE Tax (${symbol})</label>
             <div class="input-prefix-group">
               <span class="input-prefix">${symbol}</span>
               <input class="input" type="text" inputmode="decimal" id="if-tax" value="${e.paye_tax?WPUtils.koboToNaira(e.paye_tax):''}" placeholder="0">
             </div>
-            <div class="input-hint"><a id="calc-tax-link" style="color:var(--clr-accent);cursor:pointer">Auto-calculate from gross (Tax Act 2025)</a></div>
+            <div class="input-hint" id="if-tax-hint"><a id="calc-tax-link" style="color:var(--clr-accent);cursor:pointer">Auto-calculate from gross (Tax Act 2025)</a></div>
           </div>
-          <div class="form-group">
+          <div class="form-group" id="if-pension-group" style="display: ${e.income_type==='active'||!e.income_type?'block':'none'}">
             <label for="if-pension">Pension 8% (${symbol})</label>
             <div class="input-prefix-group">
               <span class="input-prefix">${symbol}</span>
@@ -320,17 +322,41 @@ const WPIncome = (() => {
 
     WPModal.open(isEdit ? 'Edit Income Source' : 'Add Income Source', body, {
       confirmLabel: isEdit ? 'Update' : 'Add Income',
-      onConfirm: async () => { await _save(e.id); },
+      onConfirm: async () => { return await _save(e.id); },
     });
 
     const grossInput = document.getElementById('if-gross');
     const taxInput = document.getElementById('if-tax');
     const pensionInput = document.getElementById('if-pension');
     const currencySelect = document.getElementById('if-currency');
+    const typeSelect = document.getElementById('if-type');
+    const pensionGroup = document.getElementById('if-pension-group');
+    const taxLabel = document.getElementById('if-tax-label');
+    const taxHint = document.getElementById('if-tax-hint');
 
     WPUtils.maskNumberInput(grossInput);
     WPUtils.maskNumberInput(taxInput);
     WPUtils.maskNumberInput(pensionInput);
+
+    const updateFormLayout = () => {
+      const isCur = currencySelect.value;
+      const sym = symbols[isCur] || '₦';
+      const type = typeSelect.value;
+
+      if (type === 'active') {
+        taxLabel.textContent = `PAYE Tax (${sym})`;
+        pensionGroup.style.display = 'block';
+        taxHint.style.display = 'block';
+      } else {
+        taxLabel.textContent = `Tax (${sym})`;
+        pensionGroup.style.display = 'none';
+        pensionInput.value = '';
+        taxHint.style.display = 'none';
+      }
+    };
+
+    typeSelect.addEventListener('change', updateFormLayout);
+    updateFormLayout();
 
     currencySelect.addEventListener('change', (ev) => {
       const newCur = ev.target.value;
@@ -339,8 +365,7 @@ const WPIncome = (() => {
         span.textContent = newSym;
       });
       document.querySelector('label[for="if-gross"]').textContent = `Gross Amount (${newSym})`;
-      document.querySelector('label[for="if-tax"]').textContent = `Tax (${newSym})`;
-      document.querySelector('label[for="if-pension"]').textContent = `Pension 8% (${newSym})`;
+      updateFormLayout();
     });
 
     document.getElementById('calc-tax-link')?.addEventListener('click', () => {
@@ -364,18 +389,23 @@ const WPIncome = (() => {
     const hasTaxInput = document.getElementById('if-tax').value.trim() !== '';
     const hasPensionInput = document.getElementById('if-pension').value.trim() !== '';
 
+    const isPassiveOrInvestment = document.getElementById('if-type').value !== 'active';
+
     let pensionVal = 0;
-    if (hasPensionInput) {
-      pensionVal = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-pension').value));
-    } else {
-      pensionVal = WPUtils.calcPensionEmployee(grossKobo);
+    if (!isPassiveOrInvestment) {
+      if (hasPensionInput) {
+        pensionVal = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-pension').value));
+      } else {
+        pensionVal = WPUtils.calcPensionEmployee(grossKobo);
+      }
     }
 
     let taxVal = 0;
     if (hasTaxInput) {
       taxVal = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-tax').value));
     } else {
-      taxVal = WPUtils.calcPIT(grossKobo, pensionVal);
+      // For passive/investment incomes, default fallback tax is 0 (or manually set), only run calcPIT for active salaries.
+      taxVal = isPassiveOrInvestment ? 0 : WPUtils.calcPIT(grossKobo, pensionVal);
     }
 
     const row = {
