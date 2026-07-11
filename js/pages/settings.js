@@ -61,14 +61,6 @@ const WPSettings = (() => {
             <div class="input-hint">Changing this updates the default symbol across your calculations, sheets, and reports. Select 'No Currency Symbol' to view pure amounts.</div>
           </div>
 
-          <div class="form-group">
-            <label for="set-takaful">Insurance Preference</label>
-            <select class="select" id="set-takaful">
-              <option value="no" ${localStorage.getItem('wp_takaful_preference_' + WPApp.state.user.id) !== 'yes' ? 'selected' : ''}>Standard policies (standard yields)</option>
-              <option value="yes" ${localStorage.getItem('wp_takaful_preference_' + WPApp.state.user.id) === 'yes' ? 'selected' : ''}>Sharia-compliant (Takaful) preference</option>
-            </select>
-          </div>
-
           <button class="btn btn-primary" style="width:100%;margin-top:1.5rem" id="save-settings-btn">Save Changes</button>
         </div>
       </div>
@@ -84,7 +76,6 @@ const WPSettings = (() => {
         const name = document.getElementById('set-name').value.trim();
         const age = parseInt(document.getElementById('set-age').value) || null;
         const retAge = parseInt(document.getElementById('set-retirement').value) || 60;
-        const takaful = document.getElementById('set-takaful').value;
 
         // Update database
         WPApp.state.profile = await WPDb.upsert('user_profiles', {
@@ -94,9 +85,6 @@ const WPSettings = (() => {
           retirement_age: retAge,
           currency: newCurrency,
         }, ['user_id']);
-
-        // Update local preferences
-        localStorage.setItem('wp_takaful_preference_' + uid, takaful);
         
         // Also update local currency caches across views to align with new global override
         const views = ['balance_sheet', 'dashboard', 'income', 'expenses', 'cashflow', 'debt', 'emergency', 'goals', 'reports'];

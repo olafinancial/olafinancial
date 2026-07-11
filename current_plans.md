@@ -244,7 +244,7 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 ---
 
 #### R16. Insurance Policies & Coverage Analysis
-* **Status**: 🔲 Not Started
+* **Status**: ✅ Completed
 * **Goal**: Build an insurance tracker page analyzing sum assured vs. needs (Life, Health, Motor, Property) and flagging coverage gaps.
 * **Proposed Files**: `js/pages/insurance.js`
 
@@ -278,7 +278,7 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | Reports | `js/pages/reports.js` | ✅ Active |
 | Retirement Planner | `js/pages/retirement.js` | ✅ Active |
 | Estate Planner | `js/pages/estate-planner.js` | ✅ Active |
+| Insurance Tracker | `js/pages/insurance.js` | ✅ Active |
 | Calculators Hub | `js/pages/calculators.js` | ✅ Active |
 | Onboarding Wizard | `js/pages/onboarding.js` | ✅ Active |
-| Settings | `js/pages/settings.js` | 🔲 Planned |
-| Insurance Tracker | `js/pages/insurance.js` | 🔲 Planned |
+| Settings | `js/pages/settings.js` | ✅ Active |

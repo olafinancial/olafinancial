@@ -2,7 +2,7 @@
 // OlaFinancial — Service Worker (Offline Cache)
 // ============================================================
 
-const CACHE_NAME   = 'olafinancial-v14';
+const CACHE_NAME   = 'olafinancial-v15';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -24,6 +24,8 @@ const STATIC_ASSETS = [
   '/js/pages/emergency-fund.js',
   '/js/pages/goals.js',
   '/js/pages/retirement.js',
+  '/js/pages/estate-planner.js',
+  '/js/pages/insurance.js',
   '/js/pages/reports.js',
   '/js/lib/supabase.min.js',
   '/js/lib/chart.umd.min.js',
