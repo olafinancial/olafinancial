@@ -47,12 +47,12 @@ test.describe('Authentication', () => {
   });
 
   test('sign-up link is visible on the landing page', async ({ page }) => {
-    const signupLink = page.locator('a[href*="signup"], button:has-text("Sign Up"), [data-action="signup"]').first();
+    const signupLink = page.locator('#goto-signup, a[href*="signup"], button:has-text("Sign Up")').first();
     await expect(signupLink).toBeVisible();
   });
 
   test('forgot password link is visible', async ({ page }) => {
-    const forgotLink = page.locator('a:has-text("Forgot"), [data-action="forgot-password"]').first();
+    const forgotLink = page.locator('#forgot-link, a:has-text("Forgot")').first();
     await expect(forgotLink).toBeVisible();
   });
 });
