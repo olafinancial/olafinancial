@@ -229,6 +229,14 @@ This file tracks the active plans, completed work, and remaining roadmap for the
   * Create an **Economic Dashboard** pulling Nigeria's GDP growth rate, monthly inflation, FX rates ($ and GBP), MPR (Monetary Policy Rate), and reserves using data from the CBN and NBS.
   * Include a Sharia-compliant (Takaful) insurance preference question during onboarding.
 
+#### R25. Reset Password & OAuth Redirects Routing
+* **Status**: ✅ Completed
+* **Description**: Configured Supabase redirection links to point to the live `pul.llc` URL overrides instead of local paths.
+
+#### R26. Syntax Crash & Offline Cache Invalidation
+* **Status**: ✅ Completed
+* **Description**: Fixed unbalanced brackets causing boot crashes, incremented the PWA service worker cache to `v14`, and updated script cache-busting version tags to restore runtime stability.
+
 ---
 
 ### LOW PRIORITY / FUTURE
