@@ -116,7 +116,8 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 ---
 
 #### R4. Global Base Currency Setting (App-Wide)
-* **Status**: 🔲 Planned (Configured in open GitHub Roadmap issues)
+* **Status**: ✅ Completed
+* **Description**: Implemented Settings page allowing users to configure name, age, retirement target, global base currency, and Takaful preferences. Supporting NONE currency option to hide currency prefixes.
 
 ---
 
