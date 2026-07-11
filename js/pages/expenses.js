@@ -140,7 +140,11 @@ const WPExpenses = (() => {
       </tr></thead>
       <tbody>${sorted.map(e => {
         const cur = WPUtils.getEntryCurrency(e.description);
-        const cleanDesc = (e.description || '').replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').replace(/\[freq:[^\]]+\]/g, '').trim();
+        const cleanDesc = (e.description || '')
+          .replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '')
+          .replace(/\[freq:[^\]]+\]/g, '')
+          .replace(/\[prepaid:\d+\]/g, '')
+          .trim();
         const convertedAmount = WPUtils.convert(e.amount||0, cur, pageCurrency);
 
         const freqMatch = (e.description || '').match(/\[freq:([^\]]+)\]/);
@@ -150,17 +154,30 @@ const WPExpenses = (() => {
           freqText = rawFreq.startsWith('custom:') ? rawFreq.replace('custom:','') : rawFreq;
         }
 
+        const prepaidMatch = (e.description || '').match(/\[prepaid:(\d+)\]/);
+        let prepaidText = '';
+        let amortizedCostLabel = '';
+        if (prepaidMatch) {
+          const months = parseInt(prepaidMatch[1]);
+          prepaidText = `<span class="badge badge-gold" style="margin-left:4px">Prepaid (${months}M)</span>`;
+          const amortizedKobo = Math.round((e.amount || 0) / months);
+          const amortizedPage = WPUtils.convert(amortizedKobo, cur, pageCurrency);
+          amortizedCostLabel = `<br><span class="text-xs text-accent">Amortised: ${WPUtils.fmt(amortizedPage, { currency: pageCurrency })}/month</span>`;
+        }
+
         return `<tr>
           <td class="text-muted text-sm">${WPUtils.fmtDate(e.expense_date)}</td>
           <td>
             <strong>${cleanDesc||'—'}</strong>
             ${e.merchant?`<br><span class="text-xs text-muted">${e.merchant}</span>`:''}
+            ${amortizedCostLabel}
           </td>
           <td><span class="badge badge-neutral">${e.category}</span></td>
           <td class="td-mono fw-600 ${convertedAmount>500000?'text-danger':''}">${WPUtils.fmt(convertedAmount, { currency: pageCurrency })}</td>
           <td>
             <span class="badge ${e.is_discretionary?'badge-gold':'badge-neutral'}">${e.is_discretionary?'Want':'Need'}</span>
             ${e.is_recurring?`<span class="badge badge-info" style="margin-left:4px">Recurring${freqText?` (${freqText})`:''}</span>`:''}
+            ${prepaidText}
             ${e.category==='Investment'?`<span class="badge badge-accent" style="margin-left:4px" title="Double entry: Flowed to Asset Side">→ Asset</span>`:''}
           </td>
           <td style="white-space:nowrap">
@@ -331,6 +348,20 @@ const WPExpenses = (() => {
             <label class="toggle"><input type="checkbox" id="ef-recur" ${e.is_recurring?'checked':''}><span class="toggle-slider"></span></label>
             <span class="toggle-label">Recurring expense</span>
           </div>
+          <div class="toggle-group">
+            <label class="toggle"><input type="checkbox" id="ef-prepaid" ${e.description && e.description.includes('[prepaid:') ? 'checked' : ''}><span class="toggle-slider"></span></label>
+            <span class="toggle-label">Prepaid Expense (e.g. rent paid in advance)</span>
+          </div>
+        </div>
+
+        <!-- Prepaid amortization months selector -->
+        <div id="ef-prepaid-container" style="display:none; margin-top:0.75rem;">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="ef-prepaid-months">Amortisation Period (Months)</label>
+              <input class="input" type="number" id="ef-prepaid-months" min="1" max="60" placeholder="e.g. 12 or 24">
+            </div>
+          </div>
         </div>
 
         <!-- Frequency select dropdown -->
@@ -402,6 +433,26 @@ const WPExpenses = (() => {
       toggleRetirement();
     }
 
+    const prepaidToggle = document.getElementById('ef-prepaid');
+    const prepaidContainer = document.getElementById('ef-prepaid-container');
+    const prepaidMonthsInput = document.getElementById('ef-prepaid-months');
+
+    if (prepaidToggle && prepaidContainer) {
+      const togglePrepaid = () => {
+        prepaidContainer.style.display = prepaidToggle.checked ? 'block' : 'none';
+      };
+      prepaidToggle.addEventListener('change', togglePrepaid);
+
+      // Parse existing prepaid value if present
+      if (e.description && e.description.includes('[prepaid:')) {
+        const match = e.description.match(/\[prepaid:(\d+)\]/);
+        if (match) {
+          prepaidMonthsInput.value = match[1];
+        }
+      }
+      togglePrepaid();
+    }
+
     if (recurToggle && freqContainer) {
       recurToggle.addEventListener('change', (ev) => {
         freqContainer.style.display = ev.target.checked ? 'block' : 'none';
@@ -431,9 +482,22 @@ const WPExpenses = (() => {
       }
     }
 
-    let cleanDesc = descVal.replace(/\[freq:[^\]]+\]/g, '').trim();
+    const isPrepaid = document.getElementById('ef-prepaid').checked;
+    let prepaidMonths = 0;
+    if (isPrepaid) {
+      prepaidMonths = parseInt(document.getElementById('ef-prepaid-months').value) || 12;
+    }
+
+    let cleanDesc = descVal
+      .replace(/\[freq:[^\]]+\]/g, '')
+      .replace(/\[prepaid:\d+\]/g, '')
+      .trim();
+
     if (freq) {
       cleanDesc = `${cleanDesc} [freq:${freq}]`.trim();
+    }
+    if (isPrepaid) {
+      cleanDesc = `${cleanDesc} [prepaid:${prepaidMonths}]`.trim();
     }
     const finalDesc = WPUtils.setEntryCurrency(cleanDesc, currency);
 
