@@ -176,10 +176,34 @@ const WPBalanceSheet = (() => {
           }
         }
 
-        const cleanNotes = (a.notes || '').replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').replace(/\[Emergency Fund\]/g, '').replace(/\[sub:[^\]]+\]/g, '').trim();
+        let parsedQty = 0;
+        let parsedUnitCost = 0;
+        if (a.notes && typeof a.notes === 'string') {
+          const qtyMatch = a.notes.match(/\[qty:([^\]]+)\]/);
+          const costMatch = a.notes.match(/\[unit_cost:([^\]]+)\]/);
+          if (qtyMatch) parsedQty = parseFloat(qtyMatch[1]);
+          if (costMatch) parsedUnitCost = parseInt(costMatch[1]);
+        }
+
+        let stockInfo = '';
+        if (a.is_income_generating && parsedQty > 0) {
+          const unitCostPage = WPUtils.convert(parsedUnitCost, cur, pageCurrency);
+          const basisPage = WPUtils.convert(parsedQty * parsedUnitCost, cur, pageCurrency);
+          stockInfo = `<br><span class="text-xs text-accent">Qty: ${parsedQty} | Avg Cost: ${WPUtils.fmt(unitCostPage, { currency: pageCurrency })} | Basis: ${WPUtils.fmt(basisPage, { currency: pageCurrency })}</span>`;
+        }
+
+        const cleanNotes = (a.notes || '')
+          .replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '')
+          .replace(/\[Emergency Fund\]/g, '')
+          .replace(/\[sub:[^\]]+\]/g, '')
+          .replace(/\[qty:[^\]]+\]/g, '')
+          .replace(/\[unit_cost:[^\]]+\]/g, '')
+          .trim();
+
         return `<tr>
           <td><strong>${typeIcon[a.asset_type]||'&#x1F4B0;'} ${a.asset_name}</strong>
             ${isEFSource?'<span class="badge badge-gold" style="margin-left:4px">EF Source</span>':''}
+            ${stockInfo}
             ${cleanNotes?`<br><span class="text-xs text-muted">${cleanNotes}</span>`:''}
           </td>
           <td><span class="badge badge-neutral">${(a.asset_type||'').replace('_',' ')}${subTypeLabel}</span></td>
@@ -312,6 +336,34 @@ const WPBalanceSheet = (() => {
           <label for="af-inst">Institution / Bank Name</label>
           <input class="input" id="af-inst" value="${e.institution_name||''}" placeholder="e.g. Zenith Bank, Stanbic IBTC">
         </div>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem;">
+          <div class="toggle-group">
+            <label class="toggle"><input type="checkbox" id="af-income" ${e.is_income_generating?'checked':''}><span class="toggle-slider"></span></label>
+            <span class="toggle-label">Income-generating/financial asset (rental, dividends, stocks)</span>
+          </div>
+          <div class="toggle-group">
+            <label class="toggle"><input type="checkbox" id="af-ef-source" ${e.notes && e.notes.includes('[Emergency Fund]') ? 'checked' : ''}><span class="toggle-slider"></span></label>
+            <span class="toggle-label">Use as an Emergency Fund source</span>
+          </div>
+        </div>
+        <!-- Financial Stock details section -->
+        <div id="af-financial-details" style="display: none; border: 1px solid var(--clr-border); border-radius: var(--radius-md); padding: var(--sp-4); margin-bottom: 1rem;">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="af-qty">Quantity</label>
+              <input class="input" type="number" step="any" id="af-qty" placeholder="e.g. 10">
+            </div>
+            <div class="form-group">
+              <label for="af-unit-cost">Cost per Unit (${symbol})</label>
+              <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
+                <input class="input" type="text" inputmode="decimal" id="af-unit-cost" placeholder="0">
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Auto-Calculated Total Cost Basis: <span id="af-total-basis-label" style="font-weight:700;color:var(--clr-text-1)">${symbol}0</span></label>
+          </div>
+        </div>
         <div class="form-row">
           <div class="form-group">
             <label for="af-open">Opening Balance (${symbol})</label>
@@ -324,19 +376,9 @@ const WPBalanceSheet = (() => {
             <input class="input" type="date" id="af-date" value="${e.period_month || WPUtils.currentPeriod()}" required>
           </div>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem;">
-          <div class="toggle-group">
-            <label class="toggle"><input type="checkbox" id="af-income" ${e.is_income_generating?'checked':''}><span class="toggle-slider"></span></label>
-            <span class="toggle-label">Income-generating asset (rental, dividends, interest)</span>
-          </div>
-          <div class="toggle-group">
-            <label class="toggle"><input type="checkbox" id="af-ef-source" ${e.notes && e.notes.includes('[Emergency Fund]') ? 'checked' : ''}><span class="toggle-slider"></span></label>
-            <span class="toggle-label">Use as an Emergency Fund source</span>
-          </div>
-        </div>
         <div class="form-row" id="yield-details-row" style="display: ${e.is_income_generating ? 'grid' : 'none'}; grid-template-columns: 1fr 1fr; gap: var(--sp-4);">
           <div class="form-group">
-            <label for="af-rate">Interest Rate (% p.a.)</label>
+            <label for="af-rate">Interest Rate (% p.a. / APY)</label>
             <input class="input" type="number" id="af-rate" min="0" max="30" step="0.1" value="${e.interest_rate||''}" placeholder="e.g. 8.5">
           </div>
           <div class="form-group">
@@ -391,14 +433,64 @@ const WPBalanceSheet = (() => {
       incomeInput.dispatchEvent(new Event('input'));
     }
 
+    const financialDetails = document.getElementById('af-financial-details');
+    const qtyInput = document.getElementById('af-qty');
+    const unitCostInput = document.getElementById('af-unit-cost');
+    const totalBasisLabel = document.getElementById('af-total-basis-label');
+
+    WPUtils.maskNumberInput(unitCostInput);
+
+    // Load existing stocks details if stored in notes
+    let parsedQty = '';
+    let parsedUnitCost = '';
+    if (e.notes && typeof e.notes === 'string') {
+      const qtyMatch = e.notes.match(/\[qty:([^\]]+)\]/);
+      const costMatch = e.notes.match(/\[unit_cost:([^\]]+)\]/);
+      if (qtyMatch) parsedQty = qtyMatch[1];
+      if (costMatch) parsedUnitCost = costMatch[1];
+    }
+    if (parsedQty) qtyInput.value = parsedQty;
+    if (parsedUnitCost) unitCostInput.value = WPUtils.koboToNaira(parseInt(parsedUnitCost)).toFixed(0);
+
+    const updateFinancialDetailsVisibility = () => {
+      const isChecked = incomeToggle.checked;
+      financialDetails.style.display = isChecked ? 'block' : 'none';
+      if (isChecked) {
+        updateCostBasis();
+      }
+    };
+
+    const updateCostBasis = () => {
+      const sym = symbols[currencySelect.value] || '₦';
+      const qty = parseFloat(qtyInput.value) || 0;
+      const unitCost = WPUtils.cleanNum(unitCostInput.value) || 0;
+      const total = qty * unitCost;
+
+      totalBasisLabel.textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      
+      // Auto fill opening balance if user inputs cost details
+      if (total > 0) {
+        openInput.value = total.toFixed(0);
+        openInput.dispatchEvent(new Event('input'));
+      }
+    };
+
+    qtyInput.addEventListener('input', updateCostBasis);
+    unitCostInput.addEventListener('input', updateCostBasis);
+
     incomeToggle.addEventListener('change', () => {
       const isChecked = incomeToggle.checked;
       yieldRow.style.display = isChecked ? 'grid' : 'none';
+      updateFinancialDetailsVisibility();
       if (!isChecked) {
         rateInput.value = '';
         incomeInput.value = '';
+        qtyInput.value = '';
+        unitCostInput.value = '';
       }
     });
+
+    updateFinancialDetailsVisibility();
 
     rateInput.addEventListener('input', () => {
       const openVal = WPUtils.cleanNum(openInput.value);
@@ -439,10 +531,18 @@ const WPBalanceSheet = (() => {
     const currency = document.getElementById('af-currency').value;
     const typeVal = document.getElementById('af-type').value;
 
+    const isFinancial = document.getElementById('af-income').checked;
+    const qtyVal = parseFloat(document.getElementById('af-qty').value) || 0;
+    const unitCostNaira = WPUtils.cleanNum(document.getElementById('af-unit-cost').value) || 0;
+    const unitCostKobo = WPUtils.nairaToKobo(unitCostNaira);
+
     let finalNotes = isEFSource ? '[Emergency Fund]' : '';
     if (typeVal === 'retirement_contribution') {
       const subVal = document.getElementById('af-retirement-sub').value;
       finalNotes += ` [sub:${subVal}]`;
+    }
+    if (isFinancial && qtyVal > 0) {
+      finalNotes += ` [qty:${qtyVal}] [unit_cost:${unitCostKobo}]`;
     }
     finalNotes = WPUtils.setEntryCurrency(finalNotes.trim(), currency);
 
@@ -456,7 +556,7 @@ const WPBalanceSheet = (() => {
       close_balance:        rawOpen,
       interest_rate:        parseFloat(document.getElementById('af-rate').value)||0,
       tenor_months:         parseInt(document.getElementById('af-tenor').value)||null,
-      is_income_generating: document.getElementById('af-income').checked,
+      is_income_generating: isFinancial,
       notes:                finalNotes,
       period_month:         periodMonth,
     };
