@@ -78,6 +78,43 @@ const WPDashboard = (() => {
               <button class="btn btn-secondary" onclick="WPRouter.navigate('/reports')">&#x1F4CA; Reports</button>
             </div>
           </div>
+          <!-- CBN / NBS Macroeconomic Indices Dashboard Widget -->
+          <div class="card dashboard-full" id="macroeconomic-card">
+            <div class="section-header">
+              <span class="section-title">🇳🇬 Macroeconomic Indicators (CBN &amp; NBS)</span>
+              <span class="badge badge-neutral">Live &amp; Local Policy Rates</span>
+            </div>
+            <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-top: 1rem; gap: 1rem;">
+              <div style="background:var(--clr-bg); padding:1rem; border-radius:8px; border:1px solid var(--clr-border);">
+                <div class="card-title" style="font-size:0.8rem">Inflation Rate</div>
+                <div class="card-value text-danger" style="font-size:1.5rem; font-weight:700">32.15%</div>
+                <div class="card-meta" style="font-size:0.75rem">NBS, May 2026</div>
+              </div>
+              <div style="background:var(--clr-bg); padding:1rem; border-radius:8px; border:1px solid var(--clr-border);">
+                <div class="card-title" style="font-size:0.8rem">Monetary Policy Rate</div>
+                <div class="card-value text-gold" style="font-size:1.5rem; font-weight:700">27.25%</div>
+                <div class="card-meta" style="font-size:0.75rem">CBN Policy Anchor</div>
+              </div>
+              <div style="background:var(--clr-bg); padding:1rem; border-radius:8px; border:1px solid var(--clr-border);">
+                <div class="card-title" style="font-size:0.8rem">GDP Growth</div>
+                <div class="card-value text-accent" style="font-size:1.5rem; font-weight:700">+3.46%</div>
+                <div class="card-meta" style="font-size:0.75rem">Q1 2026 YoY</div>
+              </div>
+              <div style="background:var(--clr-bg); padding:1rem; border-radius:8px; border:1px solid var(--clr-border);">
+                <div class="card-title" style="font-size:0.8rem">Foreign Reserves</div>
+                <div class="card-value text-white" style="font-size:1.5rem; font-weight:700">$36.89B</div>
+                <div class="card-meta" style="font-size:0.75rem">CBN Liquid Buffer</div>
+              </div>
+              <div style="background:var(--clr-bg); padding:1rem; border-radius:8px; border:1px solid var(--clr-border);">
+                <div class="card-title" style="font-size:0.8rem">Exchange Rates</div>
+                <div class="card-value text-white" style="font-size:1.2rem; font-weight:600; line-height:1.2;">
+                  $1 = ₦1,485<br>
+                  £1 = ₦1,890
+                </div>
+                <div class="card-meta" style="font-size:0.75rem">Nafem Reference</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>`;
 

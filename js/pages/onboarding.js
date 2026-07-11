@@ -135,8 +135,8 @@ const WPOnboarding = (() => {
 
   function _step3(el) {
     el.innerHTML = `
-      <h2 class="onboarding-step-title">Retirement Goal</h2>
-      <p class="onboarding-step-desc">When do you want to retire? We'll work backwards from there.</p>
+      <h2 class="onboarding-step-title">Retirement & Preferences Goal</h2>
+      <p class="onboarding-step-desc">Tell us about your investment parameters and Sharia requirements.</p>
       <div class="form-group">
         <label for="ob-ret-age">Target Retirement Age</label>
         <input class="input" type="number" id="ob-ret-age" min="40" max="75" placeholder="60" value="${_data.retirement_age||60}">
@@ -147,6 +147,13 @@ const WPOnboarding = (() => {
           <option value="conservative" ${_data.risk_tolerance==='conservative'?'selected':''}>Conservative — Preserve capital, steady returns</option>
           <option value="moderate" ${(!_data.risk_tolerance||_data.risk_tolerance==='moderate')?'selected':''}>Moderate — Balanced growth and security</option>
           <option value="aggressive" ${_data.risk_tolerance==='aggressive'?'selected':''}>Aggressive — Maximum growth, higher risk</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="ob-takaful">Do you prefer Sharia-compliant (Takaful) insurance / financial options?</label>
+        <select class="select" id="ob-takaful">
+          <option value="no" ${_data.takaful==='no'||!_data.takaful?'selected':''}>No, standard financial instruments are fine</option>
+          <option value="yes" ${_data.takaful==='yes'?'selected':''}>Yes, prefer Sharia-compliant/Takaful assets and policies</option>
         </select>
       </div>`;
   }
@@ -211,6 +218,7 @@ const WPOnboarding = (() => {
           <div class="flex justify-between"><span class="text-muted">Retirement Age</span><strong>${_data.retirement_age||60}</strong></div>
           <div class="flex justify-between"><span class="text-muted">Risk Profile</span><strong>${_data.risk_tolerance||'moderate'}</strong></div>
           <div class="flex justify-between"><span class="text-muted">Will & Legacy</span><strong>${_data.will==='yes_current'?'Will (Current)':_data.will==='yes_outdated'?'Will (Outdated)':'No Will'}</strong></div>
+          <div class="flex justify-between"><span class="text-muted">Sharia/Takaful</span><strong>${_data.takaful==='yes'?'Yes (Takaful)':'No'}</strong></div>
         </div>
       </div>
       <div class="disclaimer">${APP_CONFIG.disclaimer}</div>`;
@@ -232,6 +240,7 @@ const WPOnboarding = (() => {
     if (_step === 3) {
       _data.retirement_age = parseInt(document.getElementById('ob-ret-age')?.value) || 60;
       _data.risk_tolerance = document.getElementById('ob-risk')?.value;
+      _data.takaful        = document.getElementById('ob-takaful')?.value || 'no';
     }
     if (_step === 4) {
       _data.will      = document.getElementById('ob-will')?.value || 'no';
@@ -271,7 +280,7 @@ const WPOnboarding = (() => {
         currency: _data.currency || 'NGN',
       }, ['user_id']);
       
-      // Save onboarding estate choices to localStorage
+      // Save onboarding estate choices and takaful choices to localStorage
       const estateState = {
         will: _data.will,
         guardians: _data.guardians,
@@ -282,6 +291,7 @@ const WPOnboarding = (() => {
         beneficiary: 'no'
       };
       localStorage.setItem('wp_estate_planning_' + uid, JSON.stringify(estateState));
+      localStorage.setItem('wp_takaful_preference_' + uid, _data.takaful || 'no');
       
       WPToast.success('Profile saved! Welcome to Ola Financial.');
       // Reload the full app shell
