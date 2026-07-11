@@ -193,11 +193,11 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 ### 🆕 Requirements from WhatsApp PDF (Copy of reqs.pdf)
 
 #### R19. Show/Hide Password Toggle
-* **Status**: 🔲 Not Started
+* **Status**: ✅ Completed
 * **Description**: Add a show/hide password toggle (eye icon) to Login and Sign-up fields.
 
 #### R20. Income Form Structural Refinements
-* **Status**: 🔲 Not Started
+* **Status**: ✅ Completed
 * **Description**: 
   * Add **biweekly** option to income frequencies.
   * Dynamically show "PAYE" tax & pension deductions sub-sections *only* when "Active Income" (Salary) is selected.
@@ -205,14 +205,14 @@ This file tracks the active plans, completed work, and remaining roadmap for the
   * Include "semi-annual" option to the frequency dropdown for investments (dividends).
 
 #### R21. Asset ROI & Valuation Inputs (Rolex vs. Stock)
-* **Status**: 🔲 Not Started
+* **Status**: ✅ Completed
 * **Description**:
   * If an asset is toggled as "income-generating", allow input fields for Name, Cost per unit, Quantity, and Total cost to track average cost basis and calculate accurate ROI.
   * Separate non-financial assets (e.g. Rolex) from financial stock assets that track mark-to-market.
   * Allow tracking historical price changes of an asset (price movement trends over time).
 
 #### R22. APY Nigeria Thresholds & Crash Fixes
-* **Status**: 🔲 Not Started
+* **Status**: ✅ Completed
 * **Description**:
   * Fix bug: If user clicks "Add Asset" without entering a name, the modal crashes and disappears.
   * Raise the maximum APY boundary limit to 30% (current cap at 9% is too low for Nigerian yields).
@@ -222,7 +222,7 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 * **Description**: Implement a system to log pre-paid payments (such as paying rent for two years in advance) and amortize them monthly.
 
 #### R24. Branded Watermarks & Macroeconomic Dashboard
-* **Status**: 🔲 Not Started
+* **Status**: ✅ Completed
 * **Description**:
   * Add watermarks (`pul.llc`) to printable reports for sharing.
   * Create an **Economic Dashboard** pulling Nigeria's GDP growth rate, monthly inflation, FX rates ($ and GBP), MPR (Monetary Policy Rate), and reserves using data from the CBN and NBS.
