@@ -25,6 +25,7 @@ const WPCalculators = (() => {
           <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="car-loan">🚗 Car Loan</button>
           <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="mortgage">🏠 Mortgage</button>
           <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="fixed-deposit">🔒 Fixed Deposit / CD</button>
+          <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="nigeria-paye">🇳🇬 Nigeria PAYE (SME)</button>
           <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="inflation">🎈 Inflation Impact</button>
         </div>
         
@@ -394,6 +395,50 @@ const WPCalculators = (() => {
         </div>`;
     }
 
+    else if (_activeTab === 'nigeria-paye') {
+      html = `
+        <div class="grid-2">
+          <div class="card" style="padding:2rem">
+            <h3 style="margin-bottom:1.5rem;font-weight:700;color:#ffffff">Nigeria PAYE (SME) Calculator</h3>
+            <div class="form-group">
+              <label for="paye-gross">Monthly Gross Emoluments (₦)</label>
+              <div class="input-prefix-group"><span class="input-prefix">₦</span>
+                <input class="input" type="text" inputmode="decimal" id="paye-gross" placeholder="e.g. 500,000" value="500,000">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="paye-pension-rate">Pension Employee Contribution (%)</label>
+                <input class="input" type="number" id="paye-pension-rate" min="0" max="100" value="8">
+              </div>
+              <div class="form-group">
+                <label for="paye-nhf-rate">NHF Rate (%)</label>
+                <input class="input" type="number" id="paye-nhf-rate" min="0" max="100" value="2.5">
+              </div>
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:1.5rem" id="run-paye">Calculate Payroll</button>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;justify-content:center;gap:1rem;padding:2rem">
+            <div class="section-title">Monthly Payroll Payslip</div>
+            <div class="flex justify-between" style="border-bottom: 1px solid var(--clr-border); padding-bottom: 0.5rem;">
+              <span class="text-muted">Monthly Gross</span><strong id="paye-res-gross">₦0.00</strong>
+            </div>
+            <div class="flex justify-between" style="border-bottom: 1px solid var(--clr-border); padding-bottom: 0.5rem;">
+              <span class="text-muted">Pension (8% Base)</span><strong id="paye-res-pension" class="text-danger">₦0.00</strong>
+            </div>
+            <div class="flex justify-between" style="border-bottom: 1px solid var(--clr-border); padding-bottom: 0.5rem;">
+              <span class="text-muted">NHF (2.5% Base)</span><strong id="paye-res-nhf" class="text-danger">₦0.00</strong>
+            </div>
+            <div class="flex justify-between" style="border-bottom: 1px solid var(--clr-border); padding-bottom: 0.5rem;">
+              <span class="text-muted">Estimated PAYE Tax</span><strong id="paye-res-tax" class="text-danger">₦0.00</strong>
+            </div>
+            <div class="flex justify-between" style="font-size:1.2rem; margin-top:0.5rem">
+              <span><strong>Estimated Take-Home Net</strong></span><strong id="paye-res-net" class="text-accent">₦0.00</strong>
+            </div>
+          </div>
+        </div>`;
+    }
+
     else if (_activeTab === 'inflation') {
       html = `
         <div class="grid-2">
@@ -732,6 +777,29 @@ const WPCalculators = (() => {
       };
 
       document.getElementById('run-fd').addEventListener('click', calc);
+      calc();
+    }
+
+    else if (_activeTab === 'nigeria-paye') {
+      const calc = () => {
+        const grossNaira = WPUtils.cleanNum(document.getElementById('paye-gross').value) || 0;
+        const grossKobo = WPUtils.nairaToKobo(grossNaira);
+        const pensionRate = parseFloat(document.getElementById('paye-pension-rate').value) || 0;
+        const nhfRate = parseFloat(document.getElementById('paye-nhf-rate').value) || 0;
+
+        const pensionKobo = Math.round(grossKobo * (pensionRate / 100));
+        const nhfKobo = Math.round(grossKobo * (nhfRate / 100));
+        const taxKobo = WPUtils.calcPIT(grossKobo, pensionKobo);
+        const netKobo = grossKobo - pensionKobo - nhfKobo - taxKobo;
+
+        document.getElementById('paye-res-gross').textContent = WPUtils.fmt(grossKobo, { currency: 'NGN' });
+        document.getElementById('paye-res-pension').textContent = WPUtils.fmt(pensionKobo, { currency: 'NGN' });
+        document.getElementById('paye-res-nhf').textContent = WPUtils.fmt(nhfKobo, { currency: 'NGN' });
+        document.getElementById('paye-res-tax').textContent = WPUtils.fmt(taxKobo, { currency: 'NGN' });
+        document.getElementById('paye-res-net').textContent = WPUtils.fmt(netKobo, { currency: 'NGN' });
+      };
+
+      document.getElementById('run-paye').addEventListener('click', calc);
       calc();
     }
 
