@@ -218,7 +218,7 @@ This file tracks the active plans, completed work, and remaining roadmap for the
   * Raise the maximum APY boundary limit to 30% (current cap at 9% is too low for Nigerian yields).
 
 #### R23. Log Prepaid Expenses (Rent in Advance)
-* **Status**: 🔲 Not Started
+* **Status**: ✅ Completed
 * **Description**: Implement a system to log pre-paid payments (such as paying rent for two years in advance) and amortize them monthly.
 
 #### R24. Branded Watermarks & Macroeconomic Dashboard
