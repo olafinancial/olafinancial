@@ -97,52 +97,54 @@ const WPInsurance = (() => {
 
       <!-- Add / Edit Modal -->
       <div class="modal-overlay" id="ins-modal" style="display:none">
-        <div class="modal-card animate-in" style="max-width: 500px">
+        <div class="modal" style="max-width: 500px">
           <div class="modal-header">
             <h3 class="modal-title" id="ins-modal-title">Add Insurance Policy</h3>
             <button class="modal-close" id="ins-modal-close">&times;</button>
           </div>
-          <form id="ins-form">
-            <input type="hidden" id="ins-idx">
-            <div class="form-group">
-              <label for="ins-name">Policy Name / Description</label>
-              <input class="input" type="text" id="ins-name" placeholder="e.g. Leadway Term Life Protection" required>
-            </div>
-            
-            <div class="form-row">
+          <div class="modal-body">
+            <form id="ins-form">
+              <input type="hidden" id="ins-idx">
               <div class="form-group">
-                <label for="ins-type">Policy Type</label>
-                <select class="select" id="ins-type" required>
-                  <option value="life">Life Insurance</option>
-                  <option value="health">Health Insurance</option>
-                  <option value="motor">Motor Insurance</option>
-                  <option value="property">Property / Home</option>
-                  <option value="takaful">Takaful (Islamic)</option>
-                  <option value="other">Other / Custom</option>
-                </select>
+                <label for="ins-name">Policy Name / Description</label>
+                <input class="input" type="text" id="ins-name" placeholder="e.g. Leadway Term Life Protection" required>
               </div>
-              <div class="form-group">
-                <label for="ins-provider">Insurance Provider</label>
-                <input class="input" type="text" id="ins-provider" placeholder="e.g. AIICO Insurance" required>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="ins-type">Policy Type</label>
+                  <select class="select" id="ins-type" required>
+                    <option value="life">Life Insurance</option>
+                    <option value="health">Health Insurance</option>
+                    <option value="motor">Motor Insurance</option>
+                    <option value="property">Property / Home</option>
+                    <option value="takaful">Takaful (Islamic)</option>
+                    <option value="other">Other / Custom</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="ins-provider">Insurance Provider</label>
+                  <input class="input" type="text" id="ins-provider" placeholder="e.g. AIICO Insurance" required>
+                </div>
               </div>
-            </div>
 
-            <div class="form-row">
-              <div class="form-group">
-                <label for="ins-sum-value">Sum Assured</label>
-                <input class="input" type="text" id="ins-sum-value" placeholder="10,000,000" required>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="ins-sum-value">Sum Assured</label>
+                  <input class="input" type="text" id="ins-sum-value" placeholder="10,000,000" required>
+                </div>
+                <div class="form-group">
+                  <label for="ins-premium">Annual Premium</label>
+                  <input class="input" type="text" id="ins-premium" placeholder="120,000" required>
+                </div>
               </div>
-              <div class="form-group">
-                <label for="ins-premium">Annual Premium</label>
-                <input class="input" type="text" id="ins-premium" placeholder="120,000" required>
-              </div>
-            </div>
 
-            <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:1.5rem">
-              <button class="btn btn-secondary" type="button" id="ins-modal-cancel">Cancel</button>
-              <button class="btn btn-primary" type="submit">Save Policy</button>
-            </div>
-          </form>
+              <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:1.5rem">
+                <button class="btn btn-secondary" type="button" id="ins-modal-cancel">Cancel</button>
+                <button class="btn btn-primary" type="submit">Save Policy</button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     `;
@@ -160,14 +162,20 @@ const WPInsurance = (() => {
       document.getElementById('ins-form').reset();
       document.getElementById('ins-idx').value = '';
       document.getElementById('ins-modal-title').textContent = 'Add Insurance Policy';
-      document.getElementById('ins-modal').style.display = 'flex';
+      const m = document.getElementById('ins-modal');
+      m.style.display = 'flex';
+      setTimeout(() => m.classList.add('open'), 10);
     });
 
     document.getElementById('ins-modal-close').addEventListener('click', () => {
-      document.getElementById('ins-modal').style.display = 'none';
+      const m = document.getElementById('ins-modal');
+      m.classList.remove('open');
+      setTimeout(() => m.style.display = 'none', 250);
     });
     document.getElementById('ins-modal-cancel').addEventListener('click', () => {
-      document.getElementById('ins-modal').style.display = 'none';
+      const m = document.getElementById('ins-modal');
+      m.classList.remove('open');
+      setTimeout(() => m.style.display = 'none', 250);
     });
 
     document.getElementById('ins-form').addEventListener('submit', (e) => {
@@ -188,7 +196,9 @@ const WPInsurance = (() => {
       }
 
       localStorage.setItem('wp_insurance_data_' + uid, JSON.stringify(_data));
-      document.getElementById('ins-modal').style.display = 'none';
+      const m = document.getElementById('ins-modal');
+      m.classList.remove('open');
+      setTimeout(() => m.style.display = 'none', 250);
       WPToast.success('Policy successfully saved!');
       _render();
     });
@@ -207,7 +217,9 @@ const WPInsurance = (() => {
         document.getElementById('ins-sum-value').value = p.sumAssured.toLocaleString();
         document.getElementById('ins-premium').value = p.premium.toLocaleString();
         document.getElementById('ins-modal-title').textContent = 'Edit Insurance Policy';
-        document.getElementById('ins-modal').style.display = 'flex';
+        const m = document.getElementById('ins-modal');
+        m.style.display = 'flex';
+        setTimeout(() => m.classList.add('open'), 10);
       },
       _delete: (idx) => {
         if (confirm('Are you sure you want to delete this policy?')) {

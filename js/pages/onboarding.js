@@ -5,7 +5,7 @@
 const WPOnboarding = (() => {
 
   let _step = 1;
-  const TOTAL = 6;
+  const TOTAL = 5;
   let _data = {};
 
   async function init(container) {
@@ -52,7 +52,7 @@ const WPOnboarding = (() => {
     back.style.display = _step > 1 ? '' : 'none';
     next.textContent = _step === TOTAL ? 'Get Started' : 'Continue';
     content.innerHTML = '';
-    [_step1, _step2, _step3, _step4, _step5, _step6][_step - 1](content);
+    [_step1, _step2, _step3, _step4, _step5][_step - 1](content);
   }
 
   function _step1(el) {
@@ -134,28 +134,45 @@ const WPOnboarding = (() => {
   }
 
   function _step3(el) {
+    const goals = [
+      { key: 'retire',    icon: '&#x1F334;', label: 'Retirement' },
+      { key: 'debt_free', icon: '&#x2702;',  label: 'Become Debt-Free' },
+      { key: 'home',      icon: '&#x1F3E0;', label: 'Buy a Home' },
+      { key: 'emergency', icon: '&#x1F6E1;', label: 'Emergency Fund' },
+      { key: 'invest',    icon: '&#x1F4C8;', label: 'Start Investing' },
+      { key: 'education', icon: '&#x1F393;', label: "Children's Education" },
+      { key: 'business',  icon: '&#x1F4BC;', label: 'Start a Business' },
+    ];
+    const selected = _data.goals || [];
     el.innerHTML = `
-      <h2 class="onboarding-step-title">Retirement & Preferences Goal</h2>
-      <p class="onboarding-step-desc">Tell us about your investment parameters and Sharia requirements.</p>
-      <div class="form-group">
-        <label for="ob-ret-age">Target Retirement Age</label>
-        <input class="input" type="number" id="ob-ret-age" min="40" max="75" placeholder="60" value="${_data.retirement_age||60}">
+      <h2 class="onboarding-step-title">Retirement & Financial Goals</h2>
+      <p class="onboarding-step-desc">Specify your target age, risk tolerance, and select primary goals.</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ob-ret-age">Target Retirement Age</label>
+          <input class="input" type="number" id="ob-ret-age" min="40" max="75" placeholder="60" value="${_data.retirement_age||60}">
+        </div>
+        <div class="form-group">
+          <label for="ob-risk">Investment Risk Tolerance</label>
+          <select class="select" id="ob-risk">
+            <option value="conservative" ${_data.risk_tolerance==='conservative'?'selected':''}>Conservative — Preserve capital</option>
+            <option value="moderate" ${(!_data.risk_tolerance||_data.risk_tolerance==='moderate')?'selected':''}>Moderate — Balanced growth</option>
+            <option value="aggressive" ${_data.risk_tolerance==='aggressive'?'selected':''}>Aggressive — High growth</option>
+          </select>
+        </div>
       </div>
       <div class="form-group">
-        <label for="ob-risk">Investment Risk Tolerance</label>
-        <select class="select" id="ob-risk">
-          <option value="conservative" ${_data.risk_tolerance==='conservative'?'selected':''}>Conservative — Preserve capital, steady returns</option>
-          <option value="moderate" ${(!_data.risk_tolerance||_data.risk_tolerance==='moderate')?'selected':''}>Moderate — Balanced growth and security</option>
-          <option value="aggressive" ${_data.risk_tolerance==='aggressive'?'selected':''}>Aggressive — Maximum growth, higher risk</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="ob-takaful">Do you prefer Sharia-compliant (Takaful) insurance / financial options?</label>
-        <select class="select" id="ob-takaful">
-          <option value="no" ${_data.takaful==='no'||!_data.takaful?'selected':''}>No, standard financial instruments are fine</option>
-          <option value="yes" ${_data.takaful==='yes'?'selected':''}>Yes, prefer Sharia-compliant/Takaful assets and policies</option>
-        </select>
+        <label>Primary Financial Goals (Select all that apply)</label>
+        <div class="goal-chips" style="margin-top:0.5rem">
+          ${goals.map(g => `
+            <div class="goal-chip ${selected.includes(g.key)?'active':''}" data-goal="${g.key}">
+              <span>${g.icon}</span> ${g.label}
+            </div>`).join('')}
+        </div>
       </div>`;
+    el.querySelectorAll('.goal-chip').forEach(chip => {
+      chip.addEventListener('click', () => chip.classList.toggle('active'));
+    });
   }
 
   function _step4(el) {
@@ -181,31 +198,6 @@ const WPOnboarding = (() => {
   }
 
   function _step5(el) {
-    const goals = [
-      { key: 'retire',    icon: '&#x1F334;', label: 'Retirement' },
-      { key: 'debt_free', icon: '&#x2702;',  label: 'Become Debt-Free' },
-      { key: 'home',      icon: '&#x1F3E0;', label: 'Buy a Home' },
-      { key: 'emergency', icon: '&#x1F6E1;', label: 'Emergency Fund' },
-      { key: 'invest',    icon: '&#x1F4C8;', label: 'Start Investing' },
-      { key: 'education', icon: '&#x1F393;', label: "Children's Education" },
-      { key: 'business',  icon: '&#x1F4BC;', label: 'Start a Business' },
-    ];
-    const selected = _data.goals || [];
-    el.innerHTML = `
-      <h2 class="onboarding-step-title">Your Financial Goals</h2>
-      <p class="onboarding-step-desc">Select all that apply. You can change these later.</p>
-      <div class="goal-chips">
-        ${goals.map(g => `
-          <div class="goal-chip ${selected.includes(g.key)?'active':''}" data-goal="${g.key}">
-            <span>${g.icon}</span> ${g.label}
-          </div>`).join('')}
-      </div>`;
-    el.querySelectorAll('.goal-chip').forEach(chip => {
-      chip.addEventListener('click', () => chip.classList.toggle('active'));
-    });
-  }
-
-  function _step6(el) {
     el.innerHTML = `
       <h2 class="onboarding-step-title">You're all set! 🎉</h2>
       <p class="onboarding-step-desc">Here's a summary of your profile. Click 'Get Started' to open your dashboard.</p>
@@ -218,7 +210,6 @@ const WPOnboarding = (() => {
           <div class="flex justify-between"><span class="text-muted">Retirement Age</span><strong>${_data.retirement_age||60}</strong></div>
           <div class="flex justify-between"><span class="text-muted">Risk Profile</span><strong>${_data.risk_tolerance||'moderate'}</strong></div>
           <div class="flex justify-between"><span class="text-muted">Will & Legacy</span><strong>${_data.will==='yes_current'?'Will (Current)':_data.will==='yes_outdated'?'Will (Outdated)':'No Will'}</strong></div>
-          <div class="flex justify-between"><span class="text-muted">Sharia/Takaful</span><strong>${_data.takaful==='yes'?'Yes (Takaful)':'No'}</strong></div>
         </div>
       </div>
       <div class="disclaimer">${APP_CONFIG.disclaimer}</div>`;
@@ -240,14 +231,11 @@ const WPOnboarding = (() => {
     if (_step === 3) {
       _data.retirement_age = parseInt(document.getElementById('ob-ret-age')?.value) || 60;
       _data.risk_tolerance = document.getElementById('ob-risk')?.value;
-      _data.takaful        = document.getElementById('ob-takaful')?.value || 'no';
+      _data.goals = [...document.querySelectorAll('.goal-chip.active')].map(c => c.dataset.goal);
     }
     if (_step === 4) {
       _data.will      = document.getElementById('ob-will')?.value || 'no';
       _data.guardians = document.getElementById('ob-guardians')?.value || 'no';
-    }
-    if (_step === 5) {
-      _data.goals = [...document.querySelectorAll('.goal-chip.active')].map(c => c.dataset.goal);
     }
     return true;
   }
@@ -279,8 +267,7 @@ const WPOnboarding = (() => {
         risk_tolerance: _data.risk_tolerance || 'moderate', onboarding_done: true,
         currency: _data.currency || 'NGN',
       }, ['user_id']);
-      
-      // Save onboarding estate choices and takaful choices to localStorage
+      // Save onboarding estate choices to localStorage
       const estateState = {
         will: _data.will,
         guardians: _data.guardians,
@@ -291,7 +278,6 @@ const WPOnboarding = (() => {
         beneficiary: 'no'
       };
       localStorage.setItem('wp_estate_planning_' + uid, JSON.stringify(estateState));
-      localStorage.setItem('wp_takaful_preference_' + uid, _data.takaful || 'no');
       
       WPToast.success('Profile saved! Welcome to Ola Financial.');
       // Reload the full app shell
