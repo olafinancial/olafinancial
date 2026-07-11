@@ -247,6 +247,7 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 * **Status**: ✅ Completed
 * **Goal**: Build an insurance tracker page analyzing sum assured vs. needs (Life, Health, Motor, Property) and flagging coverage gaps.
 * **Proposed Files**: `js/pages/insurance.js`
+* **Description**: Created a standalone needs assessment questionnaire (comprehensive 5-step wizard covering personal profile, goals, investment preferences, risk tolerance, and tobacco use) with built-in Sharia-compliant Takaful preferences and product recommendations. Added dynamic policy management tables and updated onboarding steps to align.
 
 ---
 
