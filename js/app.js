@@ -184,6 +184,7 @@ const WPApp = (() => {
     { path: '/estate-planner', icon: '&#x1F4DC;', label: 'Estate Planner',   section: 'Tools' },
     { path: '/calculators',    icon: '&#x1F5A5;', label: 'Calculators',     section: 'Tools' },
     { path: '/reports',        icon: '&#x1F4CA;', label: 'Reports',        section: 'Reports' },
+    { path: '/settings',       icon: '&#x2699;',  label: 'Settings',       section: 'Account' },
   ];
 
   // Mobile bottom nav: 5 key tabs
@@ -207,7 +208,7 @@ const WPApp = (() => {
       </div>`;
     }
     // Logout
-    html += `<div class="nav-section-label">Account</div>
+    html += `
       <div class="nav-item" id="nav-logout">
         <span>&#x2B9E;</span><span>Sign Out</span>
       </div>`;
@@ -278,6 +279,7 @@ const WPApp = (() => {
       '/estate-planner':WPEstatePlanner,
       '/calculators':    WPCalculators,
       '/reports':       WPReports,
+      '/settings':      WPSettings,
     };
 
     for (const [path, page] of Object.entries(pages)) {

@@ -20,7 +20,8 @@ const WPUtils = (() => {
   function fmt(kobo, opts = {}) {
     const amount = kobo / 100;
     const currencyCode = opts.currency || WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
-    const symbol = CURRENCY_SYMBOLS[currencyCode] || '₦';
+    const isNone = currencyCode === 'NONE';
+    const symbol = isNone ? '' : (CURRENCY_SYMBOLS[currencyCode] || '₦');
     const locale = currencyCode === 'NGN' ? 'en-NG' : 'en-US';
     
     const { compact = false, signed = false } = opts;
@@ -36,6 +37,13 @@ const WPUtils = (() => {
       return prefix + symbol + (amount / 1_000).toFixed(0) + 'K';
     }
     
+    if (isNone) {
+      return prefix + new Intl.NumberFormat(locale, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amount);
+    }
+
     return prefix + new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: currencyCode,
