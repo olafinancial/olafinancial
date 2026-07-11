@@ -13,8 +13,8 @@ test.describe('Authentication', () => {
 
   test('landing page loads and shows login form', async ({ page }) => {
     await expect(page).toHaveTitle(/Ola Financial/i);
-    await expect(page.locator('#email, input[type="email"]').first()).toBeVisible();
-    await expect(page.locator('#password, input[type="password"]').first()).toBeVisible();
+    await expect(page.locator('#login-email, #email, input[type="email"]').first()).toBeVisible();
+    await expect(page.locator('#login-password, #password, input[type="password"]').first()).toBeVisible();
   });
 
   test('show/hide password toggle works', async ({ page }) => {
@@ -34,9 +34,9 @@ test.describe('Authentication', () => {
   });
 
   test('login with invalid credentials shows error', async ({ page }) => {
-    await page.fill('input[type="email"]', 'invalid@test.com');
-    await page.fill('input[type="password"]', 'wrongpassword');
-    await page.click('button[type="submit"]');
+    await page.fill('#login-email, input[type="email"]', 'invalid@test.com');
+    await page.fill('#login-password, input[type="password"]', 'wrongpassword');
+    await page.click('#login-btn, button[type="submit"]');
 
     // Allow time for the error to appear
     await page.waitForTimeout(2000);
