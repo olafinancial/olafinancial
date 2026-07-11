@@ -234,7 +234,12 @@ const WPApp = (() => {
       const item = e.target.closest('[data-path]');
       if (item) { WPRouter.navigate(item.dataset.path); _closeMobileSidebar(); }
     });
-    document.getElementById('nav-logout')?.addEventListener('click', () => WPAuth.signOut());
+    
+    document.getElementById('nav-logout')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      WPAuth.signOut();
+    });
   }
 
   function _closeMobileSidebar() {
