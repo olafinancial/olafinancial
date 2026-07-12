@@ -15,6 +15,8 @@ import { handleSnapshot }      from "./routes/snapshot.js"
 import { handleAdminUsers }    from "./routes/admin-users.js"
 import { handleHealth }        from "./routes/health.js"
 import { handleEcon }          from "./routes/econ.js"
+import { handleDigestRun }     from "./routes/digest.js"
+import { startCron }           from "./cron.js"
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url))
 const PROJECT_ROOT = join(__dirname, "..")
@@ -39,6 +41,7 @@ const API_ROUTES = {
   "POST /api/snapshot":        handleSnapshot,
   "GET  /api/admin/users":     handleAdminUsers,
   "GET  /api/econ":            handleEcon,
+  "GET  /api/digest/run":      handleDigestRun,   // admin trigger
 }
 
 // ── REQUEST HANDLER ───────────────────────────────────────────
@@ -124,4 +127,6 @@ server.listen(PORT, () => {
   console.log(`   http://localhost:${PORT}`)
   console.log(`   Supabase URL: ${process.env.SUPABASE_URL ?? "(not set)"}`)
   console.log(`   ENV: ${process.env.NODE_ENV ?? "development"}\n`)
+  // Start email digest cron (no-ops if RESEND_API_KEY not set)
+  startCron()
 })
