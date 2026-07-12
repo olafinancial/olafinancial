@@ -305,5 +305,48 @@ const WPCharts = (() => {
     });
   }
 
-  return { netWorthTrend, incomeVsExpenses, expenseDonut, incomeBreakdown, debtTimeline, goalRadar, retirementProjection, drawHealthGauge, COLORS, PALETTE };
+  // ── GENERIC ALLOCATION DOUGHNUT ──────────────────────────
+  function allocationDoughnut(canvasId, categories, dataKobo) {
+    _destroy(canvasId);
+    const dataNaira = dataKobo.map(v => WPUtils.koboToNaira(v));
+    return new Chart(document.getElementById(canvasId), {
+      type: 'doughnut',
+      data: {
+        labels: categories,
+        datasets: [{
+          data: dataNaira,
+          backgroundColor: PALETTE,
+          borderWidth: 1,
+          borderColor: '#161B22',
+        }],
+      },
+      options: {
+        ...BASE_OPTS,
+        cutout: '60%',
+        plugins: {
+          ...BASE_OPTS.plugins,
+          legend: {
+            display: true,
+            position: 'right',
+            labels: {
+              ...BASE_OPTS.plugins.legend.labels,
+              boxWidth: 12,
+            }
+          },
+          tooltip: {
+            ...BASE_OPTS.plugins.tooltip,
+            callbacks: {
+              label: ctx => {
+                const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+                const percent = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : 0;
+                return ` ${ctx.label}: ${percent}% (${WPUtils.fmt(WPUtils.nairaToKobo(ctx.raw), {compact:true})})`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  return { netWorthTrend, incomeVsExpenses, expenseDonut, incomeBreakdown, debtTimeline, goalRadar, retirementProjection, drawHealthGauge, allocationDoughnut, COLORS, PALETTE };
 })();

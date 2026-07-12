@@ -72,7 +72,6 @@ const WPReports = (() => {
         <!-- Shareable snapshot section — captured by html2canvas on Share -->
         <div id="reports-share-card">
           <!-- Net Worth Trend -->
-
           <div class="card" style="margin-bottom:1.5rem">
             <div class="section-header">
               <span class="section-title">Net Worth Trend</span>
@@ -88,6 +87,16 @@ const WPReports = (() => {
             <div class="card">
               <div class="section-title" style="margin-bottom:1rem">Savings Rate</div>
               <div class="chart-container" style="height:240px"><canvas id="rpt-chart-sr"></canvas></div>
+            </div>
+          </div>
+          <div class="grid-2" style="margin-bottom:1.5rem">
+            <div class="card">
+              <div class="section-title" style="margin-bottom:1rem">Asset Allocation</div>
+              <div class="chart-container" style="height:240px"><canvas id="rpt-chart-asset-alloc"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="section-title" style="margin-bottom:1rem">Liability Allocation</div>
+              <div class="chart-container" style="height:240px"><canvas id="rpt-chart-liab-alloc"></canvas></div>
             </div>
           </div>
         </div><!-- end #reports-share-card -->
@@ -153,7 +162,7 @@ const WPReports = (() => {
       const pageCurrency = localStorage.getItem('wp_page_currency_reports') || baseCur;
 
       _renderKPIs(snapshots, income, expenses, assets, liabs, baseCur, pageCurrency);
-      _renderCharts(snapshots); // WPCharts handles inside canvas
+      _renderCharts(snapshots, assets, liabs, baseCur);
       _renderTable(snapshots, baseCur, pageCurrency);
       _renderRatios(income, expenses, assets, liabs, baseCur, pageCurrency);
     } catch (err) { WPToast.error('Failed to load report data.'); }
@@ -192,18 +201,54 @@ const WPReports = (() => {
         <div class="card-value">${snapshots.length}</div><div class="card-meta">out of 12 months</div></div>`;
   }
 
-  function _renderCharts(snapshots) {
+  function _renderCharts(snapshots, assets, liabs, baseCur) {
     if (snapshots.length === 0) {
-      ['rpt-chart-nw','rpt-chart-cf','rpt-chart-sr'].forEach(id => {
+      ['rpt-chart-nw','rpt-chart-cf','rpt-chart-sr','rpt-chart-asset-alloc','rpt-chart-liab-alloc'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.parentElement.innerHTML = '<div style="height:240px;display:flex;align-items:center;justify-content:center;color:var(--clr-text-3);font-size:0.85rem">No data yet. Add income and expenses to see charts.</div>';
       });
       return;
     }
-    // Show charts even with a single snapshot
+    // Show line charts
     WPCharts.netWorthTrend('rpt-chart-nw', snapshots);
     WPCharts.incomeVsExpenses('rpt-chart-cf', snapshots);
     WPCharts.savingsRateLine('rpt-chart-sr', snapshots);
+
+    // ── Asset Allocation ──
+    const assetGroups = {};
+    assets.forEach(a => {
+      const cur = WPUtils.getEntryCurrency(a.notes);
+      const val = WPUtils.convert(a.close_balance || a.open_balance || 0, cur, baseCur);
+      const type = (a.asset_type || 'other').replace('_', ' ').toUpperCase();
+      assetGroups[type] = (assetGroups[type] || 0) + val;
+    });
+    const assetLabels = Object.keys(assetGroups);
+    const assetValues = Object.values(assetGroups);
+
+    if (assetLabels.length > 0) {
+      WPCharts.allocationDoughnut('rpt-chart-asset-alloc', assetLabels, assetValues);
+    } else {
+      const el = document.getElementById('rpt-chart-asset-alloc');
+      if (el) el.parentElement.innerHTML = '<div style="height:240px;display:flex;align-items:center;justify-content:center;color:var(--clr-text-3);font-size:0.85rem">No assets recorded this period.</div>';
+    }
+
+    // ── Liability Allocation ──
+    const liabGroups = {};
+    liabs.forEach(l => {
+      const cur = WPUtils.getEntryCurrency(l.notes);
+      const val = WPUtils.convert(l.close_balance || l.open_balance || 0, cur, baseCur);
+      const type = (l.liability_type || 'other').replace('_', ' ').toUpperCase();
+      liabGroups[type] = (liabGroups[type] || 0) + val;
+    });
+    const liabLabels = Object.keys(liabGroups);
+    const liabValues = Object.values(liabGroups);
+
+    if (liabLabels.length > 0) {
+      WPCharts.allocationDoughnut('rpt-chart-liab-alloc', liabLabels, liabValues);
+    } else {
+      const el = document.getElementById('rpt-chart-liab-alloc');
+      if (el) el.parentElement.innerHTML = '<div style="height:240px;display:flex;align-items:center;justify-content:center;color:var(--clr-text-3);font-size:0.85rem">No liabilities recorded this period.</div>';
+    }
   }
 
   function _renderTable(snapshots, baseCur, pageCurrency) {
