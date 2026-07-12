@@ -14,7 +14,7 @@ const WPReports = (() => {
           <h1 class="page-title">Reports &amp; Insights</h1>
           <p class="page-subtitle">Financial health history and trend analysis</p>
         </div>
-        <div class="flex gap-4" style="align-items:center">
+        <div class="flex gap-4" style="align-items:center;flex-wrap:wrap">
           <select id="reports-page-currency" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
             <option value="NGN">NGN (₦)</option>
             <option value="USD">USD ($)</option>
@@ -31,6 +31,7 @@ const WPReports = (() => {
             <option value="SAR">SAR (ر.س)</option>
             <option value="AUD">AUD (A$)</option>
           </select>
+          <button class="btn btn-secondary" id="share-btn" title="Share report snapshot">&#x1F4E4; Share</button>
           <button class="btn btn-primary" id="export-btn">&#x1F4E5; Export PDF</button>
         </div>
       </div>
@@ -68,24 +69,28 @@ const WPReports = (() => {
         </div>
 
         <div id="reports-kpis" style="margin-bottom:1.5rem"></div>
-        <!-- Trend Charts -->
-        <div class="card" style="margin-bottom:1.5rem">
-          <div class="section-header">
-            <span class="section-title">Net Worth Trend</span>
-            <span class="badge badge-neutral">12 Months</span>
+        <!-- Shareable snapshot section — captured by html2canvas on Share -->
+        <div id="reports-share-card">
+          <!-- Net Worth Trend -->
+
+          <div class="card" style="margin-bottom:1.5rem">
+            <div class="section-header">
+              <span class="section-title">Net Worth Trend</span>
+              <span class="badge badge-neutral">12 Months</span>
+            </div>
+            <div class="chart-container" style="height:280px"><canvas id="rpt-chart-nw"></canvas></div>
           </div>
-          <div class="chart-container" style="height:280px"><canvas id="rpt-chart-nw"></canvas></div>
-        </div>
-        <div class="grid-2" style="margin-bottom:1.5rem">
-          <div class="card">
-            <div class="section-title" style="margin-bottom:1rem">Income vs Expenses</div>
-            <div class="chart-container" style="height:240px"><canvas id="rpt-chart-cf"></canvas></div>
+          <div class="grid-2" style="margin-bottom:1.5rem">
+            <div class="card">
+              <div class="section-title" style="margin-bottom:1rem">Income vs Expenses</div>
+              <div class="chart-container" style="height:240px"><canvas id="rpt-chart-cf"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="section-title" style="margin-bottom:1rem">Savings Rate</div>
+              <div class="chart-container" style="height:240px"><canvas id="rpt-chart-sr"></canvas></div>
+            </div>
           </div>
-          <div class="card">
-            <div class="section-title" style="margin-bottom:1rem">Savings Rate</div>
-            <div class="chart-container" style="height:240px"><canvas id="rpt-chart-sr"></canvas></div>
-          </div>
-        </div>
+        </div><!-- end #reports-share-card -->
         <!-- Snapshot Table -->
         <div class="card">
           <div class="section-title" style="margin-bottom:1rem">Monthly Snapshot History</div>
@@ -100,6 +105,7 @@ const WPReports = (() => {
       </div>`;
 
     document.getElementById('export-btn').addEventListener('click', _exportPDF);
+    document.getElementById('share-btn').addEventListener('click', _shareReport);
     
     const curSelect = document.getElementById('reports-page-currency');
     if (curSelect) {
@@ -267,8 +273,103 @@ const WPReports = (() => {
     </table></div>`;
   }
 
+  // ── SHARE REPORT ──────────────────────────────────────────────
+  async function _shareReport() {
+    const btn = document.getElementById('share-btn');
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ Capturing…';
+
+    try {
+      const target = document.getElementById('reports-share-card');
+      if (!target) throw new Error('Share card not found');
+
+      // html2canvas — capture visible section
+      const canvas = await html2canvas(target, {
+        backgroundColor: '#0D1117',  // match app dark bg
+        scale: 2,                    // retina quality
+        useCORS: true,
+        logging: false,
+        ignoreElements: el => el.id === 'print-header',
+      });
+
+      // Watermark stamp
+      const ctx    = canvas.getContext('2d');
+      const wm     = 'pul.llc';
+      const pad    = 16;
+      const fsize  = Math.max(14, Math.round(canvas.width * 0.018));
+      ctx.save();
+      ctx.font         = `600 ${fsize}px Inter, sans-serif`;
+      ctx.fillStyle    = 'rgba(255,255,255,0.18)';
+      ctx.textAlign    = 'right';
+      ctx.textBaseline = 'bottom';
+      // bottom-right corner
+      ctx.fillText(wm, canvas.width - pad, canvas.height - pad);
+      // subtle diagonal repeat
+      ctx.globalAlpha  = 0.055;
+      ctx.fillStyle    = '#ffffff';
+      ctx.font         = `700 ${Math.round(canvas.width * 0.055)}px Inter, sans-serif`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate(-Math.PI / 8);
+      ctx.fillText('pul.llc', 0, 0);
+      ctx.restore();
+
+      // Get user's name for share text
+      const name   = WPApp.state.profile?.full_name || '';
+      const month  = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+      const title  = `My ${month} Financial Report`;
+      const text   = `${name ? name + "'s " : ''}financial snapshot — tracked with pul.llc`;
+      const url    = 'https://olafinancial.org';
+
+      // ── Path 1: Web Share API with image (mobile / modern browsers)
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+      const file = new File([blob], 'pul-llc-report.png', { type: 'image/png' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ title, text, url, files: [file] });
+        WPToast.success('Report shared!');
+        return;
+      }
+
+      // ── Path 2: Web Share API without file (some mobile)
+      if (navigator.share) {
+        // Download the image first so user has it
+        _triggerDownload(canvas, 'pul-llc-report.png');
+        await navigator.share({ title, text, url });
+        WPToast.success('Image downloaded + link shared!');
+        return;
+      }
+
+      // ── Path 3: Desktop fallback — download PNG
+      _triggerDownload(canvas, 'pul-llc-report.png');
+      WPToast.success('Report image saved! You can now post it to X or Instagram.');
+
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        // User cancelled native share sheet — that's fine
+        return;
+      }
+      console.error('Share failed:', err);
+      WPToast.error('Could not capture report. Try Export PDF instead.');
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = original;
+    }
+  }
+
+  function _triggerDownload(canvas, filename) {
+    const a    = document.createElement('a');
+    a.href     = canvas.toDataURL('image/png');
+    a.download = filename;
+    a.click();
+  }
+
+  // ── EXPORT PDF ────────────────────────────────────────────────
   function _exportPDF() {
     // Populate print header with user name and date
+
     const name = WPApp.state.profile?.full_name || 'Client';
     const nameEl = document.getElementById('print-client-name');
     const dateEl = document.getElementById('print-date');
