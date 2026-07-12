@@ -174,8 +174,13 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 ---
 
 #### R13. Scheduled / Email Reports
-* **Status**: 🔲 Planned — GitHub Issue #tracking
-* **Description**: Weekly or monthly digest email of key financial metrics (net worth change, savings rate, top expense categories). Requires backend scheduler (cron) + email provider (Resend/SendGrid).
+* **Status**: ✅ Completed
+* **Description**: Weekly or monthly digest email of key financial metrics (net worth change, savings rate, cash flow, net income) delivered via Resend API.
+* **Implementation**:
+  * DB: Migration `005_digest_prefs.sql` added configuration columns to `user_profiles`.
+  * Frontend: Added custom email digest control panel inside `WPSettings` (`js/pages/settings.js`).
+  * Backend: Created `server/routes/digest.js` which queries DB, renders branded HTML emails, and forwards them to Resend. Mounts admin manually triggered run endpoint at `GET /api/digest/run`.
+  * Cron: Added hourly tick runner in `server/cron.js` checking daily at 07:00 UTC (8am Lagos) to automatically fire due summaries.
 
 ---
 
@@ -356,6 +361,6 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#28](https://github.com/olafinancial/olafinancial/issues/28) | Confirm sponsor partners & activate sponsor banners | High | 🔲 Open |
 | [#29](https://github.com/olafinancial/olafinancial/issues/29) | Monthly macro data update — NBS/CBN economic indicators | Recurring | 🔲 Open |
 | [#30](https://github.com/olafinancial/olafinancial/issues/30) | Complete per-page currency selectors (cashflow, EF, goals) | Medium | ✅ Closed |
-| [#31](https://github.com/olafinancial/olafinancial/issues/31) | Scheduled / email digest reports | Medium | 🔲 Planned |
+| [#31](https://github.com/olafinancial/olafinancial/issues/31) | Scheduled / email digest reports | Medium | ✅ Closed |
 | [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | Low | 🔲 Planned |
 | [#33](https://github.com/olafinancial/olafinancial/issues/33) | Comprehensive Reports page overhaul (PDF, charts, statements) | Low | 🔲 Planned |
