@@ -309,11 +309,12 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 ---
 
 #### R18. Comprehensive Financial Reports Enhancements
-* **Status**: 🔲 Not Started (carried over)
-* **Goal**: Net worth trends, asset allocation chart, cash flow statement, better PDF export.
+* **Status**: ✅ Completed
+* **Description**: Added Asset Allocation and Liabilities Allocation Doughnut charts to visual layouts. Streamlined `@media print` rules for gorgeous, clean multi-page PDF generation.
 * **Files**: `js/pages/reports.js`
 
 ---
+
 
 ## Application Module Inventory
 
@@ -363,4 +364,5 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#30](https://github.com/olafinancial/olafinancial/issues/30) | Complete per-page currency selectors (cashflow, EF, goals) | Medium | ✅ Closed |
 | [#31](https://github.com/olafinancial/olafinancial/issues/31) | Scheduled / email digest reports | Medium | ✅ Closed |
 | [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | Low | 🔲 Planned |
-| [#33](https://github.com/olafinancial/olafinancial/issues/33) | Comprehensive Reports page overhaul (PDF, charts, statements) | Low | 🔲 Planned |
+| [#33](https://github.com/olafinancial/olafinancial/issues/33) | Comprehensive Reports page overhaul (PDF, charts, statements) | Low | ✅ Closed |
+
