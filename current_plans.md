@@ -186,8 +186,9 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 ---
 
 #### R15. Complete Per-Page Currency Selectors (Remaining Pages)
-* **Status**: 🔲 Planned — GitHub Issue #tracking
-* **Remaining Files**: `js/pages/cashflow.js`, `js/pages/emergency-fund.js`, `js/pages/goals.js`
+* **Status**: ✅ Completed
+* **Files**: `js/pages/cashflow.js`, `js/pages/emergency-fund.js`, `js/pages/goals.js`
+* All pages have `<select>` with localStorage persistence, `pageCurrency` passed through all `WPUtils.fmt()` / `WPUtils.convert()` calls, and re-render on change.
 
 ---
 
@@ -351,10 +352,10 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 | Issue | Title | Priority | Status |
 |-------|-------|----------|--------|
-| [#27](https://github.com/olafinancial/olafinancial/issues/27) | Social sharing & watermarked PNG export from Reports | High | 🔲 Open |
+| [#27](https://github.com/olafinancial/olafinancial/issues/27) | Social sharing & watermarked PNG export from Reports | High | ✅ Closed |
 | [#28](https://github.com/olafinancial/olafinancial/issues/28) | Confirm sponsor partners & activate sponsor banners | High | 🔲 Open |
 | [#29](https://github.com/olafinancial/olafinancial/issues/29) | Monthly macro data update — NBS/CBN economic indicators | Recurring | 🔲 Open |
-| [#30](https://github.com/olafinancial/olafinancial/issues/30) | Complete per-page currency selectors (cashflow, EF, goals) | Medium | 🔲 Open |
+| [#30](https://github.com/olafinancial/olafinancial/issues/30) | Complete per-page currency selectors (cashflow, EF, goals) | Medium | ✅ Closed |
 | [#31](https://github.com/olafinancial/olafinancial/issues/31) | Scheduled / email digest reports | Medium | 🔲 Planned |
 | [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | Low | 🔲 Planned |
 | [#33](https://github.com/olafinancial/olafinancial/issues/33) | Comprehensive Reports page overhaul (PDF, charts, statements) | Low | 🔲 Planned |
