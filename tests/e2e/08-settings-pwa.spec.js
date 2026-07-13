@@ -10,45 +10,45 @@ test.use({ storageState: '.playwright/auth-state.json' });
 
 test.describe('Settings', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`${BASE}/#settings`);
+    // Hash routes require a leading slash: #/settings (not #settings)
+    await page.goto(`${BASE}/#/settings`);
     await page.waitForLoadState('networkidle');
   });
 
   test('settings page renders', async ({ page }) => {
-    await expect(page.locator('h1, h2, .page-title').first()).toBeVisible();
+    await expect(page.locator('h1.page-title, .page-title').first()).toBeVisible();
+    await expect(page.locator('h1, .page-title').first()).toContainText(/settings/i);
   });
 
   test('base currency selector is visible', async ({ page }) => {
-    const currencySelect = page.locator('select[name*="currency"], select[id*="currency"]').first();
+    // Actual control id is #set-currency (see js/pages/settings.js)
+    const currencySelect = page.locator('#set-currency, select[id*="currency"]').first();
     await expect(currencySelect).toBeVisible();
   });
 
   test('changing base currency updates the dashboard', async ({ page }) => {
-    const currencySelect = page.locator('select[name*="currency"], select[id*="currency"]').first();
+    const currencySelect = page.locator('#set-currency, select[id*="currency"]').first();
     if (await currencySelect.isVisible()) {
       await currencySelect.selectOption('USD');
-      const saveBtn = page.locator('button:has-text("Save"), button[type="submit"]').first();
+      const saveBtn = page.locator('#save-settings-btn, button:has-text("Save Changes")').first();
       if (await saveBtn.isVisible()) await saveBtn.click();
       await page.waitForTimeout(500);
 
-      // Navigate to dashboard and verify USD is displayed
-      await page.goto(`${BASE}/#dashboard`);
+      await page.goto(`${BASE}/#/dashboard`);
       await page.waitForLoadState('networkidle');
       const body = await page.locator('body').textContent();
-      // USD symbol or code should appear somewhere
       expect(body).toMatch(/\$|USD/);
     }
   });
 
   test('user can update their name in settings', async ({ page }) => {
-    const nameInput = page.locator('input[name*="name"], input[id*="name"], input[placeholder*="name"]').first();
+    const nameInput = page.locator('#set-name, input[id*="name"]').first();
     if (await nameInput.isVisible()) {
       await nameInput.fill('Test User');
-      const saveBtn = page.locator('button:has-text("Save"), button[type="submit"]').first();
+      const saveBtn = page.locator('#save-settings-btn, button:has-text("Save Changes")').first();
       if (await saveBtn.isVisible()) {
         await saveBtn.click();
         await page.waitForTimeout(500);
-        // No crash expected
         const errors = [];
         page.on('pageerror', err => errors.push(err.message));
         expect(errors).toHaveLength(0);

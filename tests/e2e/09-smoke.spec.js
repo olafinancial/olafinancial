@@ -11,19 +11,22 @@ import { test, expect } from '@playwright/test';
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
 test.use({ storageState: '.playwright/auth-state.json' });
 
+// Hash router requires leading slash (#/income not #income)
 const ROUTES = [
-  { name: 'Dashboard',        hash: '#dashboard' },
-  { name: 'Income',           hash: '#income' },
-  { name: 'Expenses',         hash: '#expenses' },
-  { name: 'Balance Sheet',    hash: '#balance-sheet' },
-  { name: 'Cash Flow',        hash: '#cashflow' },
-  { name: 'Debt Planner',     hash: '#debt' },
-  { name: 'Emergency Fund',   hash: '#emergency-fund' },
-  { name: 'Goals',            hash: '#goals' },
-  { name: 'Reports',          hash: '#reports' },
-  { name: 'Retirement',       hash: '#retirement' },
-  { name: 'Estate Planner',   hash: '#estate-planner' },
-  { name: 'Calculators',      hash: '#calculators' },
+  { name: 'Dashboard',        hash: '#/dashboard',      title: /dashboard|hello|good|welcome|test user/i },
+  { name: 'Income',           hash: '#/income',         title: /income/i },
+  { name: 'Expenses',         hash: '#/expenses',       title: /expense/i },
+  { name: 'Balance Sheet',    hash: '#/balance-sheet',  title: /balance sheet|net worth|assets/i },
+  { name: 'Cash Flow',        hash: '#/cashflow',       title: /cash flow/i },
+  { name: 'Debt Planner',     hash: '#/debt',           title: /debt/i },
+  { name: 'Emergency Fund',   hash: '#/emergency-fund', title: /emergency/i },
+  { name: 'Goals',            hash: '#/goals',          title: /goal/i },
+  { name: 'Reports',          hash: '#/reports',        title: /report/i },
+  { name: 'Retirement',       hash: '#/retirement',     title: /retirement/i },
+  { name: 'Estate Planner',   hash: '#/estate-planner', title: /estate/i },
+  { name: 'Calculators',      hash: '#/calculators',    title: /calculator/i },
+  { name: 'Settings',         hash: '#/settings',       title: /settings/i },
+  { name: 'Insurance',        hash: '#/insurance',      title: /insurance|takaful/i },
 ];
 
 for (const route of ROUTES) {
@@ -33,22 +36,24 @@ for (const route of ROUTES) {
 
     page.on('pageerror', err => errors.push(err.message));
     page.on('response', res => {
-      if (res.status() >= 400 && !res.url().includes('favicon')) {
-        failedReqs.push(`${res.status()} ${res.url()}`);
+      // Only track same-origin failures; third-party CDNs (fonts, analytics) are flaky
+      const url = res.url();
+      const isThirdParty = !url.startsWith(BASE) && !url.includes('localhost');
+      if (res.status() >= 400 && !url.includes('favicon') && !isThirdParty) {
+        failedReqs.push(`${res.status()} ${url}`);
       }
     });
 
     await page.goto(`${BASE}/${route.hash}`);
     await page.waitForLoadState('networkidle');
 
-    // Page heading visible
     const heading = page.locator('h1, h2, .page-title').first();
     await expect(heading).toBeVisible({ timeout: 10_000 });
+    // Ensure we landed on the intended module (not a silent dashboard fallback)
+    await expect(heading).toContainText(route.title);
 
-    // No JS runtime errors
     expect(errors, `JS errors on ${route.name}: ${errors.join(', ')}`).toHaveLength(0);
 
-    // No 5xx server errors (4xx for optional resources are tolerated with a warning)
     const serverErrors = failedReqs.filter(r => r.startsWith('5'));
     expect(serverErrors, `Server errors on ${route.name}: ${serverErrors.join(', ')}`).toHaveLength(0);
   });

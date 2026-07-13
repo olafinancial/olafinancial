@@ -16,16 +16,20 @@ The test suite is split into two layers:
 ### 1. Install dev dependencies
 ```bash
 npm install
-npx playwright install --with-deps
+npx playwright install --with-deps   # needs sudo for system libraries
+# If install-deps fails (no sudo), Chromium/Firefox often still work:
+npx playwright install chromium firefox
 ```
 
 ### 2. Create your local test env file
 ```bash
 cp .env.test.example .env.test
 # Edit .env.test with your test Supabase credentials and a test user account
+# Alternatively, TEST_EMAIL / TEST_PASSWORD in .env are loaded by playwright.config.js
 ```
 
-### 3. Start the dev server (in one terminal)
+### 3. Start the dev server (in one terminal) — **required**
+E2E hits `http://localhost:3000`. Without the server you get `net::ERR_CONNECTION_REFUSED`.
 ```bash
 npm run dev
 ```
@@ -38,9 +42,26 @@ npm run test:unit
 
 ### 5. Run E2E tests (in another terminal, while dev server is running)
 ```bash
-TEST_EMAIL=you@example.com TEST_PASSWORD=yourpass npm run test:e2e
-# HTML report: open playwright-report/index.html
+# Full matrix (chromium + firefox + webkit + mobile iPhone 14)
+npm run test:e2e
+
+# Recommended local loop (Chromium only — fastest)
+npx playwright test --project=chromium
+
+# HTML report
+npx playwright show-report
 ```
+
+### Hash routes
+App routes use a **leading slash** after `#` (e.g. `#/dashboard`, `#/settings`).
+The router normalizes bare forms like `#settings` as well, but tests should prefer `#/...`.
+
+### Known environment issues
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `net::ERR_CONNECTION_REFUSED` | Dev server not running | `npm run dev` in another terminal |
+| `Host system is missing dependencies` (webkit/mobile) | Missing OS libs | `sudo npx playwright install-deps` |
+| Global setup “could not log in” | Bad `TEST_EMAIL`/`TEST_PASSWORD` or wrong dashboard selectors | Check `.env` credentials; ensure test user exists in Supabase |
 
 ---
 

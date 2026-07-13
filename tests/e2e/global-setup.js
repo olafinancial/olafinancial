@@ -29,16 +29,20 @@ export default async function globalSetup() {
     await page.fill('#login-password, #password, input[type="password"]', password);
     await page.click('#login-btn, button[type="submit"]');
 
-    // Wait until we are redirected past the login page (dashboard or onboarding visible)
+    // Wait until we are past the login page (authenticated app shell or onboarding)
+    // Real DOM markers: .app-shell, #dash-kpis, #dash-greeting, .onboarding-shell
     try {
-      await page.waitForSelector('[data-page="dashboard"], #dashboard-page, .dashboard, .onboarding-shell', { timeout: 15_000 });
+      await page.waitForSelector(
+        '.app-shell, #dash-kpis, #dash-greeting, .onboarding-shell, .page-title',
+        { timeout: 15_000 }
+      );
       const currentUrl = page.url();
       console.log(`ℹ️  Global setup: redirected to ${currentUrl}`);
-      
-      // If we got redirected to onboarding, complete it to allow future tests to proceed
-      if (currentUrl.includes('/onboarding') || await page.locator('.onboarding-shell').count() > 0) {
+
+      // If we got redirected to onboarding, complete it so future tests can proceed
+      if (currentUrl.includes('onboarding') || await page.locator('.onboarding-shell').count() > 0) {
         console.log('ℹ️  Global setup: user onboarding is required. Filling out onboarding wizard.');
-        
+
         // Step 1: Profile Info (Name, Age, State, Currency)
         await page.fill('#ob-name', 'Test User');
         await page.fill('#ob-age', '30');
@@ -55,7 +59,6 @@ export default async function globalSetup() {
         // Step 3: Retirement and goals target
         await page.fill('#ob-ret-age', '60');
         await page.selectOption('#ob-risk', 'moderate');
-        // Click a target goal chip
         const chip = page.locator('.goal-chip').first();
         if (await chip.isVisible()) await chip.click();
         await page.click('#ob-next');
@@ -69,9 +72,8 @@ export default async function globalSetup() {
 
         // Step 5: Summary
         await page.click('#ob-next'); // Click "Get Started"
-        
-        // Wait for redirect to Dashboard
-        await page.waitForSelector('[data-page="dashboard"], #dashboard-page, .dashboard', { timeout: 15_000 });
+
+        await page.waitForSelector('#dash-kpis, #dash-greeting, .app-shell', { timeout: 15_000 });
         console.log('✅  Global setup: Onboarding successfully completed!');
       }
     } catch (err) {

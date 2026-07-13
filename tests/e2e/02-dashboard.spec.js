@@ -12,14 +12,14 @@ test.use({ storageState: '.playwright/auth-state.json' });
 
 test.describe('Dashboard', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`${BASE}/#dashboard`);
+    await page.goto(`${BASE}/#/dashboard`);
     await page.waitForLoadState('networkidle');
   });
 
   test('dashboard page renders without JS errors', async ({ page }) => {
     const errors = [];
     page.on('pageerror', err => errors.push(err.message));
-    await page.goto(`${BASE}/#dashboard`);
+    await page.goto(`${BASE}/#/dashboard`);
     await page.waitForLoadState('networkidle');
     expect(errors).toHaveLength(0);
   });

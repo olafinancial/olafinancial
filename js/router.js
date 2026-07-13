@@ -11,7 +11,14 @@ const WPRouter = (() => {
     _routes[path] = handler;
   }
 
+  /** Normalize hash path so "#dashboard" and "#/dashboard" both resolve. */
+  function _normalize(path) {
+    if (!path || path === '/') return '/login';
+    return path.startsWith('/') ? path : `/${path}`;
+  }
+
   function navigate(path, replace = false) {
+    path = _normalize(path);
     console.log(`[Router] Navigating to: ${path}`);
     const hash = '#' + path;
     if (replace) {
@@ -23,6 +30,7 @@ const WPRouter = (() => {
   }
 
   function _dispatch(path) {
+    path = _normalize(path);
     console.log(`[Router] Dispatching path: "${path}". Registered routes:`, Object.keys(_routes));
     // Match exact or with params
     let handler = _routes[path];
@@ -58,6 +66,11 @@ const WPRouter = (() => {
 
   function start() {
     window.addEventListener('popstate', () => {
+      const path = window.location.hash.replace('#', '') || '/login';
+      _dispatch(path);
+    });
+    // Also react to hash-only navigations (e.g. direct #/route links / tests)
+    window.addEventListener('hashchange', () => {
       const path = window.location.hash.replace('#', '') || '/login';
       _dispatch(path);
     });

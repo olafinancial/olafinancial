@@ -348,9 +348,45 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 ## E2E and Unit Test Coverage
 
 #### Playwright E2E Suite
-* **Status**: ✅ All 58 tests passing (Chromium, Firefox, WebKit, iPhone 14)
-* **Suites**: `01-auth`, `02-dashboard`, `03-income-expenses`, `04-debt-planner`, `05-balance-sheet`, `07-reports`, `08-settings-pwa`
+* **Status**: ✅ Green on Chromium + Firefox (120 tests); WebKit/mobile runnable (118/120 — offline PWA flaky on WebKit only)
+* **Suites**: `01-auth` … `09-smoke` (auth, dashboard, income/expenses, debt, balance sheet, calculators, reports, settings/PWA, full-route smoke incl. Settings + Insurance)
+* **Unit**: Jest — 30/30 passing
 * **CI**: Runs automatically on push/PR via GitHub Actions
+* **Local recipe**: `npm run dev` (terminal 1) + `npx playwright test --project=chromium` (or chromium+firefox)
+
+---
+
+### Session 8 — 2026-07-12 — E2E Troubleshoot & Stabilization
+
+#### R33. Playwright E2E suite repair & hardening
+* **Status**: ✅ Completed
+* **Context**: Prior run artifacts showed mass failures (`ERR_CONNECTION_REFUSED`, missing browser deps, stale auth). Re-reviewed `current_plans.md`, `REQUIREMENTS.md`, `TESTING.md`, then diagnosed and fixed root causes.
+* **Root causes fixed**:
+  1. **Dev server required** — E2E targets `http://localhost:3000`; without `npm run dev`, all navigations fail.
+  2. **Global setup login detection** — waited for non-existent selectors (`.dashboard`, `#dashboard-page`). Real markers are `#dash-kpis`, `#dash-greeting`, `.app-shell`. Login succeeded but auth state was not saved.
+  3. **Hash route inconsistency** — app registers `/settings`, etc.; tests used `#settings` / `#dashboard` (no leading slash), so Settings currency test never saw `#set-currency` and smoke routes could silently fall back to Dashboard.
+  4. **Watermark test called `window.print()`** — blocked/hung Firefox on Export PDF; now asserts print header + CSS `pul.llc` watermark rule without opening the print dialog.
+  5. **Smoke treated third-party 5xx as app failures** — Google Fonts 503s failed Firefox; smoke now ignores non–same-origin responses.
+* **App fix**:
+  * `js/router.js` — normalize bare hashes (`#settings` → `/settings`); listen for `hashchange` so direct hash navigations (tests, deep links) dispatch correctly.
+* **Test / docs files touched**:
+  * `tests/e2e/global-setup.js`
+  * `tests/e2e/02-dashboard.spec.js`, `06-calculators.spec.js`, `07-reports.spec.js`, `08-settings-pwa.spec.js`, `09-smoke.spec.js`
+  * `TESTING.md` — local recipe, hash-route note, known env issues table
+* **Verification (this session)**:
+  | Layer | Result |
+  |-------|--------|
+  | Jest unit | 30 passed |
+  | Chromium E2E | 60 passed |
+  | Firefox E2E | 60 passed |
+  | WebKit + mobile | 118 passed / 2 failed (offline PWA `setOffline`+`reload` WebKit internal error only) |
+* **Environment notes (not code)**:
+  * Node is via **fnm** — `sudo npx` fails (sudo strips PATH); use `sudo apt-get install …` or `eval "$(fnm env)"` first.
+  * Pop!_OS apt noise: Launchpad PPA `system76/pop` has **no `noble` suite** — disable `system76-ubuntu-pop-noble.sources` so `apt update` is clean (system already has WebKit libs; WebKit launches OK).
+* **Follow-ups (not done today)**:
+  * Harden offline PWA test for WebKit/mobile (the 2 remaining failures).
+  * R17 Budget Planner / 50-30-20 still planned.
+  * Sponsor partners (#28) and recurring macro data (#29) still open.
 
 ---
 

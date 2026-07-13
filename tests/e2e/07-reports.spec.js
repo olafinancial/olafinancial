@@ -32,17 +32,35 @@ test.describe('Financial Reports', () => {
     }
   });
 
-  test('watermark element present in report DOM', async ({ page }) => {
-    const genBtn = page.locator('#export-btn, button:has-text("Export PDF")').first();
-    if (await genBtn.isVisible()) {
-      await genBtn.click();
-      await page.waitForTimeout(1000);
-      const watermark = page.locator('[class*="watermark"], .watermark').first();
-      if (await watermark.count() > 0) {
-        const text = await watermark.textContent();
-        expect(text.toLowerCase()).toContain('pul.llc');
+  test('watermark branding is defined for print/export', async ({ page }) => {
+    // Export PDF calls window.print() which opens a blocking print dialog in
+    // some browsers (esp. Firefox). Assert branding without triggering print:
+    // 1) print header in DOM, 2) CSS print watermark rule for pul.llc.
+    const printHeader = page.locator('#print-header, .print-header').first();
+    await expect(printHeader).toBeAttached();
+    await expect(printHeader).toContainText(/ola financial/i);
+
+    const hasWatermarkRule = await page.evaluate(() => {
+      for (const sheet of document.styleSheets) {
+        let rules;
+        try { rules = sheet.cssRules; } catch { continue; } // cross-origin sheets
+        if (!rules) continue;
+        for (const rule of rules) {
+          const text = rule.cssText || '';
+          if (/pul\.llc/i.test(text) && (/watermark|::before|print/i.test(text) || rule.type === CSSRule.MEDIA_RULE)) {
+            return true;
+          }
+          // Nested rules inside @media print
+          if (rule.cssRules) {
+            for (const nested of rule.cssRules) {
+              if (/pul\.llc/i.test(nested.cssText || '')) return true;
+            }
+          }
+        }
       }
-    }
+      return false;
+    });
+    expect(hasWatermarkRule).toBe(true);
   });
 
   test('no JS errors on report page', async ({ page }) => {

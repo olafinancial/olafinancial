@@ -20,7 +20,7 @@ const CALCULATORS = [
 
 test.describe('Calculators Hub', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`${BASE}/#calculators`);
+    await page.goto(`${BASE}/#/calculators`);
     await page.waitForLoadState('networkidle');
   });
 
