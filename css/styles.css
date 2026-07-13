@@ -813,10 +813,17 @@ tbody td {
   margin-bottom: 0.25rem;
 }
 .guide-path-blurb {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.35rem;
   font-size: 0.85rem;
   color: var(--clr-text-2);
-  line-height: 1.5;
+  line-height: 1.45;
+}
+.guide-path-tip {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--clr-accent);
+  font-weight: 500;
 }
 .guide-path-cta { margin-top: 0.15rem; }
 .guide-path-hint { display: block; margin-top: 0.15rem; }

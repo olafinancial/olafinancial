@@ -29,42 +29,48 @@ const APP_CONFIG = {
       n: 1,
       route: '/income',
       title: 'Add your income',
-      blurb: 'Log salary and other income so the app can estimate tax and cash flow.',
+      blurb: 'Money in first. Without income logged, tax, savings rate, and cash flow cannot be calculated.',
+      tip: 'Why: everything else is measured against what you earn.',
       cta: 'Go to Income',
     },
     {
       n: 2,
       route: '/expenses',
       title: 'Log a few expenses',
-      blurb: 'Capture rent, food, and bills. This powers budgets and savings rate.',
+      blurb: 'Money out. Even 5–10 real bills show where cash leaks each month.',
+      tip: 'Why: you cannot cut what you cannot see.',
       cta: 'Go to Expenses',
     },
     {
       n: 3,
       route: '/balance-sheet',
       title: 'List assets & debts',
-      blurb: 'Bank balances, investments, loans — your net worth starts here.',
+      blurb: 'What you own minus what you owe = net worth — your true financial scoreboard.',
+      tip: 'Why: cash flow is monthly; net worth is the long game.',
       cta: 'Go to Balance Sheet',
     },
     {
       n: 4,
       route: '/dashboard',
       title: 'Review your dashboard',
-      blurb: 'See net worth, cash flow, insights, and what to fix first.',
+      blurb: 'Your snapshot: health score, surplus/deficit, and plain-language alerts.',
+      tip: 'Why: one screen tells you what needs attention first.',
       cta: 'Open Dashboard',
     },
     {
       n: 5,
       route: '/goals',
       title: 'Set one goal',
-      blurb: 'Emergency fund, debt freedom, or a home — pick a target and track it.',
+      blurb: 'Pick one target (emergency fund is a great first). Goals turn numbers into a plan.',
+      tip: 'Why: vague wishes do not get funded — named goals do.',
       cta: 'Go to Goals',
     },
     {
       n: 6,
       route: '/debt',
       title: 'Optional: plan debt payoff',
-      blurb: 'If you have loans, use Avalanche or Snowball to map a payoff path.',
+      blurb: 'If you have loans, map a payoff order so interest stops eating your future.',
+      tip: 'Avalanche = highest rate first · Snowball = smallest balance first.',
       cta: 'Debt Planner',
     },
   ],
@@ -81,9 +87,10 @@ const APP_CONFIG = {
             <div class="guide-path-body">
               <div class="guide-path-title">${i === 0 ? 'Start here: ' : ''}${s.title}</div>
               <p class="guide-path-blurb">${s.blurb}</p>
+              ${s.tip ? `<p class="guide-path-tip">${s.tip}</p>` : ''}
               ${interactive
                 ? `<button type="button" class="btn btn-secondary btn-sm guide-path-cta" data-guide-route="${s.route}">${s.cta} →</button>`
-                : `<span class="guide-path-hint text-muted text-xs">Then open <strong>${s.route.replace('/', '')}</strong> in the menu</span>`
+                : `<span class="guide-path-hint text-muted text-xs">Menu: <strong>${s.route.replace('/', '') || 'dashboard'}</strong></span>`
               }
             </div>
             ${i < steps.length - 1 ? '<div class="guide-path-connector" aria-hidden="true"></div>' : ''}
