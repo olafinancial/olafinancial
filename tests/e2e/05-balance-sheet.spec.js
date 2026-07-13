@@ -8,13 +8,31 @@ import { test, expect } from '@playwright/test';
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
 test.use({ storageState: '.playwright/auth-state.json' });
 
-test.describe('Balance Sheet', () => {
-  test.beforeEach(async ({ page }) => {
+test.describe('Balance Sheet Summary', () => {
+  test('balance sheet summary page renders', async ({ page }) => {
     await page.goto(`${BASE}/#/balance-sheet`);
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('h1, h2, .page-title').first()).toBeVisible();
+  });
+
+  test('net worth updates when assets change', async ({ page }) => {
+    await page.goto(`${BASE}/#/balance-sheet`);
+    await page.waitForLoadState('networkidle');
+    const netWorth = page.locator('#nw-value, .net-worth').first();
+    if (await netWorth.isVisible()) {
+      const text = await netWorth.textContent();
+      expect(text).toMatch(/[\d,₦$€£-]+|—/);
+    }
+  });
+});
+
+test.describe('Assets Page CRUD', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`${BASE}/#/assets`);
     await page.waitForLoadState('networkidle');
   });
 
-  test('balance sheet page renders', async ({ page }) => {
+  test('assets page renders', async ({ page }) => {
     await expect(page.locator('h1, h2, .page-title').first()).toBeVisible();
   });
 
@@ -22,7 +40,7 @@ test.describe('Balance Sheet', () => {
     const errors = [];
     page.on('pageerror', err => errors.push(err.message));
 
-    const addBtn = page.locator('#add-asset-btn, button:has-text("Add Asset")').first();
+    const addBtn = page.locator('#add-asset-page-btn, button:has-text("Add Asset")').first();
     await addBtn.click();
     await page.waitForTimeout(500);
 
@@ -39,7 +57,7 @@ test.describe('Balance Sheet', () => {
   });
 
   test('asset form has APY field accepting up to 30%', async ({ page }) => {
-    const addBtn = page.locator('#add-asset-btn, button:has-text("Add Asset")').first();
+    const addBtn = page.locator('#add-asset-page-btn, button:has-text("Add Asset")').first();
     await addBtn.click();
 
     // Toggle income generating checkbox by clicking its label text
@@ -56,19 +74,12 @@ test.describe('Balance Sheet', () => {
   });
 
   test('emergency fund toggle checkbox is present on asset form', async ({ page }) => {
-    const addBtn = page.locator('#add-asset-btn, button:has-text("Add Asset")').first();
+    const addBtn = page.locator('#add-asset-page-btn, button:has-text("Add Asset")').first();
     await addBtn.click();
 
     // Checkbox input may be hidden by slider CSS, check it is attached in DOM
     const toggle = page.locator('#af-ef-source').first();
     await expect(toggle).toBeAttached();
   });
-
-  test('net worth updates when assets change', async ({ page }) => {
-    const netWorth = page.locator('#nw-value, .net-worth').first();
-    if (await netWorth.isVisible()) {
-      const text = await netWorth.textContent();
-      expect(text).toMatch(/[\d,₦$€£-]+|—/);
-    }
-  });
 });
+
