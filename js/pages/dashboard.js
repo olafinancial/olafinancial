@@ -229,8 +229,8 @@ const WPDashboard = (() => {
       </div>
       <div class="card animate-in" style="animation-delay:0.05s">
         <div class="card-title">Net Cash Flow</div>
-        <div class="card-value ${netCashFlow>=0?'accent':'danger'}">${WPUtils.fmt(netCashFlow,{compact:true,signed:true, currency: pageCurrency})}</div>
-        <div class="card-meta">Net income ${WPUtils.fmt(netIncome,{compact:true, currency: pageCurrency})}</div>
+        <div class="card-value ${netCashFlow>=0?'income':'expense'}">${WPUtils.fmt(netCashFlow,{compact:true,signed:true, currency: pageCurrency})}</div>
+        <div class="card-meta">Net income <span class="amount-income">${WPUtils.fmt(netIncome,{compact:true, currency: pageCurrency})}</span></div>
       </div>
       <div class="card animate-in" style="animation-delay:0.1s">
         <div class="card-title">Savings Rate</div>
@@ -239,7 +239,7 @@ const WPDashboard = (() => {
       </div>
       <div class="card animate-in" style="animation-delay:0.15s">
         <div class="card-title">Passive Income</div>
-        <div class="card-value gold">${WPUtils.fmt(passiveKobo,{compact:true, currency: pageCurrency})}</div>
+        <div class="card-value income">${WPUtils.fmt(passiveKobo,{compact:true, currency: pageCurrency})}</div>
         <div class="card-meta">${WPUtils.fmtPct(s.passiveKPIs.pctOfExpenses/100)} of expenses covered</div>
       </div>
       <div class="card animate-in" style="animation-delay:0.2s">

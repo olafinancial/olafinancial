@@ -14,6 +14,7 @@ const WPExpenses = (() => {
     _endDate    = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10);
 
     container.innerHTML = `
+      <div class="page-theme-expenses">
       <div class="page-header">
         <div>
           <h1 class="page-title">Expenses</h1>
@@ -73,6 +74,7 @@ const WPExpenses = (() => {
           </div>
           <div class="table-wrap" id="expense-table"></div>
         </div>
+      </div>
       </div>`;
 
     document.getElementById('add-expense-btn').addEventListener('click', () => _openForm());
@@ -138,10 +140,10 @@ const WPExpenses = (() => {
     }, 0);
 
     document.getElementById('expense-kpis').innerHTML = `
-      <div class="card"><div class="card-title">Total Expenses</div><div class="card-value danger">${WPUtils.fmt(total, { currency: baseCurrency })}</div><div class="card-meta">${_entries.length} transactions</div></div>
-      <div class="card"><div class="card-title">Essential (Needs)</div><div class="card-value">${WPUtils.fmt(nonDisc, { currency: baseCurrency })}</div><div class="card-meta">${WPUtils.fmtPct(nonDisc/Math.max(1,total))} of total</div></div>
-      <div class="card"><div class="card-title">Discretionary (Wants)</div><div class="card-value gold">${WPUtils.fmt(disc, { currency: baseCurrency })}</div><div class="card-meta">${WPUtils.fmtPct(disc/Math.max(1,total))} of total</div></div>
-      <div class="card"><div class="card-title">Recurring</div><div class="card-value">${WPUtils.fmt(recur, { currency: baseCurrency })}</div><div class="card-meta">${_entries.filter(e=>e.is_recurring).length} recurring items</div></div>`;
+      <div class="card"><div class="card-title">Total Expenses</div><div class="card-value expense">${WPUtils.fmt(total, { currency: baseCurrency })}</div><div class="card-meta">${_entries.length} transactions</div></div>
+      <div class="card"><div class="card-title">Essential (Needs)</div><div class="card-value expense">${WPUtils.fmt(nonDisc, { currency: baseCurrency })}</div><div class="card-meta">${WPUtils.fmtPct(nonDisc/Math.max(1,total))} of total</div></div>
+      <div class="card"><div class="card-title">Discretionary (Wants)</div><div class="card-value expense">${WPUtils.fmt(disc, { currency: baseCurrency })}</div><div class="card-meta">${WPUtils.fmtPct(disc/Math.max(1,total))} of total</div></div>
+      <div class="card"><div class="card-title">Recurring</div><div class="card-value expense">${WPUtils.fmt(recur, { currency: baseCurrency })}</div><div class="card-meta">${_entries.filter(e=>e.is_recurring).length} recurring items</div></div>`;
   }
 
   function _renderTable() {
@@ -191,7 +193,7 @@ const WPExpenses = (() => {
             ${amortizedCostLabel}
           </td>
           <td><span class="badge badge-neutral">${e.category}</span></td>
-          <td class="td-mono fw-600 ${convertedAmount>500000?'text-danger':''}">${WPUtils.fmt(convertedAmount, { currency: pageCurrency })}</td>
+          <td class="td-mono amount-expense fw-600">${WPUtils.fmt(convertedAmount, { currency: pageCurrency })}</td>
           <td>
             <span class="badge ${e.is_discretionary?'badge-gold':'badge-neutral'}">${e.is_discretionary?'Want':'Need'}</span>
             ${e.is_recurring?`<span class="badge badge-info" style="margin-left:4px">Recurring${freqText?` (${freqText})`:''}</span>`:''}

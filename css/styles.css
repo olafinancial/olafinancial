@@ -267,6 +267,9 @@ ul, ol { list-style: none; }
 .card-value.accent  { color: var(--clr-accent); }
 .card-value.danger  { color: var(--clr-danger); }
 .card-value.gold    { color: var(--clr-gold); }
+/* Semantic money colors (#35): income = green, expenses = red */
+.card-value.income  { color: var(--clr-accent); }
+.card-value.expense { color: var(--clr-danger); }
 .card-meta { font-size: var(--text-xs); color: var(--clr-text-2); margin-top: var(--sp-2); }
 .card-trend {
   display: inline-flex;
@@ -856,6 +859,58 @@ tbody td {
 .text-danger  { color: var(--clr-danger); }
 .text-gold    { color: var(--clr-gold); }
 .text-muted   { color: var(--clr-text-2); }
+/* Money amount semantics (#35) — use alongside mono table cells */
+.amount-income  { color: var(--clr-accent); font-weight: 600; }
+.amount-expense { color: var(--clr-danger); font-weight: 600; }
+
+/* Page themes: Income green / Expenses red */
+.page-theme-income .page-title {
+  color: var(--clr-accent);
+}
+.page-theme-income .page-title::before {
+  content: "";
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--clr-accent);
+  margin-right: 0.5rem;
+  vertical-align: middle;
+  box-shadow: 0 0 10px var(--clr-accent-glow);
+}
+.page-theme-expenses .page-title {
+  color: var(--clr-danger);
+}
+.page-theme-expenses .page-title::before {
+  content: "";
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--clr-danger);
+  margin-right: 0.5rem;
+  vertical-align: middle;
+  box-shadow: 0 0 10px var(--clr-danger-dim);
+}
+.page-theme-expenses .btn-primary {
+  background: var(--clr-danger);
+  border-color: var(--clr-danger);
+  box-shadow: 0 0 16px var(--clr-danger-dim);
+}
+.page-theme-expenses .btn-primary:hover {
+  filter: brightness(1.08);
+}
+/* Sidebar: tint active nav for money modules */
+.nav-item[data-path="/income"].active {
+  background: var(--clr-accent-dim);
+  color: var(--clr-accent);
+}
+.nav-item[data-path="/income"].active .nav-icon { color: var(--clr-accent); }
+.nav-item[data-path="/expenses"].active {
+  background: var(--clr-danger-dim);
+  color: var(--clr-danger);
+}
+.nav-item[data-path="/expenses"].active .nav-icon { color: var(--clr-danger); }
 .text-sm  { font-size: var(--text-sm); }
 .text-xs  { font-size: var(--text-xs); }
 .fw-600   { font-weight: 600; }

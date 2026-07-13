@@ -9,6 +9,7 @@ const WPIncome = (() => {
 
   async function init(container) {
     container.innerHTML = `
+      <div class="page-theme-income">
       <div class="page-header">
         <div>
           <h1 class="page-title">Income</h1>
@@ -94,6 +95,7 @@ const WPIncome = (() => {
             ℹ️ <strong>Disclaimer</strong>: Tax and tax estimator features only apply to Nigerian Residents. Since your residency is configured as Non-Resident, tax calculations are not applicable.
           </div>
         </div>`}
+      </div>
       </div>`;
 
     document.getElementById('add-income-btn').addEventListener('click', () => _openForm());
@@ -174,11 +176,11 @@ const WPIncome = (() => {
     const taxMeta = isResident ? `Effective rate: ${WPUtils.fmtPct(totalTax/Math.max(1,totalGross))}` : 'Tax applies to Nigerian Residents only';
 
     document.getElementById('income-kpis').innerHTML = `
-      <div class="card"><div class="card-title">Total Gross Income</div><div class="card-value">${WPUtils.fmt(totalGross, { currency: baseCurrency })}</div><div class="card-meta">${_entries.length} source${_entries.length!==1?'s':''}</div></div>
-      <div class="card"><div class="card-title">Total Net Income</div><div class="card-value accent">${WPUtils.fmt(totalNet, { currency: baseCurrency })}</div><div class="card-meta">After all deductions</div></div>
+      <div class="card"><div class="card-title">Total Gross Income</div><div class="card-value income">${WPUtils.fmt(totalGross, { currency: baseCurrency })}</div><div class="card-meta">${_entries.length} source${_entries.length!==1?'s':''}</div></div>
+      <div class="card"><div class="card-title">Total Net Income</div><div class="card-value income">${WPUtils.fmt(totalNet, { currency: baseCurrency })}</div><div class="card-meta">After all deductions</div></div>
       <div class="card"><div class="card-title">Tax</div><div class="card-value danger">${taxFmt}</div><div class="card-meta">${taxMeta}</div></div>
       <div class="card"><div class="card-title">Pension (8%)</div><div class="card-value gold">${WPUtils.fmt(totalPen, { currency: baseCurrency })}</div><div class="card-meta">PENCOM contributory scheme</div></div>
-      <div class="card"><div class="card-title">Passive Income</div><div class="card-value gold">${WPUtils.fmt(passive, { currency: baseCurrency })}</div><div class="card-meta">${WPUtils.fmtPct(passive/Math.max(1,totalGross))} of total income</div></div>`;
+      <div class="card"><div class="card-title">Passive Income</div><div class="card-value income">${WPUtils.fmt(passive, { currency: baseCurrency })}</div><div class="card-meta">${WPUtils.fmtPct(passive/Math.max(1,totalGross))} of total income</div></div>`;
   }
 
   function _renderTable(type = 'all') {
@@ -209,10 +211,10 @@ const WPIncome = (() => {
         return `<tr>
           <td><strong>${e.source_name}</strong>${cleanNotes?`<br><span class="text-xs text-muted">${cleanNotes}</span>`:''}</td>
           <td><span class="badge ${typeBadge}">${e.income_type}</span></td>
-          <td class="td-mono">${WPUtils.fmt(convertedGross, { currency: pageCurrency })}</td>
+          <td class="td-mono amount-income">${WPUtils.fmt(convertedGross, { currency: pageCurrency })}</td>
           <td class="td-mono text-danger">${WPUtils.fmt(convertedTax, { currency: pageCurrency })}</td>
           <td class="td-mono text-gold">${WPUtils.fmt(convertedPension, { currency: pageCurrency })}</td>
-          <td class="td-mono text-accent fw-700">${WPUtils.fmt(convertedNet, { currency: pageCurrency })}</td>
+          <td class="td-mono amount-income fw-700">${WPUtils.fmt(convertedNet, { currency: pageCurrency })}</td>
           <td><span class="badge badge-neutral">${e.frequency}</span></td>
           <td style="white-space:nowrap">
             <button class="btn btn-ghost btn-sm" onclick="WPIncome._edit('${e.id}')">Edit</button>

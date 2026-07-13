@@ -401,4 +401,21 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#31](https://github.com/olafinancial/olafinancial/issues/31) | Scheduled / email digest reports | Medium | ✅ Closed |
 | [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | Low | 🔲 Planned |
 | [#33](https://github.com/olafinancial/olafinancial/issues/33) | Comprehensive Reports page overhaul (PDF, charts, statements) | Low | ✅ Closed |
+| [#34](https://github.com/olafinancial/olafinancial/issues/34) | Salary deductibles calculator + tax-year deduction ledger | Medium | 🔲 Open |
+| [#35](https://github.com/olafinancial/olafinancial/issues/35) | Income green / expenses red color coding | Medium | ✅ Closed |
+| [#36](https://github.com/olafinancial/olafinancial/issues/36) | Split Balance Sheet into Assets + Liabilities pages | Medium | 🔲 Open (triage) |
+| [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | Branding → pul.llc (duplicates) | Medium | 🔲 Open |
+
+---
+
+### Session 8b — 2026-07-13 — Income / Expense Color Coding (#35)
+
+#### R34. Semantic money colors (income green, expenses red)
+* **Status**: ✅ Completed (closes #35)
+* **Description**:
+  * CSS: `.amount-income` / `.amount-expense`, `.card-value.income` / `.expense`, page themes `.page-theme-income` / `.page-theme-expenses`, sidebar active tints for `/income` and `/expenses`.
+  * Income page: green title + KPI/table gross & net amounts; tax stays red (outflow).
+  * Expenses page: red title, red primary CTA, all KPI amounts and table amounts in expense red.
+  * Dashboard: net cash flow / passive income use income green; net-income meta highlighted.
+  * Charts already used green/red for Income vs Expenses.
 
