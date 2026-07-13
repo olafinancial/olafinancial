@@ -406,8 +406,22 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#36](https://github.com/olafinancial/olafinancial/issues/36) | Split Balance Sheet into Assets + Liabilities pages | Medium | 🔲 Open (triage) |
 | [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | Branding → pul.llc (duplicates) | Medium | 🔲 Open — domain plan in [`DOMAIN_MIGRATION.md`](./DOMAIN_MIGRATION.md) (pul.llc primary; olafinancial.org bridge; keep org accounts) |
 | [#37](https://github.com/olafinancial/olafinancial/issues/37) | Brand UI: pul_logo + Pul Planning lockup | Medium | ✅ Closed |
+| [#38](https://github.com/olafinancial/olafinancial/issues/38) | Ops: production email (Supabase Auth + Resend digests) | High | 🔲 Open — checklist in [`EMAIL_SETUP.md`](./EMAIL_SETUP.md) |
 
 ---
+
+### Session 9b — 2026-07-13 — Email ops checklist (#38)
+
+#### R36. Document production email setup (auth + digests)
+* **Status**: 🔲 Open (docs done; production wiring pending)
+* **Issue**: [#38](https://github.com/olafinancial/olafinancial/issues/38)
+* **Doc**: [`EMAIL_SETUP.md`](./EMAIL_SETUP.md)
+* **What must happen**:
+  1. **Supabase Auth** — Site URL + redirect allowlist for pul.llc (and bridge); test password reset; optional custom SMTP / templates.
+  2. **Resend** — account, verify `pul.llc`, `RESEND_API_KEY` + `RESEND_FROM`.
+  3. **Always-on Node host** — digests cannot run on GitHub Pages alone; env includes Supabase service role + `APP_URL`.
+  4. Smoke: `GET /api/digest/run`, then confirm 07:00 UTC cron.
+* **Code already shipped**: R13 / #31 (digest feature); this issue is **ops**, not feature build.
 
 ### Session 9 — 2026-07-13 — Pul Planning brand lockup (#37)
 

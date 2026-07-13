@@ -229,13 +229,32 @@ The Supabase database (schema, RLS, migrations) is **100% reusable** between web
 
 ---
 
+## Email (auth + digests)
+
+The app sends two kinds of email. Full checklist: **[`EMAIL_SETUP.md`](./EMAIL_SETUP.md)** (GitHub issue **#38**).
+
+| Kind | Provider | Always-on Node server? |
+|------|----------|-------------------------|
+| Password reset / signup confirm | **Supabase Auth** | No |
+| Scheduled finance digests | **Resend** (`server/routes/digest.js` + cron) | **Yes** — not GitHub Pages alone |
+
+Quick production gates:
+
+1. Supabase redirect URLs include `https://pul.llc/**` (and bridge domains).
+2. Resend: verify `pul.llc`, set `RESEND_API_KEY` + `RESEND_FROM` on the **API host**.
+3. Deploy Node 24/7 with Supabase **service role** for digest jobs; test `GET /api/digest/run`.
+
+---
+
 ## Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
 | Blank white page | Open browser console (F12) for errors. Usually wrong Supabase keys. |
 | "Invalid API key" | Double-check `SUPABASE_URL` and `SUPABASE_ANON` in `js/config.js` |
-| Login not redirecting | Add your GitHub Pages URL to Supabase → Authentication → Redirect URLs |
+| Login not redirecting | Add your live URLs to Supabase → Authentication → Redirect URLs (see `EMAIL_SETUP.md` / `DOMAIN_MIGRATION.md`) |
+| Password reset email missing | Check Supabase Auth logs / SMTP; confirm email templates and redirect allowlist |
+| Digests not sending | Set `RESEND_API_KEY` on the Node host; verify Resend domain; ensure cron process is running (not Pages-only) |
 | GitHub Pages shows 404 | Repo must be **Public** and Source set to **GitHub Actions** |
 | RLS / permission errors | Re-run `002_rls.sql` in SQL Editor |
 | Tables not found | Re-run migrations in order: 001 → 002 → 003 |
