@@ -542,7 +542,7 @@ const WPRetirement = (() => {
       const rowPct = (gainLoss / Math.max(1, costBasis)) * 100;
       const rowGain = gainLoss >= 0;
 
-      return `<tr>
+      return `<tr class="stock-row" data-stock-idx="${idx}" style="cursor:pointer" title="Click to edit">
         <td><strong>${sym}</strong>${isLive ? ' <span class="badge badge-accent" style="font-size:0.65rem">LIVE</span>' : ' <span class="badge badge-neutral" style="font-size:0.65rem">EST</span>'}</td>
         <td class="td-mono">${s.qty}</td>
         <td class="td-mono">$${s.purchasePrice.toFixed(2)}</td>
@@ -552,7 +552,8 @@ const WPRetirement = (() => {
         <td class="td-mono fw-600 ${rowGain ? 'text-accent' : 'text-danger'}">
           ${rowGain ? '+' : ''}${gainLoss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${rowGain ? '+' : ''}${rowPct.toFixed(2)}%)
         </td>
-        <td>
+        <td style="white-space:nowrap" onclick="event.stopPropagation()">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="WPRetirement._editStock(${idx})">Edit</button>
           <button type="button" class="btn btn-ghost btn-sm text-danger" onclick="WPRetirement._deleteStock(${idx})">Delete</button>
         </td>
       </tr>`;
@@ -572,11 +573,19 @@ const WPRetirement = (() => {
         <div class="card" style="margin-top:0.75rem;padding:1rem 1.25rem;display:flex;flex-wrap:wrap;gap:1.25rem;align-items:center;justify-content:space-between">
           <div>
             <div class="card-title" style="margin:0">Total stock holdings (mark-to-market)</div>
-            <div class="text-xs text-muted" style="margin-top:0.25rem">${statusNote || (liveCount ? `${liveCount}/${list.length} live quotes` : 'Using estimated prices — live feed unavailable')}</div>
+            <div class="text-xs text-muted" style="margin-top:0.25rem">${statusNote || (liveCount ? `${liveCount}/${list.length} live quotes` : 'Using estimated prices — live feed unavailable')} · Click a row or Edit to change a position</div>
           </div>
           <div class="card-value income" style="font-size:1.4rem">$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>`;
     }
+
+    // Row click → edit (buttons stop propagation)
+    el.querySelectorAll('tr.stock-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const i = parseInt(row.dataset.stockIdx, 10);
+        if (!Number.isNaN(i)) _editStock(i);
+      });
+    });
   }
 
   async function _renderStocks() {
@@ -609,57 +618,101 @@ const WPRetirement = (() => {
     );
   }
 
-  function _openStockForm() {
+  /**
+   * Add or edit a stock position.
+   * @param {number|null} editIdx - index in saved list when editing; null when adding
+   */
+  function _openStockForm(editIdx = null) {
+    const stocks = _loadStocks();
+    const existing = editIdx != null && stocks[editIdx] ? stocks[editIdx] : null;
+    const isEdit = !!existing;
+
+    const tickerVal = existing ? existing.ticker : '';
+    const qtyVal = existing ? existing.qty : '';
+    const priceVal = existing ? existing.purchasePrice : '';
+    const dateVal = existing?.purchaseDate || new Date().toISOString().slice(0, 10);
+
     const body = `
       <form id="ret-stock-form">
         <div class="form-group">
           <label for="rs-ticker">Ticker Symbol</label>
-          <input class="input" id="rs-ticker" placeholder="e.g. TSLA, AAPL" required>
+          <input class="input" id="rs-ticker" placeholder="e.g. TSLA, AAPL" value="${_escAttr(tickerVal)}" required autocomplete="off">
         </div>
         <div class="form-row">
           <div class="form-group">
             <label for="rs-qty">Quantity</label>
-            <input class="input" type="number" id="rs-qty" min="1" step="any" placeholder="10" required>
+            <input class="input" type="number" id="rs-qty" min="0.0001" step="any" placeholder="10" value="${qtyVal}" required>
           </div>
           <div class="form-group">
             <label for="rs-price">Purchase Price ($)</label>
-            <input class="input" type="number" id="rs-price" min="0.01" step="any" placeholder="150.00" required>
+            <input class="input" type="number" id="rs-price" min="0.01" step="any" placeholder="150.00" value="${priceVal}" required>
           </div>
         </div>
         <div class="form-group">
           <label for="rs-date">Date of Purchase</label>
-          <input class="input" type="date" id="rs-date" value="${new Date().toISOString().slice(0,10)}">
+          <input class="input" type="date" id="rs-date" value="${_escAttr(dateVal)}">
         </div>
       </form>`;
 
-    WPModal.open('Add Stock Asset', body, {
-      confirmLabel: 'Add Stock',
+    WPModal.open(isEdit ? `Edit ${String(tickerVal).toUpperCase()}` : 'Add Stock Asset', body, {
+      confirmLabel: isEdit ? 'Save Changes' : 'Add Stock',
       onConfirm: async () => {
-        const ticker = document.getElementById('rs-ticker').value.trim();
+        const ticker = document.getElementById('rs-ticker').value.trim().toUpperCase();
         const qty = parseFloat(document.getElementById('rs-qty').value) || 0;
         const price = parseFloat(document.getElementById('rs-price').value) || 0;
         const date = document.getElementById('rs-date').value;
 
         if (!ticker || qty <= 0 || price <= 0) {
           WPToast.warning('Please enter valid stock details.');
-          return;
+          return false; // keep modal open if WPModal supports it
         }
 
-        const stocks = _loadStocks();
-        stocks.push({ ticker, qty, purchasePrice: price, purchaseDate: date });
-        _saveStocks(stocks);
-        WPToast.success('Stock asset logged and marked-to-market!');
+        const list = _loadStocks();
+        const row = { ticker, qty, purchasePrice: price, purchaseDate: date };
+
+        if (isEdit && editIdx != null && editIdx >= 0 && editIdx < list.length) {
+          const prevTicker = list[editIdx].ticker?.toUpperCase?.();
+          list[editIdx] = row;
+          // Drop stale live quote if ticker changed
+          if (prevTicker && prevTicker !== ticker) delete _fetchedPrices[prevTicker];
+          delete _fetchedPrices[ticker];
+          _saveStocks(list);
+          WPToast.success(`${ticker} updated.`);
+        } else {
+          list.push(row);
+          delete _fetchedPrices[ticker];
+          _saveStocks(list);
+          WPToast.success('Stock asset logged and marked-to-market!');
+        }
       }
     });
   }
 
+  function _escAttr(s) {
+    return String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;');
+  }
+
+  function _editStock(idx) {
+    const stocks = _loadStocks();
+    if (idx < 0 || idx >= stocks.length) {
+      WPToast.warning('Stock position not found.');
+      return;
+    }
+    _openStockForm(idx);
+  }
+
   function _deleteStock(idx) {
     const stocks = _loadStocks();
+    if (idx < 0 || idx >= stocks.length) return;
+    const name = stocks[idx].ticker || 'Stock';
     stocks.splice(idx, 1);
     _saveStocks(stocks);
-    WPToast.success('Stock asset removed.');
+    WPToast.success(`${name} removed.`);
   }
 
   function destroy() {}
-  return { init, destroy, _deleteStock };
+  return { init, destroy, _editStock, _deleteStock };
 })();
