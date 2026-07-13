@@ -123,7 +123,7 @@ const APP_CONFIG = {
       label: 'Facebook',
       handle: 'Pul Planning',
       // Business Page share / profile link provided by marketing
-      url: 'https://business.facebook.com/share_by_link/2444230906045312/VciK5QKYKMncCtkG/?nonce=dnZhbU9xMnZxaXZVSWRmZg',
+      url: 'https://m.facebook.com/story.php?story_fbid=pfbid0wSjkZAA6q2XxgmoHEYGbrLpA2fNPH6PKir8s9EDR95iKAuNAdTYKqoKDSwJDq2xRl&id=61592031444473',
     },
   },
 
