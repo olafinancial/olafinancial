@@ -404,7 +404,7 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#34](https://github.com/olafinancial/olafinancial/issues/34) | Salary deductibles calculator + tax-year deduction ledger | Medium | 🔲 Open |
 | [#35](https://github.com/olafinancial/olafinancial/issues/35) | Income green / expenses red color coding | Medium | ✅ Closed |
 | [#36](https://github.com/olafinancial/olafinancial/issues/36) | Split Balance Sheet into Assets + Liabilities pages | Medium | 🔲 Open (triage) |
-| [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | Branding → pul.llc (duplicates) | Medium | 🔲 Open |
+| [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | Branding → pul.llc (duplicates) | Medium | 🔲 Open — domain plan in [`DOMAIN_MIGRATION.md`](./DOMAIN_MIGRATION.md) (pul.llc primary; olafinancial.org bridge; keep org accounts) |
 
 ---
 
