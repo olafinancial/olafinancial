@@ -431,88 +431,33 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 ---
 
-### R40. Investment questionnaire + sample portfolio (#41) — implementation plan
+### R40. Investment questionnaire + sample portfolio (#41) — IMPLEMENTED from share
 
-* **Status**: 🔲 Planned  
-* **Issue**: [#41](https://github.com/olafinancial/olafinancial/issues/41) — *Add a questionnaire to guide asset class selection + sample portfolio*  
-* **Reference**: [Grok share mock / flow](https://x.com/i/grok/share/a480c50bfa604491a65e7b6680c6863d)  
-* **Problem**: Users need simplified help choosing asset classes and seeing a sample allocation (not full robo-advisory).
+* **Status**: ✅ Completed (implements [#41](https://github.com/olafinancial/olafinancial/issues/41))  
+* **Source of truth**: Merged Grok investment questionnaire pasted by product (Nigerian market) — age, goal date, objective, risk, liquidity, experience + scoring bands + Aggressive/Balanced/Conservative allocations + Lifetime Glide Path + review triggers  
+* **Route**: `#/invest` · Nav: **Tools → Invest Profile**  
+* **File**: `js/pages/investment-quiz.js`
 
-#### Product scope (MVP)
+#### Spec implemented
 
-| In scope | Out of scope (later) |
-|----------|----------------------|
-| Multi-step questionnaire (risk, horizon, goal, liquidity, experience, amount) | Live brokerage / order routing |
-| Map answers → risk band (Conservative / Moderate / Aggressive) | Personalized securities picks as “advice” |
-| Sample portfolio by **asset class** % (e.g. cash, bonds, equities, alt) | Guaranteed returns |
-| Educational blurbs per class (1–2 lines) | SEC-licensed advice framing — keep tool disclaimer |
-| Save results locally (+ optional profile field later) | Full Nigerian product catalogue |
+| Element | Detail |
+|---------|--------|
+| **Questions** | 10 scored + optional free-text notes (Q11) |
+| **Scoring** | Sum Q1–Q10 → Conservative **10–25**, Balanced **26–37**, Aggressive **38–48** (max 48) |
+| **Asset classes** | Equities (NGX/funds/ETFs), REITs (UPDCREIT/NREIT), Fixed income (FGN/corporate), Money market + bank deposits, Alternatives/crypto |
+| **Starting allocation** | Midpoints within published ranges per profile |
+| **Glide path** | Years-to-goal table; “now” row from Q2 goal-date answers |
+| **Review triggers** | Annual / quarterly, ±5–10% drift, life events, NGX/inflation/CBN |
+| **Persist** | `localStorage` `wp_invest_quiz_{userId}` |
+| **Prefill** | Age band + risk attitude from profile when empty |
+| **Disclaimer** | Educational only; not personalised advice |
 
-#### Reuse existing patterns
+#### Not in this ship (optional later)
 
-* Wizard UX: `js/pages/insurance.js` (step dots, localStorage, reset)  
-* Risk already collected: onboarding + `user_profiles.risk_tolerance` — **prefill** questionnaire  
-* Retirement risk bands: conservative / moderate / aggressive return assumptions  
-* Disclaimer: `APP_CONFIG.disclaimer` + investment-specific one-liner  
-* Nav: new item under Tools or after Retirement, e.g. `/invest` or `/investment-quiz`
-
-#### Proposed UX flow (5–6 short steps)
-
-1. **Goal** — What is this money for? (emergency, home, retirement, growth, education)  
-2. **Time horizon** — When do you need most of it? (&lt;3y / 3–7y / 7y+)  
-3. **Risk comfort** — Prefill from profile; confirm or change  
-4. **Experience** — New / some / experienced  
-5. **Amount band** — Optional monthly or lump (for sample sizing, not required)  
-6. **Results** — Risk band + pie/bar sample allocation + “what this means” blurbs + CTAs:
-   - Add cash/investments on Balance Sheet  
-   - Set a related Goal  
-   - Open Retirement / Calculators  
-   - Retake quiz  
-
-#### Sample allocation engine (simple rules)
-
-Start with transparent tables (document in code comments):
-
-| Band | Cash / MM | Bonds / FGN | Equities / funds | Other (optional) |
-|------|-----------|-------------|------------------|------------------|
-| Conservative | 40% | 40% | 15% | 5% |
-| Moderate | 20% | 30% | 45% | 5% |
-| Aggressive | 10% | 15% | 70% | 5% |
-
-Adjustments (examples):
-
-* Horizon &lt;3y → shift toward cash/bonds (cap equities)  
-* Goal = emergency → force high cash band  
-* Low experience → slightly more conservative than selected risk  
-
-#### Suggested files
-
-| File | Role |
-|------|------|
-| `js/pages/investment-quiz.js` (or `invest.js`) | Wizard + results |
-| `js/app.js` | Register route + nav item |
-| `index.html` | Script tag |
-| `css/styles.css` | Quiz cards / allocation bar (reuse existing where possible) |
-| Optional: `localStorage` key `wp_invest_quiz_{userId}` | Persist last result |
-
-#### Engineering checklist
-
-- [ ] Route `#/invest` (or agreed slug) + sidebar under Tools  
-- [ ] Prefill age/risk/currency from profile  
-- [ ] Persist answers + recommended band locally  
-- [ ] Doughnut or stacked bar for sample portfolio (Chart.js already in app)  
-- [ ] Strong disclaimer: informational only, not investment advice  
-- [ ] Link into getting-started path as optional step 7? (defer — keep path simple)  
-- [ ] Unit tests for allocation pure function (Jest)  
-- [ ] Smoke e2e: page loads + complete happy path  
-
-#### Compliance note
-
-Frame as **education / illustration**, same family as insurance needs quiz. Mirror SEC/CBN disclaimer language already used on reports.
-
-#### Estimate
-
-~1–2 focused sessions for MVP wizard + results + nav; polish (print/share, BS deep-link with suggested classes) later.
+* Automated rebalancing service / advisor CRM  
+* PDF export beyond print  
+* Unit tests for pure scoring helpers  
+* Getting-started path optional step 7 → **added** (`/invest`)
 
 ---
 

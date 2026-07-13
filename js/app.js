@@ -208,6 +208,7 @@ const WPApp = (() => {
     { path: '/retirement',     icon: '&#x1F334;', label: 'Retirement',     section: 'Tools' },
     { path: '/estate-planner', icon: '&#x1F4DC;', label: 'Estate Planner',   section: 'Tools' },
     { path: '/insurance',      icon: '&#x1F6E1;', label: 'Insurance',        section: 'Tools' },
+    { path: '/invest',         icon: '&#x1F4C8;', label: 'Invest Profile',   section: 'Tools' },
     { path: '/calculators',    icon: '&#x1F5A5;', label: 'Calculators',     section: 'Tools' },
     { path: '/reports',        icon: '&#x1F4CA;', label: 'Reports',        section: 'Reports' },
     { path: '/settings',       icon: '&#x2699;',  label: 'Settings',       section: 'Account' },

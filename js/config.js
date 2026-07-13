@@ -73,6 +73,14 @@ const APP_CONFIG = {
       tip: 'Avalanche = highest rate first · Snowball = smallest balance first.',
       cta: 'Debt Planner',
     },
+    {
+      n: 7,
+      route: '/invest',
+      title: 'Optional: investment profile quiz',
+      blurb: 'Answer 10 scored questions to see Conservative / Balanced / Aggressive mixes for the Nigerian market (NGX, T-bills, REITs, etc.).',
+      tip: 'Educational only — not personalised investment advice.',
+      cta: 'Invest Profile',
+    },
   ],
 
   /** HTML for the numbered getting-started path (onboarding + dashboard). */

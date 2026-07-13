@@ -836,6 +836,27 @@ tbody td {
   box-shadow: 0 0 0 1px var(--clr-accent-dim);
 }
 
+/* ── Investment questionnaire ─────────────────────────────── */
+.iq-options { display: flex; flex-direction: column; gap: 0.65rem; }
+.iq-option {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--clr-border);
+  background: var(--clr-surface-2);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.iq-option:hover { border-color: var(--clr-border-2); }
+.iq-option--selected {
+  border-color: var(--clr-accent);
+  background: var(--clr-accent-dim);
+}
+.iq-option-label { display: block; font-size: 0.9rem; color: var(--clr-text); line-height: 1.4; }
+.iq-option-pts { display: block; margin-top: 0.2rem; }
+
 /* Goal selection chips */
 .goal-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 .goal-chip {
