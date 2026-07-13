@@ -90,10 +90,9 @@ const WPAuth = (() => {
     <div class="auth-shell">
       <div class="auth-brand">
         <div class="sidebar-logo">
-          <div class="sidebar-logo-icon">&#x26A1;</div>
+          <img class="brand-logo" src="pul_logo.jpeg" alt="Pul" width="64" height="56" />
           <div>
-            <div class="sidebar-logo-text">Ola Financial</div>
-            <div class="sidebar-logo-sub">Financial Health Platform</div>
+            <div class="sidebar-logo-text">Pul Planning</div>
           </div>
         </div>
         <div class="auth-brand-tagline">
@@ -122,7 +121,7 @@ const WPAuth = (() => {
       <div class="auth-form-pane">
         <div class="auth-form-inner">
           <h1 class="auth-form-title">Welcome back</h1>
-          <p class="auth-form-sub">Sign in to your Ola Financial account</p>
+          <p class="auth-form-sub">Sign in to your Pul Planning account</p>
           <div id="auth-error" class="alert alert-danger" style="display:none"></div>
           <form id="login-form">
             <div class="form-group">
@@ -198,8 +197,8 @@ const WPAuth = (() => {
     <div class="auth-shell">
       <div class="auth-brand">
         <div class="sidebar-logo">
-          <div class="sidebar-logo-icon">&#x26A1;</div>
-          <div><div class="sidebar-logo-text">Ola Financial</div></div>
+          <img class="brand-logo" src="pul_logo.jpeg" alt="Pul" width="64" height="56" />
+          <div><div class="sidebar-logo-text">Pul Planning</div></div>
         </div>
         <div class="auth-brand-tagline">Build <span>wealth</span>. Plan your <span>future</span>.</div>
         <p class="auth-brand-sub">Nigeria's most comprehensive personal finance platform. Free forever.</p>
@@ -287,9 +286,9 @@ const WPAuth = (() => {
     container.innerHTML = `
     <div class="onboarding-shell">
       <div class="onboarding-card">
-        <div class="onboarding-logo">
-          <div class="sidebar-logo-icon">&#x26A1;</div>
-          <span class="sidebar-logo-text">Ola Financial</span>
+        <div class="onboarding-logo sidebar-logo" style="border:none;padding:0;margin-bottom:1rem">
+          <img class="brand-logo" src="pul_logo.jpeg" alt="Pul" width="52" height="44" />
+          <span class="sidebar-logo-text">Pul Planning</span>
         </div>
         <h2 class="onboarding-step-title">Reset Password</h2>
         <p class="onboarding-step-desc">Enter your email and we'll send a reset link.</p>

@@ -13,9 +13,9 @@ const SUPABASE_ANON = 'sb_publishable_i_muV01vzwnLzYvaiU6RCg_JV0-qcD6';        /
 
 // ── APP METADATA ─────────────────────────────────────────────
 const APP_CONFIG = {
-  appName:       'Ola Financial',
+  appName:       'Pul Planning',
   appVersion:    '1.0.0',
-  appTagline:    'Nigerian Personal Finance Platform',
+  appTagline:    'Personal Finance Platform',
   currency:      'NGN',
   currencySymbol:'₦',
   locale:        'en-NG',
@@ -84,7 +84,7 @@ const APP_CONFIG = {
 
   // ── DISCLAIMER ────────────────────────────────────────────
   disclaimer: `
-    <strong>Disclaimer:</strong> Ola Financial provides financial calculations for informational 
+    <strong>Disclaimer:</strong> Pul Planning provides financial calculations for informational 
     and educational purposes only. It is not a licensed financial adviser. Always verify 
     with a qualified Nigerian Chartered Accountant or financial planner before making financial decisions.
   `,

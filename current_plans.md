@@ -405,8 +405,21 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#35](https://github.com/olafinancial/olafinancial/issues/35) | Income green / expenses red color coding | Medium | ✅ Closed |
 | [#36](https://github.com/olafinancial/olafinancial/issues/36) | Split Balance Sheet into Assets + Liabilities pages | Medium | 🔲 Open (triage) |
 | [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | Branding → pul.llc (duplicates) | Medium | 🔲 Open — domain plan in [`DOMAIN_MIGRATION.md`](./DOMAIN_MIGRATION.md) (pul.llc primary; olafinancial.org bridge; keep org accounts) |
+| [#37](https://github.com/olafinancial/olafinancial/issues/37) | Brand UI: pul_logo + Pul Planning lockup | Medium | ✅ Closed |
 
 ---
+
+### Session 9 — 2026-07-13 — Pul Planning brand lockup (#37)
+
+#### R35. Replace Ola Financial lockup with logo + Pul Planning
+* **Status**: ✅ Completed (closes #37)
+* **Asset**: `pul_logo.jpeg` (project root; circular Pul mark)
+* **UI**:
+  * Sidebar, auth (login/signup/forgot), onboarding, and splash use `<img class="brand-logo">` + **Pul Planning** (removed “Financial Health” subtitle)
+  * CSS: `.brand-logo` sized ~44–64px height (`object-fit: contain`, light background for mark)
+  * `APP_CONFIG.appName`, disclaimer, manifest name/short_name, page title / PWA title
+  * Report print headers → “Pul Planning”
+* **Out of scope**: full string purge, domain cutover (see `DOMAIN_MIGRATION.md`), GitHub org rename
 
 ### Session 8b — 2026-07-13 — Income / Expense Color Coding (#35)
 

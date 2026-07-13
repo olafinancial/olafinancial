@@ -14,10 +14,10 @@ const WPOnboarding = (() => {
     container.innerHTML = `
       <div class="onboarding-shell">
         <div class="onboarding-card" id="onboarding-card">
-          <div class="onboarding-logo">
-            <div class="sidebar-logo-icon">&#x26A1;</div>
+          <div class="onboarding-logo sidebar-logo" style="border:none;padding:0;margin-bottom:1rem">
+            <img class="brand-logo" src="pul_logo.jpeg" alt="Pul" width="52" height="44" />
             <div>
-              <div class="sidebar-logo-text">Ola Financial</div>
+              <div class="sidebar-logo-text">Pul Planning</div>
               <div class="sidebar-logo-sub">Setup</div>
             </div>
           </div>
@@ -58,7 +58,7 @@ const WPOnboarding = (() => {
   function _step1(el) {
     const name = WPApp.state.profile?.full_name || '';
     el.innerHTML = `
-      <h2 class="onboarding-step-title">Welcome to Ola Financial! 👋</h2>
+      <h2 class="onboarding-step-title">Welcome to Pul Planning! 👋</h2>
       <p class="onboarding-step-desc">Let's personalize your experience. This takes about 2 minutes.</p>
       <div class="form-group">
         <label for="ob-name">Your Full Name</label>
@@ -279,7 +279,7 @@ const WPOnboarding = (() => {
       };
       localStorage.setItem('wp_estate_planning_' + uid, JSON.stringify(estateState));
       
-      WPToast.success('Profile saved! Welcome to Ola Financial.');
+      WPToast.success('Profile saved! Welcome to Pul Planning.');
       // Reload the full app shell
       document.getElementById('root').innerHTML = '';
       await WPApp.boot();

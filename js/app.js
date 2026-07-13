@@ -116,7 +116,7 @@ const WPApp = (() => {
             <div class="auth-card" style="text-align: center; padding: 3rem 2rem;">
               <div style="font-size: 3.5rem; margin-bottom: 1.25rem;">👋</div>
               <h2 style="color: #ffffff; margin-bottom: 0.5rem; font-weight: 700;">You've been signed out</h2>
-              <p style="color: var(--clr-text-3); font-size: 0.9rem; margin-bottom: 2rem; line-height: 1.5;">Thank you for using Ola Financial. Your session has been safely closed.</p>
+              <p style="color: var(--clr-text-3); font-size: 0.9rem; margin-bottom: 2rem; line-height: 1.5;">Thank you for using Pul Planning. Your session has been safely closed.</p>
               <button class="btn btn-primary" style="width: 100%;" onclick="WPRouter.navigate('/login')">Sign In Again</button>
             </div>
           </div>
@@ -131,10 +131,9 @@ const WPApp = (() => {
       <div class="app-shell">
         <aside class="sidebar" id="sidebar">
           <div class="sidebar-logo">
-            <div class="sidebar-logo-icon">&#x26A1;</div>
+            <img class="brand-logo" src="pul_logo.jpeg" alt="Pul" width="52" height="44" />
             <div>
-              <div class="sidebar-logo-text">Ola Financial</div>
-              <div class="sidebar-logo-sub">Financial Health</div>
+              <div class="sidebar-logo-text">Pul Planning</div>
             </div>
           </div>
           <nav class="sidebar-nav" id="sidebar-nav"></nav>

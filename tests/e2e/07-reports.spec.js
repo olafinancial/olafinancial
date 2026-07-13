@@ -23,12 +23,12 @@ test.describe('Financial Reports', () => {
     await expect(genBtn).toBeVisible();
   });
 
-  test('print header contains Ola Financial branding', async ({ page }) => {
+  test('print header contains product branding', async ({ page }) => {
     // Check if print-only headers exist in the DOM (visibility:hidden until print)
     const printHeader = page.locator('.print-header, [data-print-header], .report-header').first();
     if (await printHeader.count() > 0) {
       const text = await printHeader.textContent();
-      expect(text.toLowerCase()).toMatch(/ola financial|pul\.llc/i);
+      expect(text.toLowerCase()).toMatch(/ola financial|pul planning|pul\.llc/i);
     }
   });
 
@@ -38,7 +38,7 @@ test.describe('Financial Reports', () => {
     // 1) print header in DOM, 2) CSS print watermark rule for pul.llc.
     const printHeader = page.locator('#print-header, .print-header').first();
     await expect(printHeader).toBeAttached();
-    await expect(printHeader).toContainText(/ola financial/i);
+    await expect(printHeader).toContainText(/ola financial|pul planning|pul\.llc/i);
 
     const hasWatermarkRule = await page.evaluate(() => {
       for (const sheet of document.styleSheets) {

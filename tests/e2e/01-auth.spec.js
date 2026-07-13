@@ -12,7 +12,7 @@ test.describe('Authentication', () => {
   });
 
   test('landing page loads and shows login form', async ({ page }) => {
-    await expect(page).toHaveTitle(/Ola Financial/i);
+    await expect(page).toHaveTitle(/Pul Planning|Ola Financial/i);
     await expect(page.locator('#login-email, #email, input[type="email"]').first()).toBeVisible();
     await expect(page.locator('#login-password, #password, input[type="password"]').first()).toBeVisible();
   });

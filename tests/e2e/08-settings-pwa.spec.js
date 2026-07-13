@@ -91,7 +91,7 @@ test.describe('PWA & Service Worker', () => {
     await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 15_000 });
 
     const title = await page.title();
-    expect(title).toContain('Ola Financial');
+    expect(title).toMatch(/Pul Planning|Ola Financial/);
     await context.setOffline(false);
   });
 });

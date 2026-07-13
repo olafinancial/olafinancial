@@ -40,7 +40,7 @@ const WPReports = (() => {
         <div id="print-header" class="print-header" style="display:none">
           <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #333;padding-bottom:12px;margin-bottom:16px">
             <div>
-              <div style="font-size:1.4rem;font-weight:800">Ola Financial — Financial Report</div>
+              <div style="font-size:1.4rem;font-weight:800">Pul Planning — Financial Report</div>
               <div style="font-size:0.85rem;color:#555;margin-top:4px">Prepared for: <strong id="print-client-name"></strong></div>
             </div>
             <div style="text-align:right;font-size:0.8rem;color:#555">
