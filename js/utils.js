@@ -101,7 +101,8 @@ const WPUtils = (() => {
   // All amounts in KOBO
   function calcPIT(grossKobo, pensionKobo = 0, annualRentKobo = 0) {
     // Rent relief: 20% of annual rent, max ₦500,000 (50,000,000 kobo)
-    const rentRelief = Math.min(annualRentKobo * 0.20, APP_CONFIG.rentReliefMax);
+    const rentReliefMax = APP_CONFIG.rentReliefMax || (APP_CONFIG.taxReliefs && APP_CONFIG.taxReliefs.maxRentRelief) || 50000000;
+    const rentRelief = Math.min(annualRentKobo * 0.20, rentReliefMax);
     const taxableKobo = Math.max(0, grossKobo - pensionKobo - rentRelief);
 
     // Progressive brackets (in kobo)
