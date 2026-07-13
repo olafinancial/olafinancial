@@ -2,11 +2,12 @@
 // OlaFinancial — Service Worker (Offline Cache)
 // ============================================================
 
-const CACHE_NAME   = 'olafinancial-v15';
+const CACHE_NAME   = 'olafinancial-v16';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/css/styles.css',
+  '/pul_logo.jpeg',
   '/js/config.js',
   '/js/utils.js',
   '/js/supabase-client.js',
