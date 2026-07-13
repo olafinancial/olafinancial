@@ -128,9 +128,12 @@ const WPRetirement = (() => {
 
         <!-- Stock Holdings Mark-to-Market Tracking -->
         <div class="card" style="margin-bottom:1.5rem">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem">
             <div class="section-title" style="margin:0">&#x1F4C8; Stock Assets (Mark-to-Market)</div>
-            <button class="btn btn-secondary btn-sm" id="ret-add-stock-btn">+ Add Stock</button>
+            <div style="display:flex;gap:0.5rem">
+              <button type="button" class="btn btn-secondary btn-sm" id="ret-refresh-stocks-btn" title="Refresh live prices">↻ Refresh prices</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="ret-add-stock-btn">+ Add Stock</button>
+            </div>
           </div>
           <div class="table-wrap">
             <table>
@@ -151,6 +154,7 @@ const WPRetirement = (() => {
               </tbody>
             </table>
           </div>
+          <div id="ret-stocks-total"></div>
         </div>
 
         <!-- Results -->
@@ -159,6 +163,10 @@ const WPRetirement = (() => {
 
     document.getElementById('ret-calc-btn').addEventListener('click', _calculate);
     document.getElementById('ret-add-stock-btn').addEventListener('click', _openStockForm);
+    document.getElementById('ret-refresh-stocks-btn')?.addEventListener('click', () => {
+      _fetchedPrices = {};
+      _renderStocks();
+    });
 
     // Show/hide fields based on jurisdiction selection
     const jurisSelect = document.getElementById('ret-jurisdiction');
@@ -290,31 +298,10 @@ const WPRetirement = (() => {
 
     const salaryKobo = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ret-salary').value));
     
-    // Compute current stock assets valuation
+    // Compute current stock assets valuation (same mark-to-market as table)
     const baseCur = WPApp.state.profile?.currency || 'NGN';
     const stocks = _loadStocks();
-    const totalStocksUSD = stocks.reduce((sum, s) => {
-      const sym = s.ticker.toUpperCase().trim();
-      const basePrices = {
-        AAPL: 190.00, TSLA: 175.00, MSFT: 420.00, GOOG: 170.00, GOOGL: 170.00,
-        AMZN: 180.00, NVDA: 125.00, NFLX: 620.00, META: 475.00
-      };
-      const base = basePrices[sym];
-      const day = new Date().getDate();
-      let hash = 0;
-      for (let i = 0; i < sym.length; i++) hash += sym.charCodeAt(i);
-      const dailyFluc = ((hash + day) % 6) - 3;
-
-      let currentPrice = _fetchedPrices[sym];
-      if (currentPrice === undefined) {
-        if (base !== undefined) {
-          currentPrice = Math.max(1, base * (1 + dailyFluc / 100));
-        } else {
-          currentPrice = Math.max(1, s.purchasePrice * (1.15 + dailyFluc / 100));
-        }
-      }
-      return sum + (s.qty * currentPrice);
-    }, 0);
+    const { totalValue: totalStocksUSD } = _portfolioTotals(stocks);
 
     // Convert stock USD valuation to base page/profile currency in kobo
     const stocksValuationKobo = WPUtils.convert(Math.round(totalStocksUSD * 100), 'USD', baseCur);
@@ -440,14 +427,156 @@ const WPRetirement = (() => {
   }
 
   function _loadStocks() {
-    const uid = WPApp.state.user.id;
-    return JSON.parse(localStorage.getItem('wp_ret_stocks_' + uid) || '[]');
+    const uid = WPApp.state.user?.id;
+    if (!uid) return [];
+    try {
+      const raw = JSON.parse(localStorage.getItem('wp_ret_stocks_' + uid) || '[]');
+      return (Array.isArray(raw) ? raw : []).map(s => ({
+        ...s,
+        ticker: String(s.ticker || '').trim(),
+        qty: Number(s.qty) || 0,
+        purchasePrice: Number(s.purchasePrice) || 0,
+      })).filter(s => s.ticker && s.qty > 0);
+    } catch {
+      return [];
+    }
   }
 
   function _saveStocks(stocks) {
-    const uid = WPApp.state.user.id;
+    const uid = WPApp.state.user?.id;
+    if (!uid) return;
     localStorage.setItem('wp_ret_stocks_' + uid, JSON.stringify(stocks));
     _renderStocks();
+  }
+
+  function _getMockPrice(ticker, buyPrice) {
+    const sym = ticker.toUpperCase().trim();
+    const basePrices = {
+      AAPL: 190, TSLA: 175, MSFT: 420, GOOG: 170, GOOGL: 170,
+      AMZN: 180, NVDA: 125, NFLX: 620, META: 475, SPY: 520, QQQ: 450,
+    };
+    const base = basePrices[sym];
+    const day = new Date().getDate();
+    let hash = 0;
+    for (let i = 0; i < sym.length; i++) hash += sym.charCodeAt(i);
+    const dailyFluc = ((hash + day) % 6) - 3;
+    if (base !== undefined) return Math.max(1, base * (1 + dailyFluc / 100));
+    return Math.max(1, (buyPrice || 100) * (1.15 + dailyFluc / 100));
+  }
+
+  /** Live quote via Yahoo chart API through CORS proxies; null if unavailable. */
+  async function _fetchLivePrice(ticker) {
+    const yahooUrl =
+      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}` +
+      `?interval=1d&range=1d`;
+    const proxies = [
+      // raw body = Yahoo JSON
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,
+      `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
+      // JSON wrapper { contents: "..." }
+      `https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`,
+    ];
+
+    for (const url of proxies) {
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 8000);
+        const res = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(t);
+        if (!res.ok) continue;
+        let data = await res.json();
+        // Unwrap allorigins /get shape
+        if (data && typeof data.contents === 'string') {
+          try { data = JSON.parse(data.contents); } catch { continue; }
+        }
+        const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice
+          ?? data?.chart?.result?.[0]?.meta?.previousClose;
+        if (price && Number(price) > 0) return Number(price);
+      } catch {
+        /* try next proxy */
+      }
+    }
+    return null;
+  }
+
+  function _priceFor(sym, purchasePrice) {
+    if (_fetchedPrices[sym] != null && _fetchedPrices[sym] > 0) return _fetchedPrices[sym];
+    return _getMockPrice(sym, purchasePrice);
+  }
+
+  function _portfolioTotals(list) {
+    let totalCost = 0;
+    let totalValue = 0;
+    for (const s of list) {
+      const sym = s.ticker.toUpperCase().trim();
+      const px = _priceFor(sym, s.purchasePrice);
+      totalCost += s.qty * s.purchasePrice;
+      totalValue += s.qty * px;
+    }
+    return { totalCost, totalValue, totalGain: totalValue - totalCost };
+  }
+
+  function _paintStocksTable(list, statusNote = '') {
+    const el = document.getElementById('ret-stocks-list');
+    const totalEl = document.getElementById('ret-stocks-total');
+    if (!el) return;
+
+    if (!list.length) {
+      el.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--clr-text-3)">No stock assets logged. Click "+ Add Stock" to begin tracking.</td></tr>`;
+      if (totalEl) totalEl.innerHTML = '';
+      return;
+    }
+
+    const { totalCost, totalValue, totalGain } = _portfolioTotals(list);
+    const isGain = totalGain >= 0;
+    const gainPct = (totalGain / Math.max(1, totalCost)) * 100;
+    const liveCount = list.filter(s => _fetchedPrices[s.ticker.toUpperCase().trim()] != null).length;
+
+    el.innerHTML = list.map((s, idx) => {
+      const sym = s.ticker.toUpperCase().trim();
+      const currentPrice = _priceFor(sym, s.purchasePrice);
+      const isLive = _fetchedPrices[sym] != null;
+      const costBasis = s.qty * s.purchasePrice;
+      const currentValue = s.qty * currentPrice;
+      const gainLoss = currentValue - costBasis;
+      const rowPct = (gainLoss / Math.max(1, costBasis)) * 100;
+      const rowGain = gainLoss >= 0;
+
+      return `<tr>
+        <td><strong>${sym}</strong>${isLive ? ' <span class="badge badge-accent" style="font-size:0.65rem">LIVE</span>' : ' <span class="badge badge-neutral" style="font-size:0.65rem">EST</span>'}</td>
+        <td class="td-mono">${s.qty}</td>
+        <td class="td-mono">$${s.purchasePrice.toFixed(2)}</td>
+        <td class="td-mono text-accent">$${currentPrice.toFixed(2)}</td>
+        <td class="td-mono">$${costBasis.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td class="td-mono fw-600">$${currentValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td class="td-mono fw-600 ${rowGain ? 'text-accent' : 'text-danger'}">
+          ${rowGain ? '+' : ''}${gainLoss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${rowGain ? '+' : ''}${rowPct.toFixed(2)}%)
+        </td>
+        <td>
+          <button type="button" class="btn btn-ghost btn-sm text-danger" onclick="WPRetirement._deleteStock(${idx})">Delete</button>
+        </td>
+      </tr>`;
+    }).join('') + `
+      <tr style="border-top:2px solid var(--clr-border-2);background:var(--clr-surface-2)">
+        <td colspan="4" class="fw-700">Portfolio total (${list.length} position${list.length === 1 ? '' : 's'})</td>
+        <td class="td-mono fw-700">$${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td class="td-mono fw-700 text-accent">$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td class="td-mono fw-700 ${isGain ? 'text-accent' : 'text-danger'}">
+          ${isGain ? '+' : ''}${totalGain.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${isGain ? '+' : ''}${gainPct.toFixed(2)}%)
+        </td>
+        <td></td>
+      </tr>`;
+
+    if (totalEl) {
+      totalEl.innerHTML = `
+        <div class="card" style="margin-top:0.75rem;padding:1rem 1.25rem;display:flex;flex-wrap:wrap;gap:1.25rem;align-items:center;justify-content:space-between">
+          <div>
+            <div class="card-title" style="margin:0">Total stock holdings (mark-to-market)</div>
+            <div class="text-xs text-muted" style="margin-top:0.25rem">${statusNote || (liveCount ? `${liveCount}/${list.length} live quotes` : 'Using estimated prices — live feed unavailable')}</div>
+          </div>
+          <div class="card-value income" style="font-size:1.4rem">$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>`;
+    }
   }
 
   async function _renderStocks() {
@@ -456,78 +585,28 @@ const WPRetirement = (() => {
     if (!el) return;
 
     if (!list.length) {
-      el.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--clr-text-3)">No stock assets logged. Click "+ Add Stock" to begin tracking.</td></tr>`;
+      _paintStocksTable(list);
       return;
     }
 
-    const getMockPrice = (ticker, buyPrice) => {
-      const sym = ticker.toUpperCase().trim();
-      const basePrices = { AAPL: 190.00, TSLA: 175.00, MSFT: 420.00, GOOG: 170.00, GOOGL: 170.00, AMZN: 180.00, NVDA: 125.00, NFLX: 620.00, META: 475.00 };
-      const base = basePrices[sym];
-      const day = new Date().getDate();
-      let hash = 0;
-      for (let i = 0; i < sym.length; i++) hash += sym.charCodeAt(i);
-      const dailyFluc = ((hash + day) % 6) - 3;
-      if (base !== undefined) return Math.max(1, base * (1 + dailyFluc / 100));
-      return Math.max(1, buyPrice * (1.15 + dailyFluc / 100));
-    };
+    // Immediate paint with last-known / mock prices so UI is never empty
+    _paintStocksTable(list, 'Refreshing live prices…');
 
-    // Attempt to fetch live prices from Yahoo Finance public API (via CORS proxy)
-    // with fallbacks to Finnhub API and then mock data
-    _fetchedPrices = {};
-    try {
-      const tickers = [...new Set(list.map(s => s.ticker.toUpperCase().trim()))];
-      await Promise.all(tickers.map(async (ticker) => {
-        try {
-          // Attempt Yahoo Finance API first via a public CORS proxy
-          const yahooRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}`)}`);
-          if (yahooRes.ok) {
-            const wrapper = await yahooRes.json();
-            const data = JSON.parse(wrapper.contents);
-            const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-            if (price && price > 0) {
-              _fetchedPrices[ticker] = price;
-              return;
-            }
-          }
-        } catch (e) {}
+    const tickers = [...new Set(list.map(s => s.ticker.toUpperCase().trim()))];
+    const next = { ..._fetchedPrices };
+    await Promise.all(tickers.map(async (ticker) => {
+      const price = await _fetchLivePrice(ticker);
+      if (price != null) next[ticker] = price;
+    }));
+    _fetchedPrices = next;
 
-        // Fallback to Finnhub if Yahoo Finance fails
-        try {
-          const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=c89i11iad3if4lot340g`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data && data.c > 0) {
-              _fetchedPrices[ticker] = data.c;
-            }
-          }
-        } catch (e) {}
-      }));
-    } catch (e) {}
-
-    el.innerHTML = list.map((s, idx) => {
-      const sym = s.ticker.toUpperCase().trim();
-      const currentPrice = _fetchedPrices[sym] || getMockPrice(s.ticker, s.purchasePrice);
-      const costBasis = s.qty * s.purchasePrice;
-      const currentValue = s.qty * currentPrice;
-      const gainLoss = currentValue - costBasis;
-      const gainPct = (gainLoss / Math.max(1, costBasis)) * 100;
-      const isGain = gainLoss >= 0;
-
-      return `<tr>
-        <td><strong>${sym}</strong></td>
-        <td>${s.qty}</td>
-        <td class="td-mono">$${s.purchasePrice.toFixed(2)}</td>
-        <td class="td-mono text-accent">$${currentPrice.toFixed(2)}</td>
-        <td class="td-mono">$${costBasis.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
-        <td class="td-mono fw-600">$${currentValue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
-        <td class="td-mono fw-600 ${isGain?'text-accent':'text-danger'}">
-          ${isGain?'+':''}${gainLoss.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} (${isGain?'+':''}${gainPct.toFixed(2)}%)
-        </td>
-        <td>
-          <button class="btn btn-ghost btn-sm text-danger" onclick="WPRetirement._deleteStock(${idx})">Delete</button>
-      </tr>`;
-    }).join('');
+    const liveCount = tickers.filter(t => _fetchedPrices[t] != null).length;
+    _paintStocksTable(
+      list,
+      liveCount
+        ? `${liveCount}/${tickers.length} live quotes · total includes all positions`
+        : 'Live quotes unavailable — showing estimates · total includes all positions'
+    );
   }
 
   function _openStockForm() {

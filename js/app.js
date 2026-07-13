@@ -74,9 +74,30 @@ const WPApp = (() => {
 
   // ── AUTH SHELL (no sidebar) ───────────────────────────────
   function _showAuth() {
+    _activePage = null;
     document.getElementById('root').innerHTML = '<div id="auth-root"></div>';
     _registerAuthRoutes();
     WPRouter.start();
+  }
+
+  /**
+   * Tear down the logged-in shell and show auth UI.
+   * Used by WPAuth.signOut so /logged-out is always registered.
+   */
+  function enterAuthShell(path = '/logged-out') {
+    _activePage = null;
+    state.user = null;
+    state.profile = null;
+    document.getElementById('root').innerHTML = '<div id="auth-root"></div>';
+    _registerAuthRoutes();
+    // Replace hash + dispatch without relying on prior app routes
+    const target = path.startsWith('/') ? path : `/${path}`;
+    history.replaceState(null, '', '#' + target);
+    WPRouter.start();
+    // start() dispatches current hash; force logged-out if needed
+    if (WPRouter.current() !== target) {
+      WPRouter.navigate(target, true);
+    }
   }
 
   function _registerAuthRoutes() {
@@ -240,10 +261,21 @@ const WPApp = (() => {
       if (item) { WPRouter.navigate(item.dataset.path); _closeMobileSidebar(); }
     });
     
-    document.getElementById('nav-logout')?.addEventListener('click', (e) => {
+    document.getElementById('nav-logout')?.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      WPAuth.signOut();
+      const btn = e.currentTarget;
+      if (btn) {
+        btn.style.opacity = '0.6';
+        btn.style.pointerEvents = 'none';
+      }
+      try {
+        await WPAuth.signOut();
+      } catch (err) {
+        console.error('Sign out failed', err);
+        // Force auth shell even if something threw
+        if (typeof WPApp.enterAuthShell === 'function') WPApp.enterAuthShell('/login');
+      }
     });
   }
 
@@ -381,7 +413,7 @@ const WPApp = (() => {
     return { cf, totalAssets, totalLiabilities, netWorth, passiveKPIs, debtToAsset, efTarget, efBalance, efStatus };
   }
 
-  return { state, boot, loadCurrentMonthData, computeSummary, NAV_ITEMS };
+  return { state, boot, loadCurrentMonthData, computeSummary, NAV_ITEMS, enterAuthShell };
 })();
 
 // ── TOAST SYSTEM ──────────────────────────────────────────

@@ -54,14 +54,35 @@ const WPAuth = (() => {
   // ── SIGN OUT ──────────────────────────────────────────────
   async function signOut() {
     stopIdleWatcher();
-    try {
-      await WPDb.signOut();
-    } catch (e) {
-      console.warn('Supabase signOut error, signing out locally:', e);
-    }
+    // Clear local session first so UI never depends on a hanging network call
     WPApp.state.user    = null;
     WPApp.state.profile = null;
-    WPRouter.navigate('/logged-out');
+    try {
+      if (WPApp.state.data) {
+        WPApp.state.data = {
+          income: [], expenses: [], assets: [], liabilities: [],
+          goals: [], emergencyFund: null, snapshots: [],
+        };
+      }
+    } catch (_) { /* ignore */ }
+
+    try {
+      await Promise.race([
+        WPDb.signOut(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('signOut timeout')), 4000)),
+      ]);
+    } catch (e) {
+      console.warn('Supabase signOut error/timeout — continuing local logout:', e?.message || e);
+    }
+
+    // App shell only registers page routes; auth routes (incl. /logged-out) are
+    // registered in _showAuth(). After a cold boot while logged-in, /logged-out
+    // was never registered and the router fell back to /dashboard.
+    if (typeof WPApp.enterAuthShell === 'function') {
+      WPApp.enterAuthShell('/logged-out');
+    } else {
+      WPRouter.navigate('/logged-out', true);
+    }
   }
 
   // ── PASSWORD VALIDATION ───────────────────────────────────

@@ -64,16 +64,21 @@ const WPRouter = (() => {
     handler(params);
   }
 
+  let _started = false;
+
   function start() {
-    window.addEventListener('popstate', () => {
-      const path = window.location.hash.replace('#', '') || '/login';
-      _dispatch(path);
-    });
-    // Also react to hash-only navigations (e.g. direct #/route links / tests)
-    window.addEventListener('hashchange', () => {
-      const path = window.location.hash.replace('#', '') || '/login';
-      _dispatch(path);
-    });
+    if (!_started) {
+      _started = true;
+      window.addEventListener('popstate', () => {
+        const path = window.location.hash.replace('#', '') || '/login';
+        _dispatch(path);
+      });
+      // Also react to hash-only navigations (e.g. direct #/route links / tests)
+      window.addEventListener('hashchange', () => {
+        const path = window.location.hash.replace('#', '') || '/login';
+        _dispatch(path);
+      });
+    }
     const initial = window.location.hash.replace('#', '') || '/login';
     _dispatch(initial);
   }
