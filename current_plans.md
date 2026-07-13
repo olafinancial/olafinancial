@@ -392,24 +392,127 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 ## 🗓️ Open GitHub Issues
 
-| Issue | Title | Priority | Status |
-|-------|-------|----------|--------|
-| [#27](https://github.com/olafinancial/olafinancial/issues/27) | Social sharing & watermarked PNG export from Reports | High | ✅ Closed |
-| [#28](https://github.com/olafinancial/olafinancial/issues/28) | Confirm sponsor partners & activate sponsor banners | High | 🔲 Open |
-| [#29](https://github.com/olafinancial/olafinancial/issues/29) | Monthly macro data update — NBS/CBN economic indicators | Recurring | 🔲 Open |
-| [#30](https://github.com/olafinancial/olafinancial/issues/30) | Complete per-page currency selectors (cashflow, EF, goals) | Medium | ✅ Closed |
-| [#31](https://github.com/olafinancial/olafinancial/issues/31) | Scheduled / email digest reports | Medium | ✅ Closed |
-| [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | Low | 🔲 Planned |
-| [#33](https://github.com/olafinancial/olafinancial/issues/33) | Comprehensive Reports page overhaul (PDF, charts, statements) | Low | ✅ Closed |
-| [#34](https://github.com/olafinancial/olafinancial/issues/34) | Salary deductibles calculator + tax-year deduction ledger | Medium | 🔲 Open |
-| [#35](https://github.com/olafinancial/olafinancial/issues/35) | Income green / expenses red color coding | Medium | ✅ Closed |
-| [#36](https://github.com/olafinancial/olafinancial/issues/36) | Split Balance Sheet into Assets + Liabilities pages | Medium | 🔲 Open (triage) |
-| [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | Branding → pul.llc (duplicates) | Medium | 🔲 Open — domain plan in [`DOMAIN_MIGRATION.md`](./DOMAIN_MIGRATION.md) (pul.llc primary; olafinancial.org bridge; keep org accounts) |
-| [#37](https://github.com/olafinancial/olafinancial/issues/37) | Brand UI: pul_logo + Pul Planning lockup | Medium | ✅ Closed |
-| [#38](https://github.com/olafinancial/olafinancial/issues/38) | Ops: production email (Supabase Auth + Resend digests) | High | 🔲 Open — checklist in [`EMAIL_SETUP.md`](./EMAIL_SETUP.md) |
-| [#39](https://github.com/olafinancial/olafinancial/issues/39) | Brand: X / Instagram / Facebook (@pulplanning) | Medium | ✅ Closed |
-| [#40](https://github.com/olafinancial/olafinancial/issues/40) | PWA: auto cache purge / network-first (no hard refresh) | High | ✅ Closed |
-| — | Getting-started path + re-run onboarding | Medium | ✅ Completed |
+### Open now (as of 2026-07-13)
+
+| Issue | Title | Source | Priority | Status |
+|-------|-------|--------|----------|--------|
+| [#41](https://github.com/olafinancial/olafinancial/issues/41) | **Add Investment questionnaire** | @kaluaja | High | 🔲 Planned — see R40 plan below |
+| [#38](https://github.com/olafinancial/olafinancial/issues/38) | Ops: production email (Supabase Auth + Resend digests) | ops | High | 🔲 Open — [`EMAIL_SETUP.md`](./EMAIL_SETUP.md) |
+| [#36](https://github.com/olafinancial/olafinancial/issues/36) | Split Balance Sheet → Assets + Liabilities pages | @kaluaja | Medium | 🔲 Open (triage) |
+| [#34](https://github.com/olafinancial/olafinancial/issues/34) | Salary deductibles calculator + tax-year ledger | @kaluaja | Medium | 🔲 Open |
+| [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | roadmap | Low | 🔲 Planned |
+| [#29](https://github.com/olafinancial/olafinancial/issues/29) | Monthly macro data update — NBS/CBN | recurring | Recurring | 🔲 Open |
+| [#28](https://github.com/olafinancial/olafinancial/issues/28) | Confirm sponsor partners & activate banners | business | High | 🔲 Blocked (partners) |
+| [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | Branding → pul.llc (duplicates) | product | Medium | 🔲 Open — [`DOMAIN_MIGRATION.md`](./DOMAIN_MIGRATION.md) |
+
+### Recently closed
+
+| Issue | Title | Status |
+|-------|-------|--------|
+| [#27](https://github.com/olafinancial/olafinancial/issues/27) | Social sharing & watermarked PNG export | ✅ Closed |
+| [#30](https://github.com/olafinancial/olafinancial/issues/30) | Per-page currency selectors | ✅ Closed |
+| [#31](https://github.com/olafinancial/olafinancial/issues/31) | Scheduled / email digest reports (code) | ✅ Closed |
+| [#33](https://github.com/olafinancial/olafinancial/issues/33) | Reports page overhaul | ✅ Closed |
+| [#35](https://github.com/olafinancial/olafinancial/issues/35) | Income green / expenses red | ✅ Closed |
+| [#37](https://github.com/olafinancial/olafinancial/issues/37) | pul_logo + Pul Planning lockup | ✅ Closed |
+| [#39](https://github.com/olafinancial/olafinancial/issues/39) | X / Instagram / Facebook links | ✅ Closed |
+| [#40](https://github.com/olafinancial/olafinancial/issues/40) | PWA auto cache / no hard refresh | ✅ Closed |
+| — | Getting-started path + re-run onboarding | ✅ Completed |
+
+### Suggested build order (stakeholder + ops)
+
+1. **#38** Email ops (unblocks digests/auth mail in prod)  
+2. **#41** Investment questionnaire (new product ask)  
+3. **#34** Income salary deductibles  
+4. **#36** Balance Sheet split (larger IA change — design first)  
+5. **#32** Budget 50/30/20  
+6. **#28 / #29** External inputs (sponsors, macro data)  
+7. **#23/#25** Domain cutover (follow `DOMAIN_MIGRATION.md`)
+
+---
+
+### R40. Investment questionnaire + sample portfolio (#41) — implementation plan
+
+* **Status**: 🔲 Planned  
+* **Issue**: [#41](https://github.com/olafinancial/olafinancial/issues/41) — *Add a questionnaire to guide asset class selection + sample portfolio*  
+* **Reference**: [Grok share mock / flow](https://x.com/i/grok/share/a480c50bfa604491a65e7b6680c6863d)  
+* **Problem**: Users need simplified help choosing asset classes and seeing a sample allocation (not full robo-advisory).
+
+#### Product scope (MVP)
+
+| In scope | Out of scope (later) |
+|----------|----------------------|
+| Multi-step questionnaire (risk, horizon, goal, liquidity, experience, amount) | Live brokerage / order routing |
+| Map answers → risk band (Conservative / Moderate / Aggressive) | Personalized securities picks as “advice” |
+| Sample portfolio by **asset class** % (e.g. cash, bonds, equities, alt) | Guaranteed returns |
+| Educational blurbs per class (1–2 lines) | SEC-licensed advice framing — keep tool disclaimer |
+| Save results locally (+ optional profile field later) | Full Nigerian product catalogue |
+
+#### Reuse existing patterns
+
+* Wizard UX: `js/pages/insurance.js` (step dots, localStorage, reset)  
+* Risk already collected: onboarding + `user_profiles.risk_tolerance` — **prefill** questionnaire  
+* Retirement risk bands: conservative / moderate / aggressive return assumptions  
+* Disclaimer: `APP_CONFIG.disclaimer` + investment-specific one-liner  
+* Nav: new item under Tools or after Retirement, e.g. `/invest` or `/investment-quiz`
+
+#### Proposed UX flow (5–6 short steps)
+
+1. **Goal** — What is this money for? (emergency, home, retirement, growth, education)  
+2. **Time horizon** — When do you need most of it? (&lt;3y / 3–7y / 7y+)  
+3. **Risk comfort** — Prefill from profile; confirm or change  
+4. **Experience** — New / some / experienced  
+5. **Amount band** — Optional monthly or lump (for sample sizing, not required)  
+6. **Results** — Risk band + pie/bar sample allocation + “what this means” blurbs + CTAs:
+   - Add cash/investments on Balance Sheet  
+   - Set a related Goal  
+   - Open Retirement / Calculators  
+   - Retake quiz  
+
+#### Sample allocation engine (simple rules)
+
+Start with transparent tables (document in code comments):
+
+| Band | Cash / MM | Bonds / FGN | Equities / funds | Other (optional) |
+|------|-----------|-------------|------------------|------------------|
+| Conservative | 40% | 40% | 15% | 5% |
+| Moderate | 20% | 30% | 45% | 5% |
+| Aggressive | 10% | 15% | 70% | 5% |
+
+Adjustments (examples):
+
+* Horizon &lt;3y → shift toward cash/bonds (cap equities)  
+* Goal = emergency → force high cash band  
+* Low experience → slightly more conservative than selected risk  
+
+#### Suggested files
+
+| File | Role |
+|------|------|
+| `js/pages/investment-quiz.js` (or `invest.js`) | Wizard + results |
+| `js/app.js` | Register route + nav item |
+| `index.html` | Script tag |
+| `css/styles.css` | Quiz cards / allocation bar (reuse existing where possible) |
+| Optional: `localStorage` key `wp_invest_quiz_{userId}` | Persist last result |
+
+#### Engineering checklist
+
+- [ ] Route `#/invest` (or agreed slug) + sidebar under Tools  
+- [ ] Prefill age/risk/currency from profile  
+- [ ] Persist answers + recommended band locally  
+- [ ] Doughnut or stacked bar for sample portfolio (Chart.js already in app)  
+- [ ] Strong disclaimer: informational only, not investment advice  
+- [ ] Link into getting-started path as optional step 7? (defer — keep path simple)  
+- [ ] Unit tests for allocation pure function (Jest)  
+- [ ] Smoke e2e: page loads + complete happy path  
+
+#### Compliance note
+
+Frame as **education / illustration**, same family as insurance needs quiz. Mirror SEC/CBN disclaimer language already used on reports.
+
+#### Estimate
+
+~1–2 focused sessions for MVP wizard + results + nav; polish (print/share, BS deep-link with suggested classes) later.
 
 ---
 
