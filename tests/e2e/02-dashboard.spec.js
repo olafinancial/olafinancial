@@ -52,15 +52,24 @@ test.describe('Dashboard', () => {
   });
 
   test('currency selector changes displayed currency', async ({ page }) => {
+    // Empty test accounts often have net worth $0 / ₦0. Selecting the same
+    // currency (or USD when already USD) leaves the label unchanged — assert
+    // the control works and a *different* currency updates the display symbol.
     const selector = page.locator('#dash-page-currency').first();
-    if (await selector.isVisible()) {
-      const netWorthCard = page.locator('#dash-kpis .card:has-text("Net Worth")').first();
-      const originalText = await netWorthCard.locator('.card-value').first().textContent();
-      
-      await selector.selectOption('USD');
-      await page.waitForTimeout(500);
-      const updatedText = await netWorthCard.locator('.card-value').first().textContent();
-      expect(originalText).not.toBe(updatedText);
-    }
+    await expect(selector).toBeVisible();
+
+    const before = await selector.inputValue();
+    // Pick a currency that is not current so the symbol must change
+    const target = before === 'EUR' ? 'GBP' : 'EUR';
+    await selector.selectOption(target);
+    await expect(selector).toHaveValue(target);
+
+    const netWorthCard = page.locator('#dash-kpis .card:has-text("Net Worth")').first();
+    await expect(netWorthCard.locator('.card-value').first()).toBeVisible();
+    // Wait for re-render after change handler
+    await expect.poll(async () => {
+      return (await netWorthCard.locator('.card-value').first().textContent()) || '';
+    }, { timeout: 5_000 }).toMatch(target === 'EUR' ? /€|EUR/ : /£|GBP/);
   });
 });
+
