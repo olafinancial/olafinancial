@@ -75,6 +75,16 @@ const WPAuth = (() => {
       console.warn('Supabase signOut error/timeout — continuing local logout:', e?.message || e);
     }
 
+    // Drop asset caches + SW so the next visit loads the latest deploy
+    // (no hard-refresh required). Keeps localStorage user prefs/stocks.
+    try {
+      if (typeof WPCacheControl !== 'undefined') {
+        await WPCacheControl.purgeAppCaches({ unregisterSW: true });
+      }
+    } catch (e) {
+      console.warn('Cache purge on sign-out failed', e);
+    }
+
     // App shell only registers page routes; auth routes (incl. /logged-out) are
     // registered in _showAuth(). After a cold boot while logged-in, /logged-out
     // was never registered and the router fell back to /dashboard.

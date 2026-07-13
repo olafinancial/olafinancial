@@ -105,16 +105,47 @@ const server = createServer(async (req, res) => {
   let filePath = url.pathname === "/" ? "/index.html" : url.pathname
   filePath = join(PROJECT_ROOT, filePath)
 
+  /** Cache headers so browsers pick up deploys without a hard refresh. */
+  function cacheHeaders(ext, pathname) {
+    const type = MIME[ext] ?? "application/octet-stream"
+    // HTML + service worker: always revalidate
+    if (
+      ext === ".html" ||
+      pathname === "/" ||
+      pathname.endsWith("/sw.js") ||
+      pathname.endsWith("sw.js") ||
+      pathname.endsWith("cache-control.js")
+    ) {
+      return {
+        "Content-Type": type,
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+      }
+    }
+    // Versioned JS/CSS (?v=) can be short-cached; still revalidate
+    if (ext === ".js" || ext === ".css") {
+      return {
+        "Content-Type": type,
+        "Cache-Control": "no-cache, must-revalidate",
+      }
+    }
+    return {
+      "Content-Type": type,
+      "Cache-Control": "public, max-age=300, must-revalidate",
+    }
+  }
+
   try {
     const data = readFileSync(filePath)
     const ext  = extname(filePath)
-    res.writeHead(200, { "Content-Type": MIME[ext] ?? "application/octet-stream" })
+    res.writeHead(200, cacheHeaders(ext, url.pathname))
     res.end(data)
   } catch {
     // SPA fallback — serve index.html for all non-file paths
     try {
       const html = readFileSync(join(PROJECT_ROOT, "index.html"))
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
+      res.writeHead(200, cacheHeaders(".html", "/index.html"))
       res.end(html)
     } catch {
       res.writeHead(404); res.end("Not found")

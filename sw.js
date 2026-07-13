@@ -1,14 +1,19 @@
 // ============================================================
-// OlaFinancial — Service Worker (Offline Cache)
+// Pul Planning — Service Worker
+// Network-first so deploys are visible without hard refresh.
+// Clears old caches on activate / CLEAR_CACHES message.
 // ============================================================
 
-const CACHE_NAME   = 'olafinancial-v16';
-const STATIC_ASSETS = [
+// Bump this when shipping SW logic changes (pairs with js/cache-control.js BUILD_ID)
+const CACHE_NAME = 'pul-planning-v17';
+
+const PRECACHE = [
   '/',
   '/index.html',
   '/css/styles.css',
   '/pul_logo.jpeg',
   '/js/config.js',
+  '/js/cache-control.js',
   '/js/utils.js',
   '/js/supabase-client.js',
   '/js/auth.js',
@@ -28,60 +33,115 @@ const STATIC_ASSETS = [
   '/js/pages/estate-planner.js',
   '/js/pages/insurance.js',
   '/js/pages/reports.js',
+  '/js/pages/settings.js',
+  '/js/pages/calculators.js',
   '/js/lib/supabase.min.js',
   '/js/lib/chart.umd.min.js',
+  '/manifest.json',
 ];
 
-// Install: cache all static assets
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(STATIC_ASSETS))
+      .then(cache => cache.addAll(PRECACHE).catch(err => {
+        console.warn('[sw] precache partial failure', err);
+      }))
       .then(() => self.skipWaiting())
   );
 });
 
-// Activate: remove old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
-// Fetch: cache-first for static assets, network-first for API calls
-self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
+self.addEventListener('message', event => {
+  const type = event.data && event.data.type;
+  if (type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  if (type === 'CLEAR_CACHES') {
+    event.waitUntil(
+      caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+    );
+  }
+});
 
-  // Don't cache Supabase or external CDN requests — always go to network
-  if (
+function isExternal(url) {
+  return (
     url.hostname.includes('supabase.co') ||
     url.hostname.includes('googleapis.com') ||
+    url.hostname.includes('gstatic.com') ||
     url.hostname.includes('jsdelivr.net') ||
-    url.hostname.includes('gstatic.com')
-  ) {
-    event.respondWith(fetch(event.request).catch(() => new Response('', { status: 503 })));
+    url.hostname.includes('yahoo.com') ||
+    url.hostname.includes('finnhub.io') ||
+    url.hostname.includes('allorigins.win') ||
+    url.hostname.includes('corsproxy.io')
+  );
+}
+
+/** Network-first: try network, fall back to cache (offline). Update cache on success. */
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request);
+    if (response && response.ok && request.method === 'GET') {
+      const clone = response.clone();
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, clone).catch(() => {});
+    }
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    if (request.mode === 'navigate') {
+      const shell = await caches.match('/index.html');
+      if (shell) return shell;
+    }
+    return new Response('', { status: 503, statusText: 'Offline' });
+  }
+}
+
+self.addEventListener('fetch', event => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+
+  const url = new URL(req.url);
+
+  if (isExternal(url)) {
+    event.respondWith(fetch(req).catch(() => new Response('', { status: 503 })));
     return;
   }
 
-  // Cache-first for same-origin static assets
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(response => {
-        if (response.ok && event.request.method === 'GET') {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
-        }
-        return response;
-      }).catch(() => {
-        // Offline fallback for navigation requests
-        if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
-        }
-        return new Response('', { status: 503 });
-      });
-    })
-  );
+  // Never long-cache the service worker script itself via SW logic
+  if (url.pathname.endsWith('/sw.js') || url.pathname.endsWith('sw.js')) {
+    event.respondWith(fetch(req).catch(() => caches.match(req)));
+    return;
+  }
+
+  // Network-first for navigations + HTML so deploys apply immediately
+  const accept = req.headers.get('accept') || '';
+  if (req.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname === '/') {
+    event.respondWith(networkFirst(req));
+    return;
+  }
+
+  // Network-first for app JS/CSS/JSON (version query strings still help)
+  if (
+    url.pathname.startsWith('/js/') ||
+    url.pathname.startsWith('/css/') ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css') ||
+    url.pathname.endsWith('.json')
+  ) {
+    event.respondWith(networkFirst(req));
+    return;
+  }
+
+  // Other same-origin (images, etc.): network-first with cache fallback
+  event.respondWith(networkFirst(req));
 });

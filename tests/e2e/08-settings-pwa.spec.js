@@ -75,19 +75,20 @@ test.describe('PWA & Service Worker', () => {
     // "WebKit encountered an internal error" on setOffline + reload in CI.
     test.skip(browserName === 'webkit', 'WebKit offline reload is unreliable in Playwright CI');
 
-    // Load app online first (primes cache)
+    // Load app online first (primes SW network-first cache after successful fetch)
     await page.goto(`${BASE}/`);
     await page.waitForLoadState('networkidle');
-    // Wait until service worker is active so cache is primed
     await page.waitForFunction(async () => {
       if (!('serviceWorker' in navigator)) return true;
       const reg = await navigator.serviceWorker.getRegistration();
       return !!(reg && (reg.active || reg.waiting || reg.installing));
     }, null, { timeout: 10_000 }).catch(() => {});
-    await page.waitForTimeout(500);
+    // Second navigation while online fills the SW cache (network-first stores on success)
+    await page.goto(`${BASE}/`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(800);
 
     await context.setOffline(true);
-    // Prefer goto over reload — more stable when offline
     await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 15_000 });
 
     const title = await page.title();

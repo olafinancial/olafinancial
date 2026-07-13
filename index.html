@@ -101,22 +101,15 @@
        ===================================================== -->
   <script src="js/app.js?v=20260713_fix_logout"></script>
 
+  <!-- Cache control: purge on leave/sign-out; auto-update SW without hard refresh -->
+  <script src="js/cache-control.js?v=20260713_auto"></script>
+
   <!-- Boot -->
   <script>
-    document.addEventListener('DOMContentLoaded', () => WPApp.boot());
-  </script>
-
-  <!-- PWA Service Worker -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').then(reg => {
-          console.log('ServiceWorker registered with scope: ', reg.scope);
-        }).catch(err => {
-          console.error('ServiceWorker registration failed: ', err);
-        });
-      });
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof WPCacheControl !== 'undefined') WPCacheControl.init();
+      WPApp.boot();
+    });
   </script>
 
 </body>
