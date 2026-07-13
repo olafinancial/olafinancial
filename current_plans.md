@@ -408,14 +408,15 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#37](https://github.com/olafinancial/olafinancial/issues/37) | Brand UI: pul_logo + Pul Planning lockup | Medium | ✅ Closed |
 | [#38](https://github.com/olafinancial/olafinancial/issues/38) | Ops: production email (Supabase Auth + Resend digests) | High | 🔲 Open — checklist in [`EMAIL_SETUP.md`](./EMAIL_SETUP.md) |
 | [#39](https://github.com/olafinancial/olafinancial/issues/39) | Brand: X / Instagram / Facebook (@pulplanning) | Medium | ✅ Closed |
-| — | Auto cache purge on leave / sign-out (no hard refresh) | High | ✅ Completed |
+| [#40](https://github.com/olafinancial/olafinancial/issues/40) | PWA: auto cache purge / network-first (no hard refresh) | High | ✅ Closed |
 
 ---
 
-### Session 9d — 2026-07-13 — Auto cache refresh (no hard refresh)
+### Session 9d — 2026-07-13 — Auto cache refresh (no hard refresh) (#40)
 
 #### R38. Customers always get new deploys without hard refresh
-* **Status**: ✅ Completed
+* **Status**: ✅ Completed (closes #40)
+* **Issue**: [#40](https://github.com/olafinancial/olafinancial/issues/40)
 * **Problem**: Service worker was **cache-first**, so browsers kept stale JS/CSS until a manual hard refresh.
 * **Solution**:
   * SW **network-first** for HTML/JS/CSS; falls back to cache only when offline
@@ -424,6 +425,7 @@ This file tracks the active plans, completed work, and remaining roadmap for the
   * Server `Cache-Control: no-cache` for `index.html` and `sw.js`
   * Build id in `cache-control.js` / `sw.js` — bump when changing cache policy
 * **Preserved**: user data in `localStorage` (e.g. stock holdings, page currency prefs)
+* **Ship commit**: `693ef81` (implementation); docs/issue linkage in this update
 
 ### Session 9c — 2026-07-13 — Social profiles (#39)
 
