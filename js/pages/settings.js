@@ -73,6 +73,21 @@ const WPSettings = (() => {
           <button class="btn btn-primary" style="width:100%;margin-top:1.5rem" id="save-settings-btn">Save Changes</button>
         </div>
 
+        <!-- Getting started / onboarding replay -->
+        <div class="card" style="max-width:600px;padding:2rem;margin-bottom:1.5rem;">
+          <h3 style="margin-bottom:0.5rem;font-weight:700;color:#ffffff">🗺️ Getting started</h3>
+          <p style="color:var(--clr-text-2);font-size:0.85rem;margin:0 0 1.25rem;line-height:1.55">
+            New to Pul Planning? Use the same step-by-step path shown after signup:
+            <strong>Income → Expenses → Balance Sheet → Dashboard → Goals</strong>.
+            You can re-run the full setup wizard anytime to refresh your profile.
+          </p>
+          <div style="display:flex;flex-direction:column;gap:0.75rem">
+            <button type="button" class="btn btn-secondary" id="set-show-guide-btn" style="width:100%">Show path on Dashboard</button>
+            <button type="button" class="btn btn-primary" id="set-replay-onboarding-btn" style="width:100%">Replay setup wizard</button>
+          </div>
+          <div class="input-hint" style="margin-top:0.75rem">Replay opens the onboarding steps again (pre-filled). Exit anytime without saving if you only wanted a tour.</div>
+        </div>
+
         <!-- Email Digest Settings -->
         <div class="card" style="max-width:600px;padding:2rem;">
           <h3 style="margin-bottom:0.5rem;font-weight:700;color:#ffffff">📬 Email Digest</h3>
@@ -120,6 +135,22 @@ const WPSettings = (() => {
 
       </div>
     `;
+
+    // ── Getting started / replay onboarding ──────────────────
+    document.getElementById('set-show-guide-btn')?.addEventListener('click', () => {
+      const uid = WPApp.state.user?.id;
+      if (!uid) return;
+      try {
+        localStorage.setItem('wp_show_getting_started_' + uid, '1');
+        localStorage.removeItem('wp_hide_getting_started_' + uid);
+      } catch (_) {}
+      WPToast.success('Getting-started path will show on your Dashboard.');
+      WPRouter.navigate('/dashboard');
+    });
+    document.getElementById('set-replay-onboarding-btn')?.addEventListener('click', () => {
+      WPToast.info('Opening setup wizard — you can exit without saving.');
+      WPRouter.navigate('/onboarding');
+    });
 
     // ── Profile save ─────────────────────────────────────────
     document.getElementById('save-settings-btn').addEventListener('click', async () => {

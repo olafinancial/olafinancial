@@ -768,6 +768,67 @@ tbody td {
 .onboarding-step-title { font-size: var(--text-xl); font-weight: 700; margin-bottom: var(--sp-2); }
 .onboarding-step-desc  { font-size: var(--text-sm); color: var(--clr-text-2); margin-bottom: var(--sp-8); }
 
+/* ── Getting-started path (onboarding + dashboard) ───────── */
+.guide-path {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.guide-path-step {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 0.75rem 1rem;
+  position: relative;
+  padding-bottom: 1.25rem;
+}
+.guide-path-num {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--clr-accent-dim);
+  color: var(--clr-accent);
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 1;
+}
+.guide-path-connector {
+  position: absolute;
+  left: 0.95rem;
+  top: 2rem;
+  bottom: 0;
+  width: 2px;
+  background: var(--clr-border-2);
+}
+.guide-path-title {
+  font-weight: 700;
+  color: var(--clr-text);
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+.guide-path-blurb {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: var(--clr-text-2);
+  line-height: 1.5;
+}
+.guide-path-cta { margin-top: 0.15rem; }
+.guide-path-hint { display: block; margin-top: 0.15rem; }
+.guide-path--compact .guide-path-step { padding-bottom: 0.85rem; }
+.guide-path--compact .guide-path-blurb { font-size: 0.8rem; }
+
+#dash-getting-started {
+  border: 1px solid var(--clr-accent);
+  background: linear-gradient(145deg, var(--clr-surface-2), var(--clr-surface));
+  box-shadow: 0 0 0 1px var(--clr-accent-dim);
+}
+
 /* Goal selection chips */
 .goal-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 .goal-chip {

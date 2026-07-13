@@ -33,6 +33,8 @@ const WPDashboard = (() => {
         </div>
       </div>
       <div class="page-body">
+        <!-- Getting started path for naive users (shown until dismissed) -->
+        <div class="card dashboard-full" id="dash-getting-started" style="display:none;margin-bottom:1.25rem"></div>
         <div class="kpi-grid" id="dash-kpis">${_skeletons(5)}</div>
         <!-- Dashboard Insights -->
         <div id="dash-insights" style="display:none"></div>
@@ -134,7 +136,65 @@ const WPDashboard = (() => {
       });
     }
 
+    _renderGettingStarted();
     await _load();
+  }
+
+  function _renderGettingStarted() {
+    const el = document.getElementById('dash-getting-started');
+    if (!el || typeof APP_CONFIG === 'undefined') return;
+    const uid = WPApp.state.user?.id;
+    if (!uid) return;
+
+    const showKey = 'wp_show_getting_started_' + uid;
+    const hideKey = 'wp_hide_getting_started_' + uid;
+    let forceShow = false;
+    let hidden = false;
+    try {
+      forceShow = localStorage.getItem(showKey) === '1';
+      hidden = localStorage.getItem(hideKey) === '1';
+    } catch (_) { /* ignore */ }
+
+    // Default: show for everyone until they hide it; force show after onboarding/settings
+    if (hidden && !forceShow) {
+      el.style.display = 'none';
+      return;
+    }
+
+    const pathHtml = APP_CONFIG.gettingStartedPathHTML({ interactive: true });
+    el.style.display = '';
+    el.innerHTML = `
+      <div class="section-header" style="align-items:flex-start;flex-wrap:wrap;gap:0.75rem">
+        <div>
+          <div class="section-title" style="margin:0">🗺️ Your path — start here</div>
+          <p class="text-muted text-sm" style="margin:0.35rem 0 0;max-width:36rem">
+            Follow these steps in order. You can come back anytime — re-open this guide from <strong>Settings</strong>, or re-run the full setup wizard.
+          </p>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <button type="button" class="btn btn-secondary btn-sm" id="dash-gs-replay">Replay setup wizard</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="dash-gs-dismiss">Hide for now</button>
+        </div>
+      </div>
+      ${pathHtml}`;
+
+    el.querySelectorAll('[data-guide-route]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const route = btn.getAttribute('data-guide-route');
+        if (route) WPRouter.navigate(route);
+      });
+    });
+    document.getElementById('dash-gs-dismiss')?.addEventListener('click', () => {
+      try {
+        localStorage.setItem(hideKey, '1');
+        localStorage.removeItem(showKey);
+      } catch (_) {}
+      el.style.display = 'none';
+      WPToast.info('Guide hidden. Find it again under Settings → Getting started.');
+    });
+    document.getElementById('dash-gs-replay')?.addEventListener('click', () => {
+      WPRouter.navigate('/onboarding');
+    });
   }
 
   function _skeletons(n) {

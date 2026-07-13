@@ -20,6 +20,78 @@ const APP_CONFIG = {
   currencySymbol:'₦',
   locale:        'en-NG',
 
+  /**
+   * Naive-user “common path” — start here, then go there.
+   * Used in onboarding finale + Dashboard getting-started card.
+   */
+  gettingStartedPath: [
+    {
+      n: 1,
+      route: '/income',
+      title: 'Add your income',
+      blurb: 'Log salary and other income so the app can estimate tax and cash flow.',
+      cta: 'Go to Income',
+    },
+    {
+      n: 2,
+      route: '/expenses',
+      title: 'Log a few expenses',
+      blurb: 'Capture rent, food, and bills. This powers budgets and savings rate.',
+      cta: 'Go to Expenses',
+    },
+    {
+      n: 3,
+      route: '/balance-sheet',
+      title: 'List assets & debts',
+      blurb: 'Bank balances, investments, loans — your net worth starts here.',
+      cta: 'Go to Balance Sheet',
+    },
+    {
+      n: 4,
+      route: '/dashboard',
+      title: 'Review your dashboard',
+      blurb: 'See net worth, cash flow, insights, and what to fix first.',
+      cta: 'Open Dashboard',
+    },
+    {
+      n: 5,
+      route: '/goals',
+      title: 'Set one goal',
+      blurb: 'Emergency fund, debt freedom, or a home — pick a target and track it.',
+      cta: 'Go to Goals',
+    },
+    {
+      n: 6,
+      route: '/debt',
+      title: 'Optional: plan debt payoff',
+      blurb: 'If you have loans, use Avalanche or Snowball to map a payoff path.',
+      cta: 'Debt Planner',
+    },
+  ],
+
+  /** HTML for the numbered getting-started path (onboarding + dashboard). */
+  gettingStartedPathHTML(opts = {}) {
+    const { interactive = false, compact = false } = opts;
+    const steps = this.gettingStartedPath || [];
+    return `
+      <ol class="guide-path ${compact ? 'guide-path--compact' : ''}">
+        ${steps.map((s, i) => `
+          <li class="guide-path-step">
+            <div class="guide-path-num" aria-hidden="true">${s.n}</div>
+            <div class="guide-path-body">
+              <div class="guide-path-title">${i === 0 ? 'Start here: ' : ''}${s.title}</div>
+              <p class="guide-path-blurb">${s.blurb}</p>
+              ${interactive
+                ? `<button type="button" class="btn btn-secondary btn-sm guide-path-cta" data-guide-route="${s.route}">${s.cta} →</button>`
+                : `<span class="guide-path-hint text-muted text-xs">Then open <strong>${s.route.replace('/', '')}</strong> in the menu</span>`
+              }
+            </div>
+            ${i < steps.length - 1 ? '<div class="guide-path-connector" aria-hidden="true"></div>' : ''}
+          </li>
+        `).join('')}
+      </ol>`;
+  },
+
   // Public social profiles (open in new tab)
   social: {
     x: {

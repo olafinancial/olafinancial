@@ -5,12 +5,28 @@
 const WPOnboarding = (() => {
 
   let _step = 1;
-  const TOTAL = 5;
+  const TOTAL = 6; // profile → employment → goals → estate → your path → summary
   let _data = {};
+  let _isReplay = false;
 
   async function init(container) {
     _step = 1;
-    _data = {};
+    _isReplay = !!(WPApp.state.profile && WPApp.state.profile.onboarding_done);
+    // Prefill from existing profile when replaying or resuming
+    const p = WPApp.state.profile || {};
+    _data = {
+      full_name: p.full_name || '',
+      age: p.age || null,
+      state: p.state || '',
+      currency: p.currency || 'NGN',
+      employment_type: p.employment_type || '',
+      dependents: p.dependents ?? 0,
+      retirement_age: p.retirement_age || 60,
+      risk_tolerance: p.risk_tolerance || 'moderate',
+      goals: [],
+      will: 'no',
+      guardians: 'no',
+    };
     container.innerHTML = `
       <div class="onboarding-shell">
         <div class="onboarding-card" id="onboarding-card">
@@ -18,9 +34,17 @@ const WPOnboarding = (() => {
             <img class="brand-logo" src="pul_logo.jpeg" alt="Pul" width="52" height="44" />
             <div>
               <div class="sidebar-logo-text">Pul Planning</div>
-              <div class="sidebar-logo-sub">Setup</div>
+              <div class="sidebar-logo-sub">${_isReplay ? 'Refresh setup' : 'Setup'}</div>
             </div>
           </div>
+          ${_isReplay ? `
+            <div class="alert alert-info" style="margin-bottom:1.25rem">
+              <span>You can update your profile anytime. When you finish, we will refresh your setup checklist.</span>
+            </div>
+            <div style="text-align:right;margin-bottom:0.75rem">
+              <button type="button" class="btn btn-ghost btn-sm" id="ob-skip-exit">Exit without saving</button>
+            </div>
+          ` : ''}
           <div class="progress-steps" id="ob-progress"></div>
           <div id="ob-step-content"></div>
           <div class="modal-footer" id="ob-footer" style="border:none;padding-top:2rem;margin-top:0">
@@ -33,6 +57,9 @@ const WPOnboarding = (() => {
     _renderStep();
     document.getElementById('ob-next').addEventListener('click', _nextStep);
     document.getElementById('ob-back').addEventListener('click', _prevStep);
+    document.getElementById('ob-skip-exit')?.addEventListener('click', () => {
+      WPRouter.navigate('/dashboard', true);
+    });
   }
 
   function _renderProgress() {
@@ -50,9 +77,15 @@ const WPOnboarding = (() => {
     const next = document.getElementById('ob-next');
     if (!content) return;
     back.style.display = _step > 1 ? '' : 'none';
-    next.textContent = _step === TOTAL ? 'Get Started' : 'Continue';
+    if (_step === TOTAL) {
+      next.textContent = _isReplay ? 'Save & open dashboard' : 'Get Started';
+    } else if (_step === 5) {
+      next.textContent = 'I understand — continue';
+    } else {
+      next.textContent = 'Continue';
+    }
     content.innerHTML = '';
-    [_step1, _step2, _step3, _step4, _step5][_step - 1](content);
+    [_step1, _step2, _step3, _step4, _step5Path, _step6Summary][_step - 1](content);
   }
 
   function _step1(el) {
@@ -197,10 +230,34 @@ const WPOnboarding = (() => {
       </div>`;
   }
 
-  function _step5(el) {
+  /** Common path for first-time (and returning) users */
+  function _step5Path(el) {
+    const pathHtml = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.gettingStartedPathHTML)
+      ? APP_CONFIG.gettingStartedPathHTML({ interactive: false })
+      : '';
     el.innerHTML = `
-      <h2 class="onboarding-step-title">You're all set! 🎉</h2>
-      <p class="onboarding-step-desc">Here's a summary of your profile. Click 'Get Started' to open your dashboard.</p>
+      <h2 class="onboarding-step-title">Your simple path 🗺️</h2>
+      <p class="onboarding-step-desc">
+        New here? Follow this order after setup. You do not need to fill everything today —
+        start at step 1, then move down the list when you are ready.
+      </p>
+      <div class="card" style="padding:1.25rem 1.25rem 0.5rem;margin-bottom:1rem;background:var(--clr-surface-2)">
+        <div class="section-title" style="margin:0 0 1rem;font-size:1rem">Start here → then go there</div>
+        ${pathHtml}
+      </div>
+      <div class="alert alert-info" style="margin-bottom:0">
+        <span>Tip: After you finish, this same path appears on your <strong>Dashboard</strong>. You can also re-run this wizard anytime from <strong>Settings</strong>.</span>
+      </div>`;
+  }
+
+  function _step6Summary(el) {
+    el.innerHTML = `
+      <h2 class="onboarding-step-title">${_isReplay ? 'Profile refreshed' : "You're all set!"} 🎉</h2>
+      <p class="onboarding-step-desc">
+        ${_isReplay
+          ? 'Confirm your summary, then return to the dashboard. The getting-started checklist will show again so you can pick up where you left off.'
+          : "Here's a summary of your profile. Click <strong>Get Started</strong> and follow the path: Income → Expenses → Balance Sheet → Dashboard."}
+      </p>
       <div class="card" style="margin-bottom:1rem">
         <div class="card-title">Profile Summary</div>
         <div style="display:flex;flex-direction:column;gap:0.75rem;font-size:0.9rem">
@@ -211,6 +268,14 @@ const WPOnboarding = (() => {
           <div class="flex justify-between"><span class="text-muted">Risk Profile</span><strong>${_data.risk_tolerance||'moderate'}</strong></div>
           <div class="flex justify-between"><span class="text-muted">Will & Legacy</span><strong>${_data.will==='yes_current'?'Will (Current)':_data.will==='yes_outdated'?'Will (Outdated)':'No Will'}</strong></div>
         </div>
+      </div>
+      <div class="card" style="margin-bottom:1rem;padding:1rem 1.25rem">
+        <div class="card-title" style="margin-bottom:0.5rem">Remember the path</div>
+        <ol style="margin:0;padding-left:1.25rem;color:var(--clr-text-2);font-size:0.9rem;line-height:1.7">
+          <li><strong>Income</strong> → <strong>Expenses</strong> → <strong>Balance Sheet</strong></li>
+          <li>Then check <strong>Dashboard</strong> insights</li>
+          <li>Set a <strong>Goal</strong> (and Debt Planner if you have loans)</li>
+        </ol>
       </div>
       <div class="disclaimer">${APP_CONFIG.disclaimer}</div>`;
   }
@@ -279,13 +344,22 @@ const WPOnboarding = (() => {
       };
       localStorage.setItem('wp_estate_planning_' + uid, JSON.stringify(estateState));
       
-      WPToast.success('Profile saved! Welcome to Pul Planning.');
+      // Show getting-started path on dashboard after (re)onboarding
+      try {
+        localStorage.setItem('wp_show_getting_started_' + uid, '1');
+        localStorage.setItem('wp_onboarding_last_completed_' + uid, new Date().toISOString());
+      } catch (_) { /* ignore */ }
+
+      WPToast.success(_isReplay
+        ? 'Profile updated. Follow the path on your dashboard when you are ready.'
+        : 'Profile saved! Welcome to Pul Planning — start with Income.');
       // Reload the full app shell
       document.getElementById('root').innerHTML = '';
       await WPApp.boot();
     } catch (err) {
       WPToast.error('Failed to save profile: ' + err.message);
-      btn.textContent = 'Get Started'; btn.disabled = false;
+      btn.textContent = _isReplay ? 'Save & open dashboard' : 'Get Started';
+      btn.disabled = false;
     }
   }
 

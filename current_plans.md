@@ -409,8 +409,20 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#38](https://github.com/olafinancial/olafinancial/issues/38) | Ops: production email (Supabase Auth + Resend digests) | High | 🔲 Open — checklist in [`EMAIL_SETUP.md`](./EMAIL_SETUP.md) |
 | [#39](https://github.com/olafinancial/olafinancial/issues/39) | Brand: X / Instagram / Facebook (@pulplanning) | Medium | ✅ Closed |
 | [#40](https://github.com/olafinancial/olafinancial/issues/40) | PWA: auto cache purge / network-first (no hard refresh) | High | ✅ Closed |
+| — | Getting-started path + re-run onboarding | Medium | ✅ Completed |
 
 ---
+
+### Session 9e — 2026-07-13 — Naive-user path & re-onboarding
+
+#### R39. Common path guide + periodic onboarding replay
+* **Status**: ✅ Completed
+* **Onboarding** (now 6 steps):
+  1. Profile → 2. Employment → 3. Goals → 4. Estate → **5. Your simple path** (Income → Expenses → BS → Dashboard → Goals → Debt) → 6. Summary
+  * Prefills from existing profile when replaying; **Exit without saving** on replay
+* **Dashboard**: “Your path — start here” card with one-tap CTAs; hide/show; link to replay wizard
+* **Settings → Getting started**: Show path on Dashboard · Replay setup wizard
+* **Config**: `APP_CONFIG.gettingStartedPath` + `gettingStartedPathHTML()` shared by onboarding & dashboard
 
 ### Session 9d — 2026-07-13 — Auto cache refresh (no hard refresh) (#40)
 
