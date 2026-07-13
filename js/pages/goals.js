@@ -314,8 +314,8 @@ const WPGoals = (() => {
     const amtStr = sym + (savedAmt / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     
     const text = pct >= 100 
-      ? `🎉 Goal Achieved! I just completed my goal "${name}" on Ola Financial! ${amtStr} fully saved! 🚀 #OlaFinancial #FinancialFreedom`
-      : `📈 Stacking gains! I am now ${pct.toFixed(1)}% of the way to my goal "${name}" on Ola Financial! ${sym} ${amtStr} saved! 💪 #OlaFinancial`;
+      ? `🎉 Goal Achieved! I just completed my goal "${name}" on Pul Planning! ${amtStr} fully saved! 🚀 #PulPlanning #FinancialFreedom`
+      : `📈 Stacking gains! I am now ${pct.toFixed(1)}% of the way to my goal "${name}" on Pul Planning! ${sym} ${amtStr} saved! 💪 #PulPlanning`;
 
     const body = `
       <div style="padding:1rem;text-align:center">

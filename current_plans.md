@@ -407,8 +407,24 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | Branding → pul.llc (duplicates) | Medium | 🔲 Open — domain plan in [`DOMAIN_MIGRATION.md`](./DOMAIN_MIGRATION.md) (pul.llc primary; olafinancial.org bridge; keep org accounts) |
 | [#37](https://github.com/olafinancial/olafinancial/issues/37) | Brand UI: pul_logo + Pul Planning lockup | Medium | ✅ Closed |
 | [#38](https://github.com/olafinancial/olafinancial/issues/38) | Ops: production email (Supabase Auth + Resend digests) | High | 🔲 Open — checklist in [`EMAIL_SETUP.md`](./EMAIL_SETUP.md) |
+| [#39](https://github.com/olafinancial/olafinancial/issues/39) | Brand: X / Instagram / Facebook (@pulplanning) | Medium | ✅ Closed |
 
 ---
+
+### Session 9c — 2026-07-13 — Social profiles (#39)
+
+#### R37. Official social links in product UI
+* **Status**: ✅ Completed (closes #39)
+* **Accounts**:
+  * X: [@pulplanning](https://x.com/pulplanning)
+  * Instagram: [instagram.com/pulplanning](https://www.instagram.com/pulplanning/)
+  * Facebook: business share link (see `APP_CONFIG.social.facebook.url`)
+* **Implementation**:
+  * `APP_CONFIG.social` + `brandSocialHTML(variant)` in `js/config.js`
+  * Auth login/signup brand panel; logged-out screen; sidebar footer (compact icons)
+  * Meta `twitter:site` / `twitter:creator` → `@pulplanning`
+  * Goals social share copy → `#PulPlanning`
+* **CSS**: `.brand-social` / `.brand-social-link` (and compact icon-only variant)
 
 ### Session 9b — 2026-07-13 — Email ops checklist (#38)
 

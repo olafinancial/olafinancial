@@ -111,12 +111,16 @@ const WPApp = (() => {
         container = document.getElementById('auth-root');
       }
       if (container) {
+        const social = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.brandSocialHTML)
+          ? APP_CONFIG.brandSocialHTML()
+          : '';
         container.innerHTML = `
           <div class="auth-shell">
             <div class="auth-card" style="text-align: center; padding: 3rem 2rem;">
               <div style="font-size: 3.5rem; margin-bottom: 1.25rem;">👋</div>
               <h2 style="color: #ffffff; margin-bottom: 0.5rem; font-weight: 700;">You've been signed out</h2>
-              <p style="color: var(--clr-text-3); font-size: 0.9rem; margin-bottom: 2rem; line-height: 1.5;">Thank you for using Pul Planning. Your session has been safely closed.</p>
+              <p style="color: var(--clr-text-3); font-size: 0.9rem; margin-bottom: 1.25rem; line-height: 1.5;">Thank you for using Pul Planning. Your session has been safely closed.</p>
+              <div style="display:flex;justify-content:center;margin-bottom:1.5rem">${social}</div>
               <button class="btn btn-primary" style="width: 100%;" onclick="WPRouter.navigate('/login')">Sign In Again</button>
             </div>
           </div>
@@ -138,6 +142,7 @@ const WPApp = (() => {
           </div>
           <nav class="sidebar-nav" id="sidebar-nav"></nav>
           <div class="sidebar-footer">
+            ${typeof APP_CONFIG !== 'undefined' && APP_CONFIG.brandSocialHTML ? APP_CONFIG.brandSocialHTML('compact') : ''}
             <div class="sidebar-user" id="sidebar-user">
               <div class="sidebar-avatar" id="sidebar-avatar">?</div>
               <div class="sidebar-user-info">

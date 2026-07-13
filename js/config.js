@@ -20,6 +20,45 @@ const APP_CONFIG = {
   currencySymbol:'₦',
   locale:        'en-NG',
 
+  // Public social profiles (open in new tab)
+  social: {
+    x: {
+      label: 'X',
+      handle: '@pulplanning',
+      url: 'https://x.com/pulplanning',
+    },
+    instagram: {
+      label: 'Instagram',
+      handle: '@pulplanning',
+      url: 'https://www.instagram.com/pulplanning/',
+    },
+    facebook: {
+      label: 'Facebook',
+      handle: 'Pul Planning',
+      // Business Page share / profile link provided by marketing
+      url: 'https://business.facebook.com/share_by_link/2444230906045312/VciK5QKYKMncCtkG/?nonce=dnZhbU9xMnZxaXZVSWRmZg',
+    },
+  },
+
+  /**
+   * Shared social icon row for auth, sidebar, logged-out.
+   * @param {'default'|'compact'} variant
+   */
+  brandSocialHTML(variant = 'default') {
+    const s = this.social;
+    const cls = variant === 'compact' ? 'brand-social brand-social--compact' : 'brand-social';
+    // Simple monochrome SVG marks (currentColor)
+    const iconX = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.727-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg>`;
+    const iconIg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>`;
+    const iconFb = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 12.07C22 6.48 17.52 2 11.93 2S1.86 6.48 1.86 12.07c0 5.02 3.66 9.18 8.44 9.93v-7.02H7.9v-2.91h2.4V9.84c0-2.37 1.41-3.68 3.57-3.68 1.03 0 2.12.18 2.12.18v2.33h-1.2c-1.18 0-1.55.73-1.55 1.48v1.78h2.64l-.42 2.91h-2.22V22c4.78-.75 8.44-4.91 8.44-9.93z"/></svg>`;
+    return `
+      <div class="${cls}" aria-label="Follow Pul Planning">
+        <a class="brand-social-link" href="${s.x.url}" target="_blank" rel="noopener noreferrer" title="${s.x.handle} on X" aria-label="Pul Planning on X">${iconX}<span>${s.x.handle}</span></a>
+        <a class="brand-social-link" href="${s.instagram.url}" target="_blank" rel="noopener noreferrer" title="Instagram ${s.instagram.handle}" aria-label="Pul Planning on Instagram">${iconIg}<span>Instagram</span></a>
+        <a class="brand-social-link" href="${s.facebook.url}" target="_blank" rel="noopener noreferrer" title="Facebook" aria-label="Pul Planning on Facebook">${iconFb}<span>Facebook</span></a>
+      </div>`;
+  },
+
   exchangeRates: {
     NGN: 1,
     USD: 1500,

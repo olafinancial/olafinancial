@@ -117,6 +117,7 @@ const WPAuth = (() => {
             <span>100% private — your data stays yours</span>
           </div>
         </div>
+        ${typeof APP_CONFIG !== 'undefined' && APP_CONFIG.brandSocialHTML ? APP_CONFIG.brandSocialHTML() : ''}
       </div>
       <div class="auth-form-pane">
         <div class="auth-form-inner">
@@ -202,6 +203,7 @@ const WPAuth = (() => {
         </div>
         <div class="auth-brand-tagline">Build <span>wealth</span>. Plan your <span>future</span>.</div>
         <p class="auth-brand-sub">Nigeria's most comprehensive personal finance platform. Free forever.</p>
+        ${typeof APP_CONFIG !== 'undefined' && APP_CONFIG.brandSocialHTML ? APP_CONFIG.brandSocialHTML() : ''}
       </div>
       <div class="auth-form-pane">
         <div class="auth-form-inner">
