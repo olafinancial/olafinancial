@@ -321,6 +321,7 @@ const WPApp = (() => {
       '/retirement':    WPRetirement,
       '/estate-planner':WPEstatePlanner,
       '/insurance':     WPInsurance,
+      '/invest':        WPInvestmentQuiz,
       '/calculators':    WPCalculators,
       '/reports':       WPReports,
       '/settings':      WPSettings,
