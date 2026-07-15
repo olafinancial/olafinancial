@@ -392,23 +392,39 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 ## 🗓️ Open GitHub Issues
 
-### Open now (as of 2026-07-13)
+### Open now (as of 2026-07-14)
 
-| Issue | Title | Source | Priority | Status |
-|-------|-------|--------|----------|--------|
-| [#41](https://github.com/olafinancial/olafinancial/issues/41) | **Add Investment questionnaire** | @kaluaja | High | 🔲 Planned — see R40 plan below |
-| [#38](https://github.com/olafinancial/olafinancial/issues/38) | Ops: production email (Supabase Auth + Resend digests) | ops | High | 🔲 Open — [`EMAIL_SETUP.md`](./EMAIL_SETUP.md) |
-| [#36](https://github.com/olafinancial/olafinancial/issues/36) | Split Balance Sheet → Assets + Liabilities pages | @kaluaja | Medium | 🔲 Open (triage) |
-| [#34](https://github.com/olafinancial/olafinancial/issues/34) | Salary deductibles calculator + tax-year ledger | @kaluaja | Medium | 🔲 Open |
-| [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | roadmap | Low | 🔲 Planned |
-| [#29](https://github.com/olafinancial/olafinancial/issues/29) | Monthly macro data update — NBS/CBN | recurring | Recurring | 🔲 Open |
-| [#28](https://github.com/olafinancial/olafinancial/issues/28) | Confirm sponsor partners & activate banners | business | High | 🔲 Blocked (partners) |
-| [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | Branding → pul.llc (duplicates) | product | Medium | 🔲 Open — [`DOMAIN_MIGRATION.md`](./DOMAIN_MIGRATION.md) |
+#### Stakeholder batch (2026-07-14 · @kaluaja)
+
+| Issue | Title | Type | Priority | Status |
+|-------|-------|------|----------|--------|
+| [#48](https://github.com/olafinancial/olafinancial/issues/48) | **[Bug] Insurance currency stuck on $** | Bug | High | 🔲 Open — should be NGN / switchable |
+| [#43](https://github.com/olafinancial/olafinancial/issues/43) | Your Path starts with Goals | UX | Medium | 🔲 Open — reorder getting-started path |
+| [#42](https://github.com/olafinancial/olafinancial/issues/42) | Active Income Salary (gross → deductibles → net) | Feature | High | 🔲 Open — overlaps #34 |
+| [#34](https://github.com/olafinancial/olafinancial/issues/34) | Salary deductibles calculator + tax-year ledger | Feature | High | 🔲 Open — related to #42 |
+| [#45](https://github.com/olafinancial/olafinancial/issues/45) | Cash flow inflows: category totals only | UX | Medium | 🔲 Open |
+| [#44](https://github.com/olafinancial/olafinancial/issues/44) | Header “Income Statement” for Income + Expenses | IA | Medium | 🔲 Open |
+| [#47](https://github.com/olafinancial/olafinancial/issues/47) | Mark-to-market ticker under Assets (not Retirement) | Feature | Medium | 🔲 Open |
+| [#46](https://github.com/olafinancial/olafinancial/issues/46) | Budget planner / debt payoff graph unclear | UX | Medium | 🔲 Open |
+| [#49](https://github.com/olafinancial/olafinancial/issues/49) | Reports as strategic marketing tool | Feature | Medium | 🔲 Open |
+| [#50](https://github.com/olafinancial/olafinancial/issues/50) | Classify income-generating assets / interest-bearing liabilities | Feature | Medium | 🔲 Open |
+| [#36](https://github.com/olafinancial/olafinancial/issues/36) | Split Balance Sheet → Assets + Liabilities pages | IA | Medium | 🔲 Open (triage) |
+
+#### Ops / roadmap
+
+| Issue | Title | Priority | Status |
+|-------|-------|----------|--------|
+| [#38](https://github.com/olafinancial/olafinancial/issues/38) | Ops: production email (Supabase Auth + Resend digests) | High | 🔲 Open — [`EMAIL_SETUP.md`](./EMAIL_SETUP.md) |
+| [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | Low | 🔲 Planned |
+| [#29](https://github.com/olafinancial/olafinancial/issues/29) | Monthly macro data update — NBS/CBN | Recurring | 🔲 Open |
+| [#28](https://github.com/olafinancial/olafinancial/issues/28) | Confirm sponsor partners & activate banners | High | 🔲 Blocked (partners) |
+| [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | Branding → pul.llc (duplicates) | Medium | 🔲 Open — [`DOMAIN_MIGRATION.md`](./DOMAIN_MIGRATION.md) |
 
 ### Recently closed
 
 | Issue | Title | Status |
 |-------|-------|--------|
+| [#41](https://github.com/olafinancial/olafinancial/issues/41) | Investment questionnaire (NG) | ✅ Closed 2026-07-14 — `#/invest`, R40 |
 | [#27](https://github.com/olafinancial/olafinancial/issues/27) | Social sharing & watermarked PNG export | ✅ Closed |
 | [#30](https://github.com/olafinancial/olafinancial/issues/30) | Per-page currency selectors | ✅ Closed |
 | [#31](https://github.com/olafinancial/olafinancial/issues/31) | Scheduled / email digest reports (code) | ✅ Closed |
@@ -419,21 +435,25 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#40](https://github.com/olafinancial/olafinancial/issues/40) | PWA auto cache / no hard refresh | ✅ Closed |
 | — | Getting-started path + re-run onboarding | ✅ Completed |
 
-### Suggested build order (stakeholder + ops)
+### Suggested build order (updated 2026-07-14)
 
-1. **#38** Email ops (unblocks digests/auth mail in prod)  
-2. **#41** Investment questionnaire (new product ask)  
-3. **#34** Income salary deductibles  
-4. **#36** Balance Sheet split (larger IA change — design first)  
-5. **#32** Budget 50/30/20  
-6. **#28 / #29** External inputs (sponsors, macro data)  
-7. **#23/#25** Domain cutover (follow `DOMAIN_MIGRATION.md`)
+1. **#48** Insurance currency bug (quick win)  
+2. **#43** Your Path: Goals first  
+3. **#42 / #34** Salary gross → deductibles → net (+ tax ledger)  
+4. **#45 / #44** Cash flow simplification + Income Statement header  
+5. **#47** Stock MTM under Assets / equities  
+6. **#46** Budget / debt payoff graph clarity  
+7. **#49 / #50** Reports depth + asset/liability income classification  
+8. **#36** Split BS pages (larger IA)  
+9. **#38** Email ops  
+10. **#32 / #28 / #29 / #23–25** Roadmap & external  
 
 ---
 
 ### R40. Investment questionnaire + sample portfolio (#41) — IMPLEMENTED from share
 
-* **Status**: ✅ Completed (implements [#41](https://github.com/olafinancial/olafinancial/issues/41))  
+* **Status**: ✅ Completed · **GitHub #41 closed** 2026-07-14  
+
 * **Source of truth**: Merged Grok investment questionnaire pasted by product (Nigerian market) — age, goal date, objective, risk, liquidity, experience + scoring bands + Aggressive/Balanced/Conservative allocations + Lifetime Glide Path + review triggers  
 * **Route**: `#/invest` · Nav: **Tools → Invest Profile**  
 * **File**: `js/pages/investment-quiz.js`
