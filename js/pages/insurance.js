@@ -7,6 +7,23 @@ const WPInsurance = (() => {
   let _step = 1;
   const TOTAL_STEPS = 5;
 
+  const CURRENCY_OPTIONS = [
+    { code: 'NGN', symbol: '₦' },
+    { code: 'USD', symbol: '$' },
+    { code: 'EUR', symbol: '€' },
+    { code: 'GBP', symbol: '£' },
+    { code: 'AED', symbol: 'د.إ' },
+    { code: 'CNY', symbol: '¥' },
+    { code: 'XOF', symbol: 'CFA' },
+    { code: 'XAF', symbol: 'FCFA' },
+    { code: 'KES', symbol: 'KSh' },
+    { code: 'GHS', symbol: 'GH₵' },
+    { code: 'CAD', symbol: 'CA$' },
+    { code: 'ZAR', symbol: 'R' },
+    { code: 'SAR', symbol: 'ر.س' },
+    { code: 'AUD', symbol: 'A$' }
+  ];
+
   async function init(container) {
     const uid = WPApp.state.user.id;
     const local = localStorage.getItem('wp_insurance_data_' + uid);
@@ -67,13 +84,18 @@ const WPInsurance = (() => {
   }
 
   function _renderLayout(container) {
+    const pageCurrency = localStorage.getItem('wp_page_currency_insurance') || WPApp.state.profile?.currency || 'NGN';
+
     container.innerHTML = `
       <div class="page-header">
         <div>
           <h1 class="page-title">Insurance Needs Assessment</h1>
           <p class="page-subtitle">Complete our comprehensive assessment to identify coverage gaps and get product recommendations</p>
         </div>
-        <div style="display:flex;gap:0.75rem">
+        <div style="display:flex;gap:0.75rem;align-items:center">
+          <select id="ins-page-currency" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
+            ${CURRENCY_OPTIONS.map(c => `<option value="${c.code}" ${c.code === pageCurrency ? 'selected' : ''}>${c.code} (${c.symbol})</option>`).join('')}
+          </select>
           <button class="btn btn-secondary" id="ins-reset-btn">🔄 Reset Assessment</button>
           <button class="btn btn-primary" id="ins-view-policies-btn">📋 Manage Policies</button>
         </div>
@@ -121,6 +143,14 @@ const WPInsurance = (() => {
     document.getElementById('ins-reset-btn').addEventListener('click', _resetForm);
     document.getElementById('ins-view-policies-btn').addEventListener('click', _renderPoliciesView);
 
+    const currencySelect = document.getElementById('ins-page-currency');
+    if (currencySelect) {
+      currencySelect.addEventListener('change', (e) => {
+        localStorage.setItem('wp_page_currency_insurance', e.target.value);
+        _renderStep();
+      });
+    }
+
     _renderStep();
     _updateRecommendation();
 
@@ -158,8 +188,15 @@ const WPInsurance = (() => {
     container.innerHTML = '';
 
     const answers = _data.answers;
+    const pageCurrency = localStorage.getItem('wp_page_currency_insurance') || WPApp.state.profile?.currency || 'NGN';
+    const sym = CURRENCY_OPTIONS.find(c => c.code === pageCurrency)?.symbol || '₦';
 
     if (_step === 1) {
+      // Dynamic brackets calculation based on selected currency
+      const bracket50 = WPUtils.fmt(WPUtils.convert(50000 * 100, 'USD', pageCurrency), { currency: pageCurrency, compact: true });
+      const bracket100 = WPUtils.fmt(WPUtils.convert(100000 * 100, 'USD', pageCurrency), { currency: pageCurrency, compact: true });
+      const bracket200 = WPUtils.fmt(WPUtils.convert(200000 * 100, 'USD', pageCurrency), { currency: pageCurrency, compact: true });
+
       container.innerHTML = `
         <div class="form-row">
           <div class="form-group">
@@ -194,10 +231,10 @@ const WPInsurance = (() => {
           <div class="form-group">
             <label for="ob-ins-income">What is your approximate annual household income?</label>
             <select class="select" id="ob-ins-income">
-              <option value="under_50k" ${answers.income === 'under_50k' ? 'selected' : ''}>Under $50,000</option>
-              <option value="50k_100k" ${answers.income === '50k_100k' ? 'selected' : ''}>$50,000 – $99,999</option>
-              <option value="100k_200k" ${answers.income === '100k_200k' ? 'selected' : ''}>$100,000 – $199,999</option>
-              <option value="over_200k" ${answers.income === 'over_200k' ? 'selected' : ''}>$200,000+</option>
+              <option value="under_50k" ${answers.income === 'under_50k' ? 'selected' : ''}>Under ${bracket50}</option>
+              <option value="50k_100k" ${answers.income === '50k_100k' ? 'selected' : ''}>${bracket50} – ${bracket100}</option>
+              <option value="100k_200k" ${answers.income === '100k_200k' ? 'selected' : ''}>${bracket100} – ${bracket200}</option>
+              <option value="over_200k" ${answers.income === 'over_200k' ? 'selected' : ''}>${bracket200}+</option>
             </select>
           </div>
           <div class="form-group">
@@ -236,6 +273,10 @@ const WPInsurance = (() => {
         { key: 'leave_legacy', label: 'Estate planning / leave a legacy' },
         { key: 'tax_grow', label: 'Tax-advantaged growth or retirement income' }
       ];
+
+      const refCoverage = WPUtils.fmt(WPUtils.convert(500000 * 100, 'USD', pageCurrency), { currency: pageCurrency, compact: true });
+      const refBudget = `${sym}5,000 - ${sym}10,000`;
+
       container.innerHTML = `
         <div class="form-group">
           <label>What is your primary goal with this insurance? (Select all that apply)</label>
@@ -251,11 +292,11 @@ const WPInsurance = (() => {
         <div class="form-row">
           <div class="form-group">
             <label for="ob-ins-cov-needs">How much life insurance coverage do you think you need?</label>
-            <input class="input" type="text" id="ob-ins-cov-needs" placeholder="e.g. 10x my income, $500,000, cover mortgage" value="${answers.coverageNeeds || ''}">
+            <input class="input" type="text" id="ob-ins-cov-needs" placeholder="e.g. 10x my income, ${refCoverage}, cover mortgage" value="${answers.coverageNeeds || ''}">
           </div>
           <div class="form-group">
             <label for="ob-ins-budget">What is your approximate monthly budget for premiums?</label>
-            <input class="input" type="text" id="ob-ins-budget" placeholder="e.g. $50-$100 per month" value="${answers.premiumBudget || ''}">
+            <input class="input" type="text" id="ob-ins-budget" placeholder="e.g. ${refBudget} per month" value="${answers.premiumBudget || ''}">
           </div>
         </div>
       `;
@@ -332,6 +373,7 @@ const WPInsurance = (() => {
     }
 
     if (_step === 4) {
+      const refExisting = WPUtils.fmt(WPUtils.convert(100000 * 100, 'USD', pageCurrency), { currency: pageCurrency, compact: true });
       container.innerHTML = `
         <div class="form-row">
           <div class="form-group">
@@ -343,7 +385,7 @@ const WPInsurance = (() => {
           </div>
           <div class="form-group" id="current-life-details-grp" style="display:${answers.hasCurrentLife === 'yes' ? 'block' : 'none'}">
             <label for="ob-ins-current-details">Please share type and approximate amount</label>
-            <input class="input" type="text" id="ob-ins-current-details" placeholder="e.g. $100k term life through work" value="${answers.currentLifeDetails || ''}">
+            <input class="input" type="text" id="ob-ins-current-details" placeholder="e.g. ${refExisting} term life through work" value="${answers.currentLifeDetails || ''}">
           </div>
         </div>
 
@@ -367,20 +409,20 @@ const WPInsurance = (() => {
     }
 
     if (_step === 5) {
-      const optionals = [
-        { key: 'health', label: 'Health / Medical Insurance' },
-        { key: 'disability', label: 'Disability Income Protection' },
-        { key: 'critical', label: 'Critical Illness Insurance' },
-        { key: 'longterm', label: 'Long-term Care Insurance' },
-        { key: 'home', label: 'Homeowners / Renters Insurance' },
-        { key: 'auto', label: 'Auto Insurance' },
-        { key: 'annuity', label: 'Retirement / Annuity products' }
+      const optsList = [
+        { key: 'health_ins', label: 'Health Insurance / Private Medical' },
+        { key: 'critical_illness', label: 'Critical Illness / Cancer Cover' },
+        { key: 'disability_income', label: 'Disability Income Protection' },
+        { key: 'home_property', label: 'Home / Property / Renters Insurance' },
+        { key: 'motor_vehicle', label: 'Motor Vehicle / Car Insurance' },
+        { key: 'travel_ins', label: 'Travel Insurance' }
       ];
+
       container.innerHTML = `
         <div class="form-group">
-          <label>Are you also interested in any of the following? (Select all that apply)</label>
+          <label>What other types of insurance are you interested in or currently own?</label>
           <div class="goal-chips" style="margin-top:0.5rem">
-            ${optionals.map(o => `
+            ${optsList.map(o => `
               <div class="goal-chip ${answers.otherInterests.includes(o.key) ? 'active' : ''}" data-opt-ins="${o.key}">
                 ${o.label}
               </div>
@@ -389,8 +431,8 @@ const WPInsurance = (() => {
         </div>
 
         <div class="form-group">
-          <label for="ob-ins-concerns">Any other specific needs or concerns?</label>
-          <textarea class="textarea" id="ob-ins-concerns" style="height:120px" placeholder="e.g. I want to leave money for kids college, I have a mortgage...">${answers.otherConcerns || ''}</textarea>
+          <label for="ob-ins-concerns">What is your biggest concern regarding insurance in Nigeria?</label>
+          <textarea class="textarea" id="ob-ins-concerns" style="height:100px" placeholder="e.g., Claim payouts reliability, affordability, inflation eroding benefits...">${answers.otherConcerns || ''}</textarea>
         </div>
       `;
 
@@ -560,7 +602,16 @@ const WPInsurance = (() => {
     const recommendedProduct = document.getElementById('sidebar-rec-product')?.textContent || 'Term Life';
 
     const answers = _data.answers;
-    const baseCur = WPApp.state.profile?.currency || 'NGN';
+    const pageCurrency = localStorage.getItem('wp_page_currency_insurance') || WPApp.state.profile?.currency || 'NGN';
+    const bracket50 = WPUtils.fmt(WPUtils.convert(50000 * 100, 'USD', pageCurrency), { currency: pageCurrency, compact: true });
+    const bracket100 = WPUtils.fmt(WPUtils.convert(100000 * 100, 'USD', pageCurrency), { currency: pageCurrency, compact: true });
+    const bracket200 = WPUtils.fmt(WPUtils.convert(200000 * 100, 'USD', pageCurrency), { currency: pageCurrency, compact: true });
+
+    let incomeLabel = '';
+    if (answers.income === 'under_50k') incomeLabel = `Under ${bracket50}`;
+    else if (answers.income === '50k_100k') incomeLabel = `${bracket50} – ${bracket100}`;
+    else if (answers.income === '100k_200k') incomeLabel = `${bracket100} – ${bracket200}`;
+    else if (answers.income === 'over_200k') incomeLabel = `${bracket200}+`;
 
     reportView.innerHTML = `
       <div class="card" style="padding: 2rem;">
@@ -578,7 +629,7 @@ const WPInsurance = (() => {
             <table class="table text-sm">
               <tr><td>Age / Marital Status</td><td><strong>${answers.age || '—'} / ${answers.marital.toUpperCase()}</strong></td></tr>
               <tr><td>Dependents</td><td><strong>${answers.dependents === 'yes' ? answers.dependentsDetails : 'None'}</strong></td></tr>
-              <tr><td>Income Bracket</td><td><strong>${answers.income.replace('_', ' ').toUpperCase()}</strong></td></tr>
+              <tr><td>Income Bracket</td><td><strong>${incomeLabel}</strong></td></tr>
               <tr><td>Tobacco User</td><td><strong>${answers.tobacco.toUpperCase()}</strong></td></tr>
             </table>
           </div>
@@ -629,6 +680,7 @@ const WPInsurance = (() => {
     if (!container) return;
 
     const baseCur = WPApp.state.profile?.currency || 'NGN';
+    const pageCurrency = localStorage.getItem('wp_page_currency_insurance') || baseCur;
     const list = _data.policies || [];
 
     container.innerHTML = `
@@ -637,7 +689,10 @@ const WPInsurance = (() => {
           <h1 class="page-title">Insurance Policies & Takaful</h1>
           <p class="page-subtitle">Add and manage your active policies</p>
         </div>
-        <div style="display:flex;gap:0.75rem">
+        <div style="display:flex;gap:0.75rem;align-items:center">
+          <select id="ins-page-currency-pol" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
+            ${CURRENCY_OPTIONS.map(c => `<option value="${c.code}" ${c.code === pageCurrency ? 'selected' : ''}>${c.code} (${c.symbol})</option>`).join('')}
+          </select>
           <button class="btn btn-secondary" id="ins-back-assess-btn">📋 Needs Assessment</button>
           <button class="btn btn-primary" id="ins-add-btn">➕ Add Policy</button>
         </div>
@@ -665,21 +720,26 @@ const WPInsurance = (() => {
                   </tr>
                 </thead>
                 <tbody id="ins-policies-list">
-                  ${list.length ? list.map((p, idx) => `
-                    <tr>
-                      <td><strong>${p.name}</strong></td>
-                      <td><span class="badge badge-neutral">${p.type.toUpperCase()}</span></td>
-                      <td>${p.provider}</td>
-                      <td class="td-mono text-right">${WPUtils.fmt(p.sumAssured * 100, { currency: baseCur })}</td>
-                      <td class="td-mono text-right">${WPUtils.fmt(p.premium * 100, { currency: baseCur })}</td>
-                      <td>
-                        <div style="display:flex; gap:0.5rem">
-                          <button class="btn btn-ghost btn-sm" onclick="WPInsurance._edit(${idx})">Edit</button>
-                          <button class="btn btn-ghost btn-sm text-danger" onclick="WPInsurance._delete(${idx})">Delete</button>
-                        </div>
-                      </td>
-                    </tr>
-                  `).join('') : `<tr><td colspan="6" class="text-muted text-center" style="padding:2rem">No insurance policies added yet. Click "Add Policy" to begin.</td></tr>`}
+                  ${list.length ? list.map((p, idx) => {
+                    const polCur = p.currency || baseCur;
+                    const displaySum = WPUtils.convert(p.sumAssured * 100, polCur, pageCurrency);
+                    const displayPrem = WPUtils.convert(p.premium * 100, polCur, pageCurrency);
+                    return `
+                      <tr>
+                        <td><strong>${p.name}</strong> ${p.currency && p.currency !== pageCurrency ? `<span class="badge badge-neutral" style="font-size:10px">${p.currency}</span>` : ''}</td>
+                        <td><span class="badge badge-neutral">${p.type.toUpperCase()}</span></td>
+                        <td>${p.provider}</td>
+                        <td class="td-mono text-right">${WPUtils.fmt(displaySum, { currency: pageCurrency })}</td>
+                        <td class="td-mono text-right">${WPUtils.fmt(displayPrem, { currency: pageCurrency })}</td>
+                        <td>
+                          <div style="display:flex; gap:0.5rem">
+                            <button class="btn btn-ghost btn-sm" onclick="WPInsurance._edit(${idx})">Edit</button>
+                            <button class="btn btn-ghost btn-sm text-danger" onclick="WPInsurance._delete(${idx})">Delete</button>
+                          </div>
+                        </td>
+                      </tr>
+                    `;
+                  }).join('') : `<tr><td colspan="6" class="text-muted text-center" style="padding:2rem">No insurance policies added yet. Click "Add Policy" to begin.</td></tr>`}
                 </tbody>
               </table>
             </div>
@@ -706,9 +766,18 @@ const WPInsurance = (() => {
           <div class="modal-body">
             <form id="ins-form">
               <input type="hidden" id="ins-idx">
-              <div class="form-group">
-                <label for="ins-name">Policy Name / Description</label>
-                <input class="input" type="text" id="ins-name" placeholder="e.g. Leadway Term Life Protection" required>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="ins-currency">Policy Currency</label>
+                  <select class="select" id="ins-currency" required>
+                    ${CURRENCY_OPTIONS.map(c => `<option value="${c.code}">${c.code} (${c.symbol})</option>`).join('')}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="ins-name">Policy Name / Description</label>
+                  <input class="input" type="text" id="ins-name" placeholder="e.g. Leadway Term Life Protection" required>
+                </div>
               </div>
               
               <div class="form-row">
@@ -731,11 +800,11 @@ const WPInsurance = (() => {
 
               <div class="form-row">
                 <div class="form-group">
-                  <label for="ins-sum-value">Sum Assured</label>
+                  <label for="ins-sum-value" id="lbl-ins-sum-value">Sum Assured</label>
                   <input class="input" type="text" id="ins-sum-value" placeholder="10,000,000" required>
                 </div>
                 <div class="form-group">
-                  <label for="ins-premium">Annual Premium</label>
+                  <label for="ins-premium" id="lbl-ins-premium">Annual Premium</label>
                   <input class="input" type="text" id="ins-premium" placeholder="120,000" required>
                 </div>
               </div>
@@ -754,10 +823,20 @@ const WPInsurance = (() => {
       _renderLayout(container);
     });
 
+    const currencySelectPol = document.getElementById('ins-page-currency-pol');
+    if (currencySelectPol) {
+      currencySelectPol.addEventListener('change', (e) => {
+        localStorage.setItem('wp_page_currency_insurance', e.target.value);
+        _renderPoliciesView();
+      });
+    }
+
     document.getElementById('ins-add-btn').addEventListener('click', () => {
       document.getElementById('ins-form').reset();
       document.getElementById('ins-idx').value = '';
+      document.getElementById('ins-currency').value = pageCurrency;
       document.getElementById('ins-modal-title').textContent = 'Add Insurance Policy';
+      _updateModalLabels(pageCurrency);
       const m = document.getElementById('ins-modal');
       m.style.display = 'flex';
       setTimeout(() => m.classList.add('open'), 10);
@@ -774,6 +853,19 @@ const WPInsurance = (() => {
       setTimeout(() => m.style.display = 'none', 250);
     });
 
+    const modalCurrencySelect = document.getElementById('ins-currency');
+    if (modalCurrencySelect) {
+      modalCurrencySelect.addEventListener('change', (e) => {
+        _updateModalLabels(e.target.value);
+      });
+    }
+
+    function _updateModalLabels(curCode) {
+      const sym = CURRENCY_OPTIONS.find(c => c.code === curCode)?.symbol || '₦';
+      document.getElementById('lbl-ins-sum-value').textContent = `Sum Assured (${sym})`;
+      document.getElementById('lbl-ins-premium').textContent = `Annual Premium (${sym})`;
+    }
+
     document.getElementById('ins-form').addEventListener('submit', (e) => {
       e.preventDefault();
       const uid = WPApp.state.user.id;
@@ -783,7 +875,8 @@ const WPInsurance = (() => {
         type: document.getElementById('ins-type').value,
         provider: document.getElementById('ins-provider').value.trim(),
         sumAssured: WPUtils.cleanNum(document.getElementById('ins-sum-value').value),
-        premium: WPUtils.cleanNum(document.getElementById('ins-premium').value)
+        premium: WPUtils.cleanNum(document.getElementById('ins-premium').value),
+        currency: document.getElementById('ins-currency').value
       };
 
       if (idx === '') {
@@ -806,13 +899,16 @@ const WPInsurance = (() => {
     window.WPInsurance = {
       _edit: (idx) => {
         const p = _data.policies[idx];
+        const polCur = p.currency || baseCur;
         document.getElementById('ins-idx').value = idx;
         document.getElementById('ins-name').value = p.name;
         document.getElementById('ins-type').value = p.type;
         document.getElementById('ins-provider').value = p.provider;
         document.getElementById('ins-sum-value').value = p.sumAssured.toLocaleString();
         document.getElementById('ins-premium').value = p.premium.toLocaleString();
+        document.getElementById('ins-currency').value = polCur;
         document.getElementById('ins-modal-title').textContent = 'Edit Insurance Policy';
+        _updateModalLabels(polCur);
         const m = document.getElementById('ins-modal');
         m.style.display = 'flex';
         setTimeout(() => m.classList.add('open'), 10);
@@ -827,15 +923,16 @@ const WPInsurance = (() => {
       }
     };
 
-    let totalSum = 0;
-    let totalPrem = 0;
+    let totalSumKobo = 0;
+    let totalPremKobo = 0;
     list.forEach(p => {
-      totalSum += p.sumAssured;
-      totalPrem += p.premium;
+      const polCur = p.currency || baseCur;
+      totalSumKobo += WPUtils.convert(p.sumAssured * 100, polCur, pageCurrency);
+      totalPremKobo += WPUtils.convert(p.premium * 100, polCur, pageCurrency);
     });
 
-    document.getElementById('ins-total-coverage').textContent = WPUtils.fmt(totalSum * 100, { currency: baseCur });
-    document.getElementById('ins-total-premiums').textContent = 'Total Annual Premiums: ' + WPUtils.fmt(totalPrem * 100, { currency: baseCur });
+    document.getElementById('ins-total-coverage').textContent = WPUtils.fmt(totalSumKobo, { currency: pageCurrency });
+    document.getElementById('ins-total-premiums').textContent = 'Total Annual Premiums: ' + WPUtils.fmt(totalPremKobo, { currency: pageCurrency });
   }
 
   function destroy() {

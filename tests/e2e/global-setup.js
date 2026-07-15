@@ -70,7 +70,11 @@ export default async function globalSetup() {
         await page.click('#ob-next');
         await page.waitForTimeout(500);
 
-        // Step 5: Summary
+        // Step 5: Simple Path
+        await page.click('#ob-next');
+        await page.waitForTimeout(500);
+
+        // Step 6: Summary
         await page.click('#ob-next'); // Click "Get Started"
 
         await page.waitForSelector('#dash-kpis, #dash-greeting, .app-shell', { timeout: 15_000 });
