@@ -394,17 +394,16 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 ### Open now (as of 2026-07-15)
 
-#### Stakeholder batch (2026-07-14 · @kaluaja)
+#### Stakeholder / product
 
 | Issue | Title | Type | Priority | Status |
 |-------|-------|------|----------|--------|
-| [#43](https://github.com/olafinancial/olafinancial/issues/43) | Your Path starts with Goals | UX | Medium | 🔲 Open — reorder getting-started path |
-| [#45](https://github.com/olafinancial/olafinancial/issues/45) | Cash flow inflows: category totals only | UX | Medium | 🔲 Open |
-| [#44](https://github.com/olafinancial/olafinancial/issues/44) | Header “Income Statement” for Income + Expenses | IA | Medium | 🔲 Open |
-| [#47](https://github.com/olafinancial/olafinancial/issues/47) | Mark-to-market ticker under Assets (not Retirement) | Feature | Medium | 🔲 Open |
 | [#46](https://github.com/olafinancial/olafinancial/issues/46) | Budget planner / debt payoff graph unclear | UX | Medium | 🔲 Open |
 | [#49](https://github.com/olafinancial/olafinancial/issues/49) | Reports as strategic marketing tool | Feature | Medium | 🔲 Open |
 | [#50](https://github.com/olafinancial/olafinancial/issues/50) | Classify income-generating assets / interest-bearing liabilities | Feature | Medium | 🔲 Open |
+| [#36](https://github.com/olafinancial/olafinancial/issues/36) | Balance Sheet split (Assets & Liabilities pages) | Feature | Medium | 🔲 Open — verify vs shipped pages |
+| [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | Feature | Medium | 🔲 Open — verify vs `budget.js` |
+| [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | Branding / domain → pul.llc | Ops | Medium | 🔲 Open — code mostly done; confirm live DNS |
 
 #### Ops / roadmap
 
@@ -418,11 +417,12 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 | Issue | Title | Status |
 |-------|-------|--------|
+| [#47](https://github.com/olafinancial/olafinancial/issues/47) | Mark-to-market ticker under Assets (not Retirement) | ✅ Closed 2026-07-15 |
+| [#43](https://github.com/olafinancial/olafinancial/issues/43) | Your Path starts with Goals | ✅ Closed 2026-07-15 |
+| [#45](https://github.com/olafinancial/olafinancial/issues/45) | Cash flow inflows: category totals only | ✅ Closed 2026-07-15 |
+| [#44](https://github.com/olafinancial/olafinancial/issues/44) | Header “Income Statement” for Income + Expenses | ✅ Closed 2026-07-15 |
 | [#48](https://github.com/olafinancial/olafinancial/issues/48) | [Bug] Insurance currency stuck on $ | ✅ Closed 2026-07-15 |
 | [#34](https://github.com/olafinancial/olafinancial/issues/34) / [#42](https://github.com/olafinancial/olafinancial/issues/42) | Salary Calculator & active income ledger | ✅ Closed 2026-07-15 |
-| [#36](https://github.com/olafinancial/olafinancial/issues/36) | Balance Sheet split (Assets & Liabilities pages) | ✅ Closed 2026-07-15 |
-| [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner (50-30-20 rule page) | ✅ Closed 2026-07-15 |
-| [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | CNAME & manifest migrated to pul.llc | ✅ Closed 2026-07-15 |
 | [#41](https://github.com/olafinancial/olafinancial/issues/41) | Investment questionnaire (NG) | ✅ Closed 2026-07-14 — `#/invest`, R40 |
 | [#27](https://github.com/olafinancial/olafinancial/issues/27) | Social sharing & watermarked PNG export | ✅ Closed |
 | [#30](https://github.com/olafinancial/olafinancial/issues/30) | Per-page currency selectors | ✅ Closed |
@@ -434,17 +434,28 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#40](https://github.com/olafinancial/olafinancial/issues/40) | PWA auto cache / no hard refresh | ✅ Closed |
 | — | Getting-started path + re-run onboarding | ✅ Completed |
 
-### Suggested build order (updated 2026-07-15)
+### Suggested build order (updated 2026-07-15 · post–sensible path)
 
-1. **#43** Your Path: Goals first  
-2. **#45 / #44** Cash flow simplification + Income Statement header  
-3. **#47** Stock MTM under Assets / equities  
-4. **#46** Budget / debt payoff graph clarity  
-5. **#49 / #50** Reports depth + asset/liability income classification  
-6. **#38** Email ops  
-7. **#28 / #29** Sponsor activation & macro data updates  
+1. **#46** Budget / debt payoff graph clarity  
+2. **#50** Income-generating assets vs interest-bearing liabilities  
+3. **#49** Reports as strategic / plain-language narrative  
+4. **#38** Email ops  
+5. **#28 / #29** Sponsor activation & macro data updates  
+6. Confirm / close stale opens: **#36**, **#32**, **#23/#25** if already shipped  
 
 ---
+
+### Session 11 — 2026-07-15 — Sensible path batch + MTM under Assets
+
+* **Status**: ✅ Completed
+* **Sensible path** (`7013c21` and prior): Goals-first getting started, Income Statement nav/titles, salary deductibles → net, cash-flow category inflows, insurance NGN brackets — closed **#43, #44, #45, #42/#34, #48**
+* **#47 Mark-to-market**:
+  * Equity MTM UI moved from **Retirement → Assets**
+  * Add Asset form: **Manual** vs **Ticker (mark-to-market)** radio + explainer
+  * Live quotes via shared `WPUtils.fetchMarketPrice` / `estimateMarketPrice`
+  * Notes tags: `[ticker:…] [qty:…] [unit_cost:…]`; closing balance synced to market
+  * One-time import of legacy `wp_ret_stocks_*` localStorage into equity assets
+  * Retirement keeps a link to Assets and still folds equity MTM into projections
 
 ### Session 10 — 2026-07-15 — Insurance Currency Selection & E2E Verification
 

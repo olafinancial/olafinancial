@@ -4,8 +4,6 @@
 
 const WPRetirement = (() => {
 
-  let _fetchedPrices = {};
-
   async function init(container) {
     const profile = WPApp.state.profile || {};
     const age     = profile.age || 35;
@@ -126,35 +124,15 @@ const WPRetirement = (() => {
           <button class="btn btn-primary" id="ret-calc-btn">Calculate Retirement Plan</button>
         </div>
 
-        <!-- Stock Holdings Mark-to-Market Tracking -->
-        <div class="card" style="margin-bottom:1.5rem">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem">
-            <div class="section-title" style="margin:0">&#x1F4C8; Stock Assets (Mark-to-Market)</div>
-            <div style="display:flex;gap:0.5rem">
-              <button type="button" class="btn btn-secondary btn-sm" id="ret-refresh-stocks-btn" title="Refresh live prices">↻ Refresh prices</button>
-              <button type="button" class="btn btn-secondary btn-sm" id="ret-add-stock-btn">+ Add Stock</button>
-            </div>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Ticker</th>
-                  <th>Qty</th>
-                  <th>Purchase Price</th>
-                  <th>Current Price</th>
-                  <th>Cost Basis</th>
-                  <th>Current Value</th>
-                  <th>Gain / Loss</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="ret-stocks-list">
-                <tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--clr-text-3)">No stock assets logged. Click "+ Add Stock" to begin tracking.</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div id="ret-stocks-total"></div>
+        <!-- Equities MTM lives under Assets (#47) -->
+        <div class="card" style="margin-bottom:1.5rem;padding:1.1rem 1.25rem">
+          <div class="section-title" style="margin:0 0 0.5rem">&#x1F4C8; Stock &amp; equity holdings</div>
+          <p class="text-sm text-muted" style="margin:0 0 0.75rem;max-width:40rem">
+            Mark-to-market tracking with tickers lives on the <strong>Assets</strong> page under
+            <em>Equities / Stocks / ETFs → Ticker valuation</em>. Your retirement projection still
+            includes those holdings automatically.
+          </p>
+          <a href="#/assets" class="btn btn-secondary btn-sm">Open Assets · manage tickers</a>
         </div>
 
         <!-- Results -->
@@ -162,11 +140,6 @@ const WPRetirement = (() => {
       </div>`;
 
     document.getElementById('ret-calc-btn').addEventListener('click', _calculate);
-    document.getElementById('ret-add-stock-btn').addEventListener('click', _openStockForm);
-    document.getElementById('ret-refresh-stocks-btn')?.addEventListener('click', () => {
-      _fetchedPrices = {};
-      _renderStocks();
-    });
 
     // Show/hide fields based on jurisdiction selection
     const jurisSelect = document.getElementById('ret-jurisdiction');
@@ -188,7 +161,6 @@ const WPRetirement = (() => {
 
     // Pre-populate from income data
     await _prefillFromState();
-    _renderStocks();
   }
 
   async function _prefillFromState() {
@@ -274,7 +246,7 @@ const WPRetirement = (() => {
     } catch (e) {}
   }
 
-  function _calculate() {
+  async function _calculate() {
     const juris      = document.getElementById('ret-jurisdiction').value;
     const age        = parseInt(document.getElementById('ret-age').value) || 35;
     const retAge     = parseInt(document.getElementById('ret-retire').value) || 60;
@@ -298,13 +270,9 @@ const WPRetirement = (() => {
 
     const salaryKobo = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ret-salary').value));
     
-    // Compute current stock assets valuation (same mark-to-market as table)
+    // Equity MTM from Assets (ticker holdings) — #47
     const baseCur = WPApp.state.profile?.currency || 'NGN';
-    const stocks = _loadStocks();
-    const { totalValue: totalStocksUSD } = _portfolioTotals(stocks);
-
-    // Convert stock USD valuation to base page/profile currency in kobo
-    const stocksValuationKobo = WPUtils.convert(Math.round(totalStocksUSD * 100), 'USD', baseCur);
+    const stocksValuationKobo = await _equityMtmKobo(baseCur);
 
     const investKobo = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ret-invest').value));
     const needKobo   = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ret-monthly-need').value));
@@ -426,293 +394,64 @@ const WPRetirement = (() => {
       </div>`;
   }
 
-  function _loadStocks() {
-    const uid = WPApp.state.user?.id;
-    if (!uid) return [];
-    try {
-      const raw = JSON.parse(localStorage.getItem('wp_ret_stocks_' + uid) || '[]');
-      return (Array.isArray(raw) ? raw : []).map(s => ({
-        ...s,
-        ticker: String(s.ticker || '').trim(),
-        qty: Number(s.qty) || 0,
-        purchasePrice: Number(s.purchasePrice) || 0,
-      })).filter(s => s.ticker && s.qty > 0);
-    } catch {
-      return [];
-    }
-  }
-
-  function _saveStocks(stocks) {
-    const uid = WPApp.state.user?.id;
-    if (!uid) return;
-    localStorage.setItem('wp_ret_stocks_' + uid, JSON.stringify(stocks));
-    _renderStocks();
-  }
-
-  function _getMockPrice(ticker, buyPrice) {
-    const sym = ticker.toUpperCase().trim();
-    const basePrices = {
-      AAPL: 190, TSLA: 175, MSFT: 420, GOOG: 170, GOOGL: 170,
-      AMZN: 180, NVDA: 125, NFLX: 620, META: 475, SPY: 520, QQQ: 450,
-    };
-    const base = basePrices[sym];
-    const day = new Date().getDate();
-    let hash = 0;
-    for (let i = 0; i < sym.length; i++) hash += sym.charCodeAt(i);
-    const dailyFluc = ((hash + day) % 6) - 3;
-    if (base !== undefined) return Math.max(1, base * (1 + dailyFluc / 100));
-    return Math.max(1, (buyPrice || 100) * (1.15 + dailyFluc / 100));
-  }
-
-  /** Live quote via Yahoo chart API through CORS proxies; null if unavailable. */
-  async function _fetchLivePrice(ticker) {
-    const yahooUrl =
-      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}` +
-      `?interval=1d&range=1d`;
-    const proxies = [
-      // raw body = Yahoo JSON
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,
-      `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
-      // JSON wrapper { contents: "..." }
-      `https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`,
-    ];
-
-    for (const url of proxies) {
-      try {
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 8000);
-        const res = await fetch(url, { signal: ctrl.signal });
-        clearTimeout(t);
-        if (!res.ok) continue;
-        let data = await res.json();
-        // Unwrap allorigins /get shape
-        if (data && typeof data.contents === 'string') {
-          try { data = JSON.parse(data.contents); } catch { continue; }
-        }
-        const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice
-          ?? data?.chart?.result?.[0]?.meta?.previousClose;
-        if (price && Number(price) > 0) return Number(price);
-      } catch {
-        /* try next proxy */
-      }
-    }
-    return null;
-  }
-
-  function _priceFor(sym, purchasePrice) {
-    if (_fetchedPrices[sym] != null && _fetchedPrices[sym] > 0) return _fetchedPrices[sym];
-    return _getMockPrice(sym, purchasePrice);
-  }
-
-  function _portfolioTotals(list) {
-    let totalCost = 0;
-    let totalValue = 0;
-    for (const s of list) {
-      const sym = s.ticker.toUpperCase().trim();
-      const px = _priceFor(sym, s.purchasePrice);
-      totalCost += s.qty * s.purchasePrice;
-      totalValue += s.qty * px;
-    }
-    return { totalCost, totalValue, totalGain: totalValue - totalCost };
-  }
-
-  function _paintStocksTable(list, statusNote = '') {
-    const el = document.getElementById('ret-stocks-list');
-    const totalEl = document.getElementById('ret-stocks-total');
-    if (!el) return;
-
-    if (!list.length) {
-      el.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--clr-text-3)">No stock assets logged. Click "+ Add Stock" to begin tracking.</td></tr>`;
-      if (totalEl) totalEl.innerHTML = '';
-      return;
-    }
-
-    const { totalCost, totalValue, totalGain } = _portfolioTotals(list);
-    const isGain = totalGain >= 0;
-    const gainPct = (totalGain / Math.max(1, totalCost)) * 100;
-    const liveCount = list.filter(s => _fetchedPrices[s.ticker.toUpperCase().trim()] != null).length;
-
-    el.innerHTML = list.map((s, idx) => {
-      const sym = s.ticker.toUpperCase().trim();
-      const currentPrice = _priceFor(sym, s.purchasePrice);
-      const isLive = _fetchedPrices[sym] != null;
-      const costBasis = s.qty * s.purchasePrice;
-      const currentValue = s.qty * currentPrice;
-      const gainLoss = currentValue - costBasis;
-      const rowPct = (gainLoss / Math.max(1, costBasis)) * 100;
-      const rowGain = gainLoss >= 0;
-
-      return `<tr class="stock-row" data-stock-idx="${idx}" style="cursor:pointer" title="Click to edit">
-        <td><strong>${sym}</strong>${isLive ? ' <span class="badge badge-accent" style="font-size:0.65rem">LIVE</span>' : ' <span class="badge badge-neutral" style="font-size:0.65rem">EST</span>'}</td>
-        <td class="td-mono">${s.qty}</td>
-        <td class="td-mono">$${s.purchasePrice.toFixed(2)}</td>
-        <td class="td-mono text-accent">$${currentPrice.toFixed(2)}</td>
-        <td class="td-mono">$${costBasis.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        <td class="td-mono fw-600">$${currentValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        <td class="td-mono fw-600 ${rowGain ? 'text-accent' : 'text-danger'}">
-          ${rowGain ? '+' : ''}${gainLoss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${rowGain ? '+' : ''}${rowPct.toFixed(2)}%)
-        </td>
-        <td style="white-space:nowrap" onclick="event.stopPropagation()">
-          <button type="button" class="btn btn-ghost btn-sm" onclick="WPRetirement._editStock(${idx})">Edit</button>
-          <button type="button" class="btn btn-ghost btn-sm text-danger" onclick="WPRetirement._deleteStock(${idx})">Delete</button>
-        </td>
-      </tr>`;
-    }).join('') + `
-      <tr style="border-top:2px solid var(--clr-border-2);background:var(--clr-surface-2)">
-        <td colspan="4" class="fw-700">Portfolio total (${list.length} position${list.length === 1 ? '' : 's'})</td>
-        <td class="td-mono fw-700">$${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        <td class="td-mono fw-700 text-accent">$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        <td class="td-mono fw-700 ${isGain ? 'text-accent' : 'text-danger'}">
-          ${isGain ? '+' : ''}${totalGain.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${isGain ? '+' : ''}${gainPct.toFixed(2)}%)
-        </td>
-        <td></td>
-      </tr>`;
-
-    if (totalEl) {
-      totalEl.innerHTML = `
-        <div class="card" style="margin-top:0.75rem;padding:1rem 1.25rem;display:flex;flex-wrap:wrap;gap:1.25rem;align-items:center;justify-content:space-between">
-          <div>
-            <div class="card-title" style="margin:0">Total stock holdings (mark-to-market)</div>
-            <div class="text-xs text-muted" style="margin-top:0.25rem">${statusNote || (liveCount ? `${liveCount}/${list.length} live quotes` : 'Using estimated prices — live feed unavailable')} · Click a row or Edit to change a position</div>
-          </div>
-          <div class="card-value income" style="font-size:1.4rem">$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-        </div>`;
-    }
-
-    // Row click → edit (buttons stop propagation)
-    el.querySelectorAll('tr.stock-row').forEach(row => {
-      row.addEventListener('click', () => {
-        const i = parseInt(row.dataset.stockIdx, 10);
-        if (!Number.isNaN(i)) _editStock(i);
-      });
-    });
-  }
-
-  async function _renderStocks() {
-    const list = _loadStocks();
-    const el = document.getElementById('ret-stocks-list');
-    if (!el) return;
-
-    if (!list.length) {
-      _paintStocksTable(list);
-      return;
-    }
-
-    // Immediate paint with last-known / mock prices so UI is never empty
-    _paintStocksTable(list, 'Refreshing live prices…');
-
-    const tickers = [...new Set(list.map(s => s.ticker.toUpperCase().trim()))];
-    const next = { ..._fetchedPrices };
-    await Promise.all(tickers.map(async (ticker) => {
-      const price = await _fetchLivePrice(ticker);
-      if (price != null) next[ticker] = price;
-    }));
-    _fetchedPrices = next;
-
-    const liveCount = tickers.filter(t => _fetchedPrices[t] != null).length;
-    _paintStocksTable(
-      list,
-      liveCount
-        ? `${liveCount}/${tickers.length} live quotes · total includes all positions`
-        : 'Live quotes unavailable — showing estimates · total includes all positions'
-    );
-  }
-
   /**
-   * Add or edit a stock position.
-   * @param {number|null} editIdx - index in saved list when editing; null when adding
+   * Mark-to-market equity value from Assets ticker holdings (and legacy localStorage
+   * if not yet migrated). Returns minor units in targetCurrency.
    */
-  function _openStockForm(editIdx = null) {
-    const stocks = _loadStocks();
-    const existing = editIdx != null && stocks[editIdx] ? stocks[editIdx] : null;
-    const isEdit = !!existing;
-
-    const tickerVal = existing ? existing.ticker : '';
-    const qtyVal = existing ? existing.qty : '';
-    const priceVal = existing ? existing.purchasePrice : '';
-    const dateVal = existing?.purchaseDate || new Date().toISOString().slice(0, 10);
-
-    const body = `
-      <form id="ret-stock-form">
-        <div class="form-group">
-          <label for="rs-ticker">Ticker Symbol</label>
-          <input class="input" id="rs-ticker" placeholder="e.g. TSLA, AAPL" value="${_escAttr(tickerVal)}" required autocomplete="off">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="rs-qty">Quantity</label>
-            <input class="input" type="number" id="rs-qty" min="0.0001" step="any" placeholder="10" value="${qtyVal}" required>
-          </div>
-          <div class="form-group">
-            <label for="rs-price">Purchase Price ($)</label>
-            <input class="input" type="number" id="rs-price" min="0.01" step="any" placeholder="150.00" value="${priceVal}" required>
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="rs-date">Date of Purchase</label>
-          <input class="input" type="date" id="rs-date" value="${_escAttr(dateVal)}">
-        </div>
-      </form>`;
-
-    WPModal.open(isEdit ? `Edit ${String(tickerVal).toUpperCase()}` : 'Add Stock Asset', body, {
-      confirmLabel: isEdit ? 'Save Changes' : 'Add Stock',
-      onConfirm: async () => {
-        const ticker = document.getElementById('rs-ticker').value.trim().toUpperCase();
-        const qty = parseFloat(document.getElementById('rs-qty').value) || 0;
-        const price = parseFloat(document.getElementById('rs-price').value) || 0;
-        const date = document.getElementById('rs-date').value;
-
-        if (!ticker || qty <= 0 || price <= 0) {
-          WPToast.warning('Please enter valid stock details.');
-          return false; // keep modal open if WPModal supports it
-        }
-
-        const list = _loadStocks();
-        const row = { ticker, qty, purchasePrice: price, purchaseDate: date };
-
-        if (isEdit && editIdx != null && editIdx >= 0 && editIdx < list.length) {
-          const prevTicker = list[editIdx].ticker?.toUpperCase?.();
-          list[editIdx] = row;
-          // Drop stale live quote if ticker changed
-          if (prevTicker && prevTicker !== ticker) delete _fetchedPrices[prevTicker];
-          delete _fetchedPrices[ticker];
-          _saveStocks(list);
-          WPToast.success(`${ticker} updated.`);
-        } else {
-          list.push(row);
-          delete _fetchedPrices[ticker];
-          _saveStocks(list);
-          WPToast.success('Stock asset logged and marked-to-market!');
-        }
-      }
-    });
-  }
-
-  function _escAttr(s) {
-    return String(s ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/"/g, '&quot;')
-      .replace(/</g, '&lt;');
-  }
-
-  function _editStock(idx) {
-    const stocks = _loadStocks();
-    if (idx < 0 || idx >= stocks.length) {
-      WPToast.warning('Stock position not found.');
-      return;
+  async function _equityMtmKobo(targetCurrency) {
+    // Prefer shared helper on Assets module when available
+    if (typeof WPAssets !== "undefined" && typeof WPAssets.mtmEquityValueKobo === "function") {
+      try {
+        const fromAssets = WPAssets.mtmEquityValueKobo(targetCurrency);
+        if (fromAssets > 0) return fromAssets;
+      } catch { /* fall through */ }
     }
-    _openStockForm(idx);
-  }
 
-  function _deleteStock(idx) {
-    const stocks = _loadStocks();
-    if (idx < 0 || idx >= stocks.length) return;
-    const name = stocks[idx].ticker || 'Stock';
-    stocks.splice(idx, 1);
-    _saveStocks(stocks);
-    WPToast.success(`${name} removed.`);
+    try {
+      const uid = WPApp.state.user.id;
+      const PERIOD = WPUtils.currentPeriod();
+      const assets = await WPDb.getAssetsByPeriod(uid, PERIOD);
+      let total = 0;
+      const priceCache = {};
+      for (const a of assets) {
+        const tags = WPUtils.parseNotesTags(a.notes);
+        if (!tags.ticker || tags.qty <= 0) continue;
+        const cur = WPUtils.getEntryCurrency(a.notes);
+        const buyMajor = WPUtils.koboToNaira(tags.unitCostKobo);
+        let px = priceCache[tags.ticker];
+        if (px == null) {
+          px = await WPUtils.fetchMarketPrice(tags.ticker);
+          if (px == null) px = WPUtils.estimateMarketPrice(tags.ticker, buyMajor);
+          priceCache[tags.ticker] = px;
+        }
+        const valueKobo = Math.round(tags.qty * WPUtils.nairaToKobo(px));
+        total += WPUtils.convert(valueKobo, cur, targetCurrency);
+      }
+      if (total > 0) return total;
+    } catch { /* fall through to legacy */ }
+
+    // Legacy Retirement localStorage stocks (pre-#47), treated as USD
+    try {
+      const uid = WPApp.state.user?.id;
+      if (!uid) return 0;
+      const raw = JSON.parse(localStorage.getItem("wp_ret_stocks_" + uid) || "[]");
+      if (!Array.isArray(raw) || !raw.length) return 0;
+      let totalUsdMajor = 0;
+      for (const s of raw) {
+        const ticker = String(s.ticker || "").trim().toUpperCase();
+        const qty = Number(s.qty) || 0;
+        const buy = Number(s.purchasePrice) || 0;
+        if (!ticker || qty <= 0) continue;
+        let px = await WPUtils.fetchMarketPrice(ticker);
+        if (px == null) px = WPUtils.estimateMarketPrice(ticker, buy);
+        totalUsdMajor += qty * px;
+      }
+      return WPUtils.convert(Math.round(totalUsdMajor * 100), "USD", targetCurrency);
+    } catch {
+      return 0;
+    }
   }
 
   function destroy() {}
-  return { init, destroy, _editStock, _deleteStock };
+  return { init, destroy };
 })();

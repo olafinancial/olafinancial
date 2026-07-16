@@ -5,7 +5,7 @@
 // ============================================================
 
 // Bump this when shipping SW logic changes (pairs with js/cache-control.js BUILD_ID)
-const CACHE_NAME = 'pul-planning-v18';
+const CACHE_NAME = 'pul-planning-v19';
 
 const PRECACHE = [
   '/',
@@ -25,6 +25,8 @@ const PRECACHE = [
   '/js/pages/income.js',
   '/js/pages/expenses.js',
   '/js/pages/balance-sheet.js',
+  '/js/pages/assets.js',
+  '/js/pages/liabilities.js',
   '/js/pages/debt.js',
   '/js/pages/cashflow.js',
   '/js/pages/emergency-fund.js',

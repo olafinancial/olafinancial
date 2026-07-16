@@ -538,6 +538,87 @@ const WPUtils = (() => {
     return Math.round(amountInNGN / rateTo);
   }
 
+  /** Parse structured tags embedded in asset notes: [ticker:…] [qty:…] [unit_cost:…] [sub:…] */
+  function parseNotesTags(notes) {
+    const out = { ticker: '', qty: 0, unitCostKobo: 0, sub: '' };
+    if (!notes || typeof notes !== 'string') return out;
+    const t = notes.match(/\[ticker:([^\]]+)\]/i);
+    const q = notes.match(/\[qty:([^\]]+)\]/i);
+    const c = notes.match(/\[unit_cost:([^\]]+)\]/i);
+    const s = notes.match(/\[sub:([^\]]+)\]/i);
+    if (t) out.ticker = String(t[1]).trim().toUpperCase();
+    if (q) out.qty = parseFloat(q[1]) || 0;
+    if (c) out.unitCostKobo = parseInt(c[1], 10) || 0;
+    if (s) out.sub = String(s[1]).trim();
+    return out;
+  }
+
+  /** Strip structured tags (and currency) for human-readable notes display. */
+  function cleanNotesDisplay(notes) {
+    return (notes || '')
+      .replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '')
+      .replace(/\[Emergency Fund\]/g, '')
+      .replace(/\[sub:[^\]]+\]/gi, '')
+      .replace(/\[qty:[^\]]+\]/gi, '')
+      .replace(/\[unit_cost:[^\]]+\]/gi, '')
+      .replace(/\[ticker:[^\]]+\]/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /** Deterministic fallback quote when live feed is unavailable. */
+  function estimateMarketPrice(ticker, buyPrice) {
+    const sym = String(ticker || '').toUpperCase().trim();
+    const basePrices = {
+      AAPL: 190, TSLA: 175, MSFT: 420, GOOG: 170, GOOGL: 170,
+      AMZN: 180, NVDA: 125, NFLX: 620, META: 475, SPY: 520, QQQ: 450,
+      DANGCEM: 520, GTCO: 48, ZENITHBANK: 42, MTNN: 220, BUA: 95,
+    };
+    const base = basePrices[sym];
+    const day = new Date().getDate();
+    let hash = 0;
+    for (let i = 0; i < sym.length; i++) hash += sym.charCodeAt(i);
+    const dailyFluc = ((hash + day) % 6) - 3;
+    if (base !== undefined) return Math.max(0.01, base * (1 + dailyFluc / 100));
+    return Math.max(0.01, (buyPrice || 100) * (1.15 + dailyFluc / 100));
+  }
+
+  /**
+   * Live quote via Yahoo chart API through CORS proxies.
+   * Returns major-unit price (e.g. dollars) or null.
+   */
+  async function fetchMarketPrice(ticker) {
+    const sym = String(ticker || '').trim().toUpperCase();
+    if (!sym) return null;
+    const yahooUrl =
+      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}` +
+      `?interval=1d&range=1d`;
+    const proxies = [
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,
+      `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
+      `https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`,
+    ];
+    for (const url of proxies) {
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 8000);
+        const res = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(t);
+        if (!res.ok) continue;
+        let data = await res.json();
+        if (data && typeof data.contents === 'string') {
+          try { data = JSON.parse(data.contents); } catch { continue; }
+        }
+        const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice
+          ?? data?.chart?.result?.[0]?.meta?.previousClose;
+        if (price && Number(price) > 0) return Number(price);
+      } catch {
+        /* try next proxy */
+      }
+    }
+    return null;
+  }
+
   return {
     fmt, cleanNum, maskNumberInput, nairaToKobo, koboToNaira, pct, fmtPct, fmtDate,
     calcPIT, effectiveTaxRate, taxBracket,
@@ -554,5 +635,7 @@ const WPUtils = (() => {
     healthScore, healthScoreLabel,
     currentPeriod, periodLabel, last12Months,
     getEntryCurrency, setEntryCurrency, convert,
+    parseNotesTags, cleanNotesDisplay,
+    estimateMarketPrice, fetchMarketPrice,
   };
 })();
