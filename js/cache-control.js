@@ -7,7 +7,7 @@
 
 const WPCacheControl = (() => {
   // Bump when shipping cache-policy or SW behaviour changes
-  const BUILD_ID = '20260716_mtm';
+  const BUILD_ID = '20260716_fix_nav';
   const BUILD_KEY = 'wp_app_build_id';
   let _leaveHooked = false;
   let _reloading = false;

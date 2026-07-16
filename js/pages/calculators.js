@@ -73,10 +73,17 @@ const WPCalculators = (() => {
     // Full Salary Calculator replaces the old simple PAYE SME tool
     if (_activeTab === 'salary' || _activeTab === 'nigeria-paye') {
       _activeTab = 'salary';
+      document.querySelectorAll('.calc-tab-btn').forEach(btn => {
+        btn.classList.toggle('btn-primary', btn.dataset.tab === 'salary');
+        btn.classList.toggle('btn-ghost', btn.dataset.tab !== 'salary');
+      });
       if (typeof WPSalaryCalculator !== 'undefined') {
-        WPSalaryCalculator.init(wrap, { embedded: true });
+        Promise.resolve(WPSalaryCalculator.init(wrap, { embedded: true })).catch(err => {
+          console.error('[salary calc]', err);
+          wrap.innerHTML = `<div class="card" style="padding:2rem"><strong>Salary calculator error:</strong> ${err.message || err}</div>`;
+        });
       } else {
-        wrap.innerHTML = '<div class="card" style="padding:2rem">Salary calculator module failed to load.</div>';
+        wrap.innerHTML = '<div class="card" style="padding:2rem">Salary calculator module failed to load. Hard-refresh (Ctrl+Shift+R).</div>';
       }
       return;
     }
@@ -423,6 +430,66 @@ const WPCalculators = (() => {
         </div>`;
     }
 
+    else if (_activeTab === 'fixed-deposit') {
+      html = `
+        <div class="grid-2">
+          <div class="card" style="padding:2rem">
+            <h3 style="margin-bottom:1.5rem;font-weight:700;color:#ffffff">Fixed Deposit / CD Calculator</h3>
+            <div class="form-group">
+              <label for="fd-principal">Deposit Amount / Principal (${symbol})</label>
+              <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
+                <input class="input" type="text" inputmode="decimal" id="fd-principal" value="1,000,000">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="fd-rate">Interest Rate (% p.a.)</label>
+              <input class="input" type="number" id="fd-rate" min="0" step="0.1" value="12">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="fd-term">Term Value</label>
+                <input class="input" type="number" id="fd-term" min="1" value="12">
+              </div>
+              <div class="form-group">
+                <label for="fd-term-unit">Term Unit</label>
+                <select class="select" id="fd-term-unit">
+                  <option value="months">Months</option>
+                  <option value="years">Years</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="fd-compound">Compounding Frequency</label>
+              <select class="select" id="fd-compound">
+                <option value="365">Daily</option>
+                <option value="12" selected>Monthly</option>
+                <option value="4">Quarterly</option>
+                <option value="2">Semi-annually</option>
+                <option value="1">Annually</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="run-fd" style="margin-top:1rem;width:100%">Calculate Yield</button>
+          </div>
+          <div class="card" style="padding:2rem;background:linear-gradient(135deg,var(--clr-surface-3),var(--clr-surface-2))">
+            <h3 style="margin-bottom:1.5rem;font-weight:700;color:var(--clr-accent)">Maturity Breakdown</h3>
+            <div style="display:flex;flex-direction:column;gap:1.25rem">
+              <div>
+                <div style="font-size:0.8rem;color:var(--clr-text-3);text-transform:uppercase">Maturity Value</div>
+                <div id="fd-res-maturity" class="accent" style="font-size:2.2rem;font-weight:800;font-family:var(--font-mono)">—</div>
+              </div>
+              <div>
+                <div style="font-size:0.8rem;color:var(--clr-text-3);text-transform:uppercase">Total Interest Earned</div>
+                <div id="fd-res-interest" class="gold" style="font-size:1.6rem;font-weight:700;font-family:var(--font-mono)">—</div>
+              </div>
+              <div>
+                <div style="font-size:0.8rem;color:var(--clr-text-3);text-transform:uppercase">Effective Annual Yield (EAY)</div>
+                <div id="fd-res-eay" class="text-white" style="font-size:1.3rem;font-weight:600;font-family:var(--font-mono)">—</div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
     else if (_activeTab === 'inflation') {
       html = `
         <div class="grid-2">
@@ -762,91 +829,27 @@ const WPCalculators = (() => {
     }
 
     else if (_activeTab === 'fixed-deposit') {
-      html = `
-        <div class="grid-2">
-          <div class="card" style="padding:2rem">
-            <h3 style="margin-bottom:1.5rem;font-weight:700;color:#ffffff">Fixed Deposit / CD Calculator</h3>
-            <div class="form-group">
-              <label for="fd-principal">Deposit Amount / Principal (${symbol})</label>
-              <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
-                <input class="input" type="text" inputmode="decimal" id="fd-principal" value="1,000,000">
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="fd-rate">Interest Rate (% p.a.)</label>
-              <input class="input" type="number" id="fd-rate" min="0" step="0.1" value="12">
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="fd-term">Term Value</label>
-                <input class="input" type="number" id="fd-term" min="1" value="12">
-              </div>
-              <div class="form-group">
-                <label for="fd-term-unit">Term Unit</label>
-                <select class="select" id="fd-term-unit">
-                  <option value="months">Months</option>
-                  <option value="years">Years</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="fd-compound">Compounding Frequency</label>
-              <select class="select" id="fd-compound">
-                <option value="365">Daily</option>
-                <option value="12" selected>Monthly</option>
-                <option value="4">Quarterly</option>
-                <option value="2">Semi-annually</option>
-                <option value="1">Annually</option>
-              </select>
-            </div>
-            <button class="btn btn-primary" id="run-fd" style="margin-top:1rem;width:100%">Calculate Yield</button>
-          </div>
-          
-          <div class="card" style="padding:2rem;background:linear-gradient(135deg,var(--clr-surface-3),var(--clr-surface-2))">
-            <h3 style="margin-bottom:1.5rem;font-weight:700;color:var(--clr-accent)">Maturity Breakdown</h3>
-            <div style="display:flex;flex-direction:column;gap:1.25rem">
-              <div>
-                <div style="font-size:0.8rem;color:var(--clr-text-3);text-transform:uppercase">Maturity Value</div>
-                <div id="fd-res-maturity" class="accent" style="font-size:2.2rem;font-weight:800;font-family:var(--font-mono)">—</div>
-              </div>
-              <div>
-                <div style="font-size:0.8rem;color:var(--clr-text-3);text-transform:uppercase">Total Interest Earned</div>
-                <div id="fd-res-interest" class="gold" style="font-size:1.6rem;font-weight:700;font-family:var(--font-mono)">—</div>
-              </div>
-              <div>
-                <div style="font-size:0.8rem;color:var(--clr-text-3);text-transform:uppercase">Effective Annual Yield (EAY)</div>
-                <div id="fd-res-eay" class="text-white" style="font-size:1.3rem;font-weight:600;font-family:var(--font-mono)">—</div>
-              </div>
-            </div>
-          </div>
-        </div>`;
-      wrap.innerHTML = html;
-      WPUtils.maskNumberInput(document.getElementById('fd-principal'));
-
       const calc = () => {
         const principal = WPUtils.cleanNum(document.getElementById('fd-principal').value) || 0;
         const rate = parseFloat(document.getElementById('fd-rate').value) || 0;
         const term = parseFloat(document.getElementById('fd-term').value) || 0;
         const termUnit = document.getElementById('fd-term-unit').value;
-        const compound = parseFloat(document.getElementById('fd-compound').value);
+        const compound = parseFloat(document.getElementById('fd-compound').value) || 12;
 
-        // Convert term to years
         const t = termUnit === 'years' ? term : term / 12;
         const r = rate / 100;
-        
-        // Maturity = P * (1 + r/n)^(n*t)
         const maturity = principal * Math.pow(1 + (r / compound), compound * t);
         const interest = Math.max(0, maturity - principal);
-        
-        // EAY = (1 + r/n)^n - 1
         const eay = (Math.pow(1 + (r / compound), compound) - 1) * 100;
 
-        document.getElementById('fd-res-maturity').textContent = WPUtils.fmt(maturity * 100, { currency: currency });
-        document.getElementById('fd-res-interest').textContent = WPUtils.fmt(interest * 100, { currency: currency });
-        document.getElementById('fd-res-eay').textContent = eay.toFixed(3) + '%';
+        const mEl = document.getElementById('fd-res-maturity');
+        const iEl = document.getElementById('fd-res-interest');
+        const eEl = document.getElementById('fd-res-eay');
+        if (mEl) mEl.textContent = WPUtils.fmt(maturity * 100, { currency: currency });
+        if (iEl) iEl.textContent = WPUtils.fmt(interest * 100, { currency: currency });
+        if (eEl) eEl.textContent = eay.toFixed(3) + '%';
       };
-
-      document.getElementById('run-fd').addEventListener('click', calc);
+      document.getElementById('run-fd')?.addEventListener('click', calc);
       calc();
     }
 

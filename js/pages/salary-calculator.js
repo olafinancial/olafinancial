@@ -193,29 +193,34 @@ const WPSalaryCalculator = (() => {
     const nhfToggle = document.getElementById('sc-nhf-toggle');
     const currencySelect = document.getElementById('sc-sc-page-currency') || document.getElementById('sc-page-currency');
 
+    if (!grossEl) {
+      console.error('[salary-calc] form not mounted');
+      return;
+    }
+
     WPUtils.maskNumberInput(grossEl);
-    WPUtils.maskNumberInput(rentEl);
-    WPUtils.maskNumberInput(avcEl);
+    if (rentEl) WPUtils.maskNumberInput(rentEl);
+    if (avcEl) WPUtils.maskNumberInput(avcEl);
 
     // Event listeners
     const triggerRecalc = () => {
       _monthlyGross = WPUtils.nairaToKobo(WPUtils.cleanNum(grossEl.value)) || 0;
-      _basicPct = parseFloat(basicEl.value) || 0;
-      _housingPct = parseFloat(housingEl.value) || 0;
-      _transportPct = parseFloat(transEl.value) || 0;
-      _annualRent = WPUtils.nairaToKobo(WPUtils.cleanNum(rentEl.value)) || 0;
-      _avc = WPUtils.nairaToKobo(WPUtils.cleanNum(avcEl.value)) || 0;
-      _nhfEnabled = nhfToggle.checked;
-      _recalculate();
+      _basicPct = parseFloat(basicEl?.value) || 0;
+      _housingPct = parseFloat(housingEl?.value) || 0;
+      _transportPct = parseFloat(transEl?.value) || 0;
+      _annualRent = WPUtils.nairaToKobo(WPUtils.cleanNum(rentEl?.value)) || 0;
+      _avc = WPUtils.nairaToKobo(WPUtils.cleanNum(avcEl?.value)) || 0;
+      _nhfEnabled = nhfToggle ? nhfToggle.checked : true;
+      try { _recalculate(); } catch (e) { console.error('[salary-calc recalc]', e); }
     };
 
     grossEl.addEventListener('input', triggerRecalc);
-    basicEl.addEventListener('input', triggerRecalc);
-    housingEl.addEventListener('input', triggerRecalc);
-    transEl.addEventListener('input', triggerRecalc);
-    rentEl.addEventListener('input', triggerRecalc);
-    avcEl.addEventListener('input', triggerRecalc);
-    nhfToggle.addEventListener('change', triggerRecalc);
+    basicEl?.addEventListener('input', triggerRecalc);
+    housingEl?.addEventListener('input', triggerRecalc);
+    transEl?.addEventListener('input', triggerRecalc);
+    rentEl?.addEventListener('input', triggerRecalc);
+    avcEl?.addEventListener('input', triggerRecalc);
+    nhfToggle?.addEventListener('change', triggerRecalc);
 
     if (currencySelect) {
       currencySelect.value = localStorage.getItem('wp_page_currency_salary_calc') || 'NGN';

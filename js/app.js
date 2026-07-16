@@ -22,6 +22,7 @@ const WPApp = (() => {
 
   // Current active page module
   let _activePage = null;
+  let _pageLoadGen = 0; // cancel stale async page loads
 
   // ── BOOT ──────────────────────────────────────────────────
   async function boot() {
@@ -328,19 +329,22 @@ const WPApp = (() => {
       '/estate-planner':WPEstatePlanner,
       '/insurance':     WPInsurance,
       '/invest':        WPInvestmentQuiz,
-      // Legacy route: salary calculator now lives under Calculators → Salary / PAYE
+      // Legacy: salary calculator lives under Calculators → Salary / PAYE
       '/salary-calc':   {
-        init() {
+        async init(container) {
           try { sessionStorage.setItem('wp_calc_tab', 'salary'); } catch { /* ignore */ }
-          if (!String(window.location.hash || '').includes('/calculators')) {
-            window.location.hash = '#/calculators';
-          } else if (typeof WPCalculators !== 'undefined') {
-            // Already on calculators (edge case) — force salary tab
-            const wrap = document.getElementById('calc-content-wrap') || document.querySelector('.page-body');
-            if (wrap && WPSalaryCalculator) WPSalaryCalculator.init(wrap, { embedded: true });
+          // Delegate fully to Calculators hub (avoids hash race / stuck skeleton)
+          if (typeof WPCalculators !== 'undefined') {
+            await WPCalculators.init(container);
+          } else {
+            container.innerHTML = '<div class="page-body" style="padding:2rem">Calculators module failed to load. Hard-refresh the page.</div>';
           }
         },
-        destroy() {},
+        destroy() {
+          if (typeof WPCalculators !== 'undefined') {
+            try { WPCalculators.destroy(); } catch { /* ignore */ }
+          }
+        },
       },
       '/calculators':    WPCalculators,
       '/reports':       WPReports,
@@ -356,9 +360,13 @@ const WPApp = (() => {
   }
 
   async function _loadPage(page, params = {}) {
-    if (_activePage && typeof _activePage.destroy === 'function') {
-      _activePage.destroy();
-    }
+    const gen = ++_pageLoadGen;
+
+    try {
+      if (_activePage && typeof _activePage.destroy === 'function') {
+        try { _activePage.destroy(); } catch (e) { console.warn('[page destroy]', e); }
+      }
+    } catch (e) { console.warn('[page destroy outer]', e); }
 
     // Route guard: if onboarding is not done, only allow onboarding page (only for logged in users)
     if (state.user && page !== WPOnboarding && (!state.profile || !state.profile.onboarding_done)) {
@@ -385,8 +393,32 @@ const WPApp = (() => {
       </div>
     </div>`;
     _activePage = page;
-    await page.init(container, params);
-    container.classList.add('page-enter');
+
+    if (!page || typeof page.init !== 'function') {
+      container.innerHTML = `<div class="page-body" style="padding:2rem"><div class="card" style="padding:1.5rem">
+        <h3 style="margin:0 0 0.5rem;color:#fff">Page failed to load</h3>
+        <p class="text-muted text-sm">Module is missing. Hard-refresh (Ctrl+Shift+R) or clear site data.</p>
+        <button class="btn btn-primary btn-sm" onclick="location.reload()">Reload</button>
+      </div></div>`;
+      return;
+    }
+
+    try {
+      await page.init(container, params);
+      if (gen !== _pageLoadGen) return; // superseded by a newer navigation
+      container.classList.add('page-enter');
+    } catch (err) {
+      if (gen !== _pageLoadGen) return;
+      console.error('[page init]', err);
+      container.innerHTML = `<div class="page-body" style="padding:2rem"><div class="card" style="padding:1.5rem;border:1px solid var(--clr-danger)">
+        <h3 style="margin:0 0 0.5rem;color:#fff">Could not open this page</h3>
+        <p class="text-muted text-sm" style="margin:0 0 1rem">${(err && err.message) ? String(err.message) : 'Unexpected error'}</p>
+        <div class="flex gap-2" style="flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="location.reload()">Hard reload</button>
+          <button class="btn btn-secondary btn-sm" onclick="WPRouter.navigate('/dashboard')">Dashboard</button>
+        </div>
+      </div></div>`;
+    }
   }
 
   // ── DATA LOADING ──────────────────────────────────────────
