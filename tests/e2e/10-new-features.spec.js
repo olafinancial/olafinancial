@@ -29,7 +29,7 @@ test.describe('Salary Deductibles Calculator', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(400);
     await expect(page).toHaveURL(/#\/calculators/);
-    await expect(page.locator('#sc-gross, text=Monthly Net Breakdown').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#sc-gross').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('adjusting gross salary recalculates take-home pay', async ({ page }) => {

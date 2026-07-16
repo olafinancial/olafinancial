@@ -1,83 +1,64 @@
 // ============================================================
-// Pul Planning — Hash Router
+// Pul Planning — Hash Router (simple + reliable)
 // ============================================================
 
 const WPRouter = (() => {
   let _routes = {};
   let _current = null;
-  let _dispatching = false;
   let _started = false;
-  let _queue = null; // path pending while dispatching
+  let _navToken = 0; // increments each navigation; async handlers check this
 
   function register(path, handler) {
-    _routes[path] = handler;
+    _routes[_normalize(path)] = handler;
   }
 
-  /** Wipe all routes (switch between auth shell and app shell). */
   function clearRoutes() {
     _routes = {};
   }
 
-  /** Normalize hash path so "#dashboard" and "#/dashboard" both resolve. */
   function _normalize(path) {
-    if (!path || path === '/') return '/login';
-    // Strip query/hash fragments accidentally included
-    path = String(path).split('?')[0].split('#')[0];
-    return path.startsWith('/') ? path : `/${path}`;
+    if (path == null || path === '' || path === '/') return '/login';
+    path = String(path).trim();
+    // From location.hash: "#/income" or "#income"
+    if (path.startsWith('#')) path = path.slice(1);
+    path = path.split('?')[0];
+    if (!path.startsWith('/')) path = '/' + path;
+    // Collapse accidental //
+    path = path.replace(/\/{2,}/g, '/');
+    return path || '/login';
   }
 
+  function _pathFromLocation() {
+    return _normalize(window.location.hash || '#/login');
+  }
+
+  /**
+   * Navigate to a hash route. Always dispatches the handler.
+   */
   function navigate(path, replace = false) {
     path = _normalize(path);
-
-    // No-op if already on this path (stops login↔dashboard thrash)
-    if (path === _current && window.location.hash === '#' + path) {
-      return;
-    }
-
     const hash = '#' + path;
+
     if (replace) {
       history.replaceState(null, '', hash);
-    } else {
+    } else if (window.location.hash !== hash) {
+      // pushState so we control dispatch (avoid double hashchange+dispatch races)
       history.pushState(null, '', hash);
     }
+
     _dispatch(path);
   }
 
   function _dispatch(path) {
     path = _normalize(path);
+    const token = ++_navToken;
 
-    // Re-entrancy: if a handler navigates, finish current then run latest path once
-    if (_dispatching) {
-      _queue = path;
-      return;
-    }
-    _dispatching = true;
-
-    try {
-      let guard = 0;
-      let next = path;
-      while (next && guard++ < 8) {
-        _queue = null;
-        const resolved = _runHandler(next);
-        // Handler may have queued a new path via navigate()
-        next = _queue;
-        if (!next || next === resolved) break;
-      }
-      if (guard >= 8) {
-        console.error('[Router] Navigation loop detected; stopping at', _current);
-      }
-    } finally {
-      _dispatching = false;
-      _queue = null;
-    }
-  }
-
-  function _runHandler(path) {
     let handler = _routes[path];
-    let params  = {};
+    let params = {};
 
     if (!handler) {
       for (const [pattern, fn] of Object.entries(_routes)) {
+        if (!pattern.includes(':')) continue;
         const regex = new RegExp('^' + pattern.replace(/:[^/]+/g, '([^/]+)') + '$');
         const match = path.match(regex);
         if (match) {
@@ -90,56 +71,71 @@ const WPRouter = (() => {
     }
 
     if (!handler) {
-      // Prefer staying put / login over bouncing between missing routes
-      const fallback = _routes['/login']
-        ? '/login'
-        : (_routes['/dashboard'] ? '/dashboard' : null);
-      if (fallback && fallback !== path) {
-        console.warn(`[Router] No handler for ${path}; falling back to ${fallback}`);
-        const hash = '#' + fallback;
-        history.replaceState(null, '', hash);
-        path = fallback;
-        handler = _routes[path];
-      } else {
-        console.warn(`[Router] Route not found: ${path}`);
-        return path;
+      console.warn('[Router] No route for', path, 'known:', Object.keys(_routes));
+      // Only fall back once — never bounce login↔dashboard
+      if (path !== '/login' && _routes['/login']) {
+        history.replaceState(null, '', '#/login');
+        _current = '/login';
+        try { _routes['/login']({}); } catch (e) { console.error(e); }
+      } else if (path !== '/dashboard' && _routes['/dashboard']) {
+        history.replaceState(null, '', '#/dashboard');
+        _current = '/dashboard';
+        try { _routes['/dashboard']({}); } catch (e) { console.error(e); }
       }
+      return;
     }
-
-    if (!handler) return path;
 
     _current = path;
-    try {
-      handler(params);
-    } catch (err) {
-      console.error(`[Router] Handler error for ${path}`, err);
-    }
-    return path;
+
+    // Support async handlers without blocking the router
+    Promise.resolve()
+      .then(() => handler(params, token))
+      .catch(err => console.error('[Router] handler failed for', path, err));
   }
 
   function start() {
     if (!_started) {
       _started = true;
       window.addEventListener('popstate', () => {
-        const path = window.location.hash.replace('#', '') || '/login';
+        const path = _pathFromLocation();
+        if (path === _current) return;
         _dispatch(path);
       });
+      // Backup for anything that sets location.hash directly
       window.addEventListener('hashchange', () => {
-        const path = window.location.hash.replace('#', '') || '/login';
-        // Ignore if we already handled this path via navigate()
-        if (_normalize(path) === _current && !_dispatching) return;
+        const path = _pathFromLocation();
+        if (path === _current) return;
         _dispatch(path);
       });
     }
-    const initial = window.location.hash.replace('#', '') || '/login';
-    _dispatch(initial);
+    _dispatch(_pathFromLocation());
   }
 
-  function current() { return _current; }
+  function current() {
+    return _current;
+  }
 
   function hasRoute(path) {
     return !!_routes[_normalize(path)];
   }
 
-  return { register, clearRoutes, navigate, start, current, hasRoute };
+  /** True if this navigation was superseded by a newer one. */
+  function isStale(token) {
+    return token != null && token !== _navToken;
+  }
+
+  function navToken() {
+    return _navToken;
+  }
+
+  return {
+    register,
+    clearRoutes,
+    navigate,
+    start,
+    current,
+    hasRoute,
+    isStale,
+    navToken,
+  };
 })();

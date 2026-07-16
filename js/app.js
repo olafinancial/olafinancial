@@ -48,14 +48,14 @@ const WPApp = (() => {
         return;
       }
 
-      // Ensure router listeners exist, then land on a real app route
-      WPRouter.start();
-      const currentPath = window.location.hash.replace('#', '') || '/dashboard';
-      const authPaths = ['/login', '/signup', '/logged-out', 'login', 'signup', 'logged-out'];
-      if (authPaths.includes(currentPath) || currentPath === '/' || currentPath === '') {
-        WPRouter.navigate('/dashboard', true);
+      // Start router after app routes are registered
+      const rawHash = window.location.hash.replace('#', '') || '/dashboard';
+      const path = rawHash.startsWith('/') ? rawHash : '/' + rawHash;
+      const authPaths = ['/login', '/signup', '/logged-out'];
+      if (authPaths.includes(path) || path === '/') {
+        history.replaceState(null, '', '#/dashboard');
       }
-      // else start() already dispatched the current app path (e.g. #/income)
+      WPRouter.start();
     } catch (err) {
       console.error("[Boot Error]", err);
       const splash = document.getElementById('app-splash');
@@ -253,55 +253,65 @@ const WPApp = (() => {
         html += `<div class="nav-section-label">${item.section}</div>`;
         lastSection = item.section;
       }
-      html += `<div class="nav-item" data-path="${item.path}" id="nav-${item.path.replace('/','').replace('-','_')}">
+      // Use <a href="#/..."> so navigation works even if JS handlers fail
+      html += `<a class="nav-item" href="#${item.path}" data-path="${item.path}" id="nav-${item.path.replace('/','').replace(/-/g,'_')}" style="text-decoration:none;color:inherit">
         <span style="font-size:1.1rem">${item.icon}</span>
         <span>${item.label}</span>
-      </div>`;
+      </a>`;
     }
-    // Logout
     html += `
-      <div class="nav-item" id="nav-logout">
+      <div class="nav-item" id="nav-logout" role="button" tabindex="0">
         <span>&#x2B9E;</span><span>Sign Out</span>
       </div>`;
     nav.innerHTML = html;
 
-    // Mobile nav
     if (bottomNav) {
       bottomNav.innerHTML = MOBILE_TABS.map(p => {
         const item = NAV_ITEMS.find(n => n.path === p);
         if (!item) return '';
-        return `<div class="bottom-nav-item" data-path="${p}">
+        return `<a class="bottom-nav-item" href="#${p}" data-path="${p}" style="text-decoration:none;color:inherit">
           <span style="font-size:1.3rem">${item.icon}</span>
           <span>${item.label}</span>
-        </div>`;
+        </a>`;
       }).join('');
-      bottomNav.addEventListener('click', e => {
-        const item = e.target.closest('[data-path]');
-        if (item) WPRouter.navigate(item.dataset.path);
-      });
     }
 
-    nav.addEventListener('click', e => {
+    // Single delegated handler (rebind-safe: property assign replaces previous)
+    nav.onclick = (e) => {
+      if (e.target.closest('#nav-logout')) return;
       const item = e.target.closest('[data-path]');
-      if (item) { WPRouter.navigate(item.dataset.path); _closeMobileSidebar(); }
-    });
-    
-    document.getElementById('nav-logout')?.addEventListener('click', async (e) => {
+      if (!item) return;
       e.preventDefault();
-      e.stopPropagation();
-      const btn = e.currentTarget;
-      if (btn) {
-        btn.style.opacity = '0.6';
-        btn.style.pointerEvents = 'none';
-      }
-      try {
-        await WPAuth.signOut();
-      } catch (err) {
-        console.error('Sign out failed', err);
-        // Force auth shell even if something threw
-        if (typeof WPApp.enterAuthShell === 'function') WPApp.enterAuthShell('/login');
-      }
-    });
+      const path = item.getAttribute('data-path');
+      if (path) WPRouter.navigate(path);
+      _closeMobileSidebar();
+    };
+
+    if (bottomNav) {
+      bottomNav.onclick = (e) => {
+        const item = e.target.closest('[data-path]');
+        if (!item) return;
+        e.preventDefault();
+        const path = item.getAttribute('data-path');
+        if (path) WPRouter.navigate(path);
+      };
+    }
+
+    const logoutBtn = document.getElementById('nav-logout');
+    if (logoutBtn) {
+      logoutBtn.onclick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        logoutBtn.style.opacity = '0.6';
+        logoutBtn.style.pointerEvents = 'none';
+        try {
+          await WPAuth.signOut();
+        } catch (err) {
+          console.error('Sign out failed', err);
+          if (typeof WPApp.enterAuthShell === 'function') WPApp.enterAuthShell('/login');
+        }
+      };
+    }
   }
 
   function _closeMobileSidebar() {
@@ -356,18 +366,9 @@ const WPApp = (() => {
       '/salary-calc':   {
         async init(container) {
           try { sessionStorage.setItem('wp_calc_tab', 'salary'); } catch { /* ignore */ }
-          // Delegate fully to Calculators hub (avoids hash race / stuck skeleton)
-          if (typeof WPCalculators !== 'undefined') {
-            await WPCalculators.init(container);
-          } else {
-            container.innerHTML = '<div class="page-body" style="padding:2rem">Calculators module failed to load. Hard-refresh the page.</div>';
-          }
+          WPRouter.navigate('/calculators', true);
         },
-        destroy() {
-          if (typeof WPCalculators !== 'undefined') {
-            try { WPCalculators.destroy(); } catch { /* ignore */ }
-          }
-        },
+        destroy() {},
       },
       '/calculators':    WPCalculators,
       '/reports':       WPReports,
@@ -375,15 +376,18 @@ const WPApp = (() => {
     };
 
     for (const [path, page] of Object.entries(pages)) {
-      WPRouter.register(path, async (params) => {
+      WPRouter.register(path, async (params, token) => {
         _setActiveNav(path);
-        await _loadPage(page, params);
+        await _loadPage(page, params, token);
       });
     }
   }
 
-  async function _loadPage(page, params = {}) {
+  async function _loadPage(page, params = {}, token = null) {
     const gen = ++_pageLoadGen;
+    const stale = () =>
+      (token != null && typeof WPRouter.isStale === 'function' && WPRouter.isStale(token))
+      || gen !== _pageLoadGen;
 
     try {
       if (_activePage && typeof _activePage.destroy === 'function') {
@@ -391,24 +395,27 @@ const WPApp = (() => {
       }
     } catch (e) { console.warn('[page destroy outer]', e); }
 
-    // Route guard: if onboarding is not done, only allow onboarding page (only for logged in users)
+    // Route guard: incomplete onboarding → wizard only
     if (state.user && page !== WPOnboarding && (!state.profile || !state.profile.onboarding_done)) {
-      WPRouter.navigate('/onboarding', true);
+      // Only redirect if onboarding route exists (app shell)
+      if (WPRouter.hasRoute('/onboarding')) {
+        WPRouter.navigate('/onboarding', true);
+      }
       return;
     }
 
-    // Toggle sidebar visibility based on active page
     const shell = document.querySelector('.app-shell');
     if (shell) {
-      if (page === WPOnboarding) {
-        shell.classList.add('no-sidebar');
-      } else {
-        shell.classList.remove('no-sidebar');
-      }
+      if (page === WPOnboarding) shell.classList.add('no-sidebar');
+      else shell.classList.remove('no-sidebar');
     }
 
     const container = document.getElementById('page-container');
-    if (!container) return;
+    if (!container) {
+      console.error('[page] #page-container missing — app shell not mounted');
+      return;
+    }
+
     container.innerHTML = `<div class="page-body" style="display:flex;align-items:center;justify-content:center;min-height:60vh">
       <div style="text-align:center;color:var(--clr-text-2)">
         <div class="skeleton skeleton-card" style="width:120px;height:120px;margin:0 auto 1rem"></div>
@@ -420,7 +427,7 @@ const WPApp = (() => {
     if (!page || typeof page.init !== 'function') {
       container.innerHTML = `<div class="page-body" style="padding:2rem"><div class="card" style="padding:1.5rem">
         <h3 style="margin:0 0 0.5rem;color:#fff">Page failed to load</h3>
-        <p class="text-muted text-sm">Module is missing. Hard-refresh (Ctrl+Shift+R) or clear site data.</p>
+        <p class="text-muted text-sm">Module is missing. Hard-refresh (Ctrl+Shift+R).</p>
         <button class="btn btn-primary btn-sm" onclick="location.reload()">Reload</button>
       </div></div>`;
       return;
@@ -428,10 +435,10 @@ const WPApp = (() => {
 
     try {
       await page.init(container, params);
-      if (gen !== _pageLoadGen) return; // superseded by a newer navigation
+      if (stale()) return;
       container.classList.add('page-enter');
     } catch (err) {
-      if (gen !== _pageLoadGen) return;
+      if (stale()) return;
       console.error('[page init]', err);
       container.innerHTML = `<div class="page-body" style="padding:2rem"><div class="card" style="padding:1.5rem;border:1px solid var(--clr-danger)">
         <h3 style="margin:0 0 0.5rem;color:#fff">Could not open this page</h3>
