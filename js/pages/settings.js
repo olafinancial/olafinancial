@@ -157,6 +157,45 @@ const WPSettings = (() => {
           <button class="btn btn-primary" style="width:100%;margin-top:1rem" id="save-digest-btn">Save Digest Preferences</button>
         </div>
 
+        <!-- Testing & account safety -->
+        <div class="card" style="max-width:600px;padding:2rem;margin-top:1.5rem;border:1px solid var(--clr-danger)">
+          <h3 style="margin-bottom:0.5rem;font-weight:700;color:#ffffff">🧪 Testing &amp; account</h3>
+          <p style="color:var(--clr-text-2);font-size:0.85rem;margin:0 0 1rem;line-height:1.55">
+            You do <strong>not</strong> need to delete your login to try features again.
+            Prefer <strong>Reset data</strong> or <strong>Load demo data</strong> so the same email keeps working.
+          </p>
+
+          <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.25rem">
+            <div style="padding:0.85rem;background:var(--clr-surface-2);border-radius:8px">
+              <div style="font-weight:600;margin-bottom:0.35rem">1. Reset my financial data</div>
+              <p class="text-xs text-muted" style="margin:0 0 0.65rem;line-height:1.45">
+                Deletes income, expenses, assets, liabilities, goals, snapshots, etc.
+                Keeps your email/password. Then opens the setup wizard.
+              </p>
+              <button type="button" class="btn btn-secondary btn-sm" id="set-reset-data-btn" style="width:100%">Reset my data</button>
+            </div>
+            <div style="padding:0.85rem;background:var(--clr-surface-2);border-radius:8px">
+              <div style="font-weight:600;margin-bottom:0.35rem">2. Load demo sample data</div>
+              <p class="text-xs text-muted" style="margin:0 0 0.65rem;line-height:1.45">
+                Adds a small sample month (salary, expenses, assets, loans) so you can click through
+                Budget, Balance Sheet, Debt, Reports without manual entry. Safe to run after a reset.
+              </p>
+              <button type="button" class="btn btn-primary btn-sm" id="set-seed-demo-btn" style="width:100%">Load demo data</button>
+            </div>
+            <div style="padding:0.85rem;background:var(--clr-surface-2);border-radius:8px">
+              <div style="font-weight:600;margin-bottom:0.35rem">3. Delete account permanently</div>
+              <p class="text-xs text-muted" style="margin:0 0 0.65rem;line-height:1.45">
+                Removes your Auth user so you can sign up again with the same email.
+                Requires the API server with <code>SUPABASE_SECRET_KEY</code>. Prefer reset for normal testing.
+              </p>
+              <button type="button" class="btn btn-ghost btn-sm text-danger" id="set-delete-account-btn" style="width:100%;border:1px solid var(--clr-danger)">Delete account…</button>
+            </div>
+          </div>
+          <p class="text-xs text-muted" style="margin:0">
+            Tip: after reset or demo load, use Dashboard → pages to verify. Replay onboarding from Getting started above anytime.
+          </p>
+        </div>
+
       </div>
     `;
 
@@ -248,6 +287,122 @@ const WPSettings = (() => {
       toggleThumb.style.left       = on ? '25px' : '3px';
       digestOptions.style.display  = on ? 'block' : 'none';
       digestEmailGrp.style.display = on ? 'block' : 'none';
+    });
+
+    // ── Reset data (keep account) ────────────────────────────
+    document.getElementById('set-reset-data-btn')?.addEventListener('click', () => {
+      WPModal.confirm(
+        'Reset all financial data?',
+        'This deletes income, expenses, assets, liabilities, goals, and snapshots for your account. Your login email and password stay. Continue?',
+        async () => {
+          const btn = document.getElementById('set-reset-data-btn');
+          if (btn) { btn.disabled = true; btn.textContent = 'Resetting…'; }
+          try {
+            const uid = WPApp.state.user.id;
+            // Prefer API when server is available; always fall back to client RLS wipe
+            try {
+              const session = await WPDb.getSession();
+              if (session?.access_token) {
+                await fetch('/api/account/reset', {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json',
+                  },
+                });
+              }
+            } catch { /* offline / no API */ }
+            await WPDb.resetUserData(uid);
+            WPDb.clearUserLocalState(uid);
+            WPApp.state.profile = await WPDb.getProfile(uid);
+            WPApp.state.data = {
+              income: [], expenses: [], assets: [], liabilities: [],
+              goals: [], emergencyFund: null, snapshots: [],
+            };
+            WPToast.success('Data cleared. Opening setup wizard…');
+            WPRouter.navigate('/onboarding');
+          } catch (err) {
+            WPToast.error('Reset failed: ' + (err.message || err));
+          } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Reset my data'; }
+          }
+        }
+      );
+    });
+
+    // ── Seed demo data ───────────────────────────────────────
+    document.getElementById('set-seed-demo-btn')?.addEventListener('click', () => {
+      WPModal.confirm(
+        'Load demo sample data?',
+        'Adds sample income, expenses, assets, and debts for this month so you can test features. Does not delete existing rows (reset first for a clean slate).',
+        async () => {
+          const btn = document.getElementById('set-seed-demo-btn');
+          if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+          try {
+            const uid = WPApp.state.user.id;
+            await WPDb.seedDemoData(uid);
+            WPApp.state.profile = await WPDb.getProfile(uid);
+            WPToast.success('Demo data loaded. Open Dashboard or Budget to explore.');
+            WPRouter.navigate('/dashboard');
+          } catch (err) {
+            WPToast.error('Could not seed demo data: ' + (err.message || err));
+            console.error(err);
+          } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Load demo data'; }
+          }
+        }
+      );
+    });
+
+    // ── Delete account ───────────────────────────────────────
+    document.getElementById('set-delete-account-btn')?.addEventListener('click', () => {
+      WPModal.confirm(
+        'Permanently delete account?',
+        'This removes your login so you can sign up again with the same email. Type DELETE in the next prompt if asked. Prefer “Reset my data” if you only want a clean slate.',
+        async () => {
+          const typed = window.prompt('Type DELETE to confirm permanent account deletion:');
+          if (String(typed || '').trim().toUpperCase() !== 'DELETE') {
+            WPToast.info('Account delete cancelled.');
+            return;
+          }
+          const btn = document.getElementById('set-delete-account-btn');
+          if (btn) { btn.disabled = true; btn.textContent = 'Deleting…'; }
+          try {
+            const session = await WPDb.getSession();
+            if (!session?.access_token) throw new Error('Not signed in');
+            const res = await fetch('/api/account/delete', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ confirm: 'DELETE' }),
+            });
+            const body = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              // Fallback: wipe data if API cannot delete auth user
+              if (res.status === 503 || res.status === 404) {
+                await WPDb.resetUserData(WPApp.state.user.id);
+                WPDb.clearUserLocalState(WPApp.state.user.id);
+                WPToast.warning(
+                  (body.error || 'Account delete API unavailable.') +
+                  ' Your financial data was cleared instead. Ask an admin to remove the Auth user, or reset and re-test with the same login.'
+                );
+                await WPAuth.signOut();
+                return;
+              }
+              throw new Error(body.error || res.statusText);
+            }
+            WPDb.clearUserLocalState(WPApp.state.user.id);
+            WPToast.success('Account deleted. You can sign up again with the same email.');
+            await WPAuth.signOut();
+          } catch (err) {
+            WPToast.error('Delete failed: ' + (err.message || err));
+          } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Delete account…'; }
+          }
+        }
+      );
     });
 
     // ── Digest prefs save ────────────────────────────────────

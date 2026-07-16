@@ -392,13 +392,7 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 ## 🗓️ Open GitHub Issues
 
-### Open now (as of 2026-07-15)
-
-#### Stakeholder / product
-
-| Issue | Title | Type | Priority | Status |
-|-------|-------|------|----------|--------|
-
+### Open now (as of 2026-07-16)
 
 #### Ops / roadmap
 
@@ -408,39 +402,44 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#29](https://github.com/olafinancial/olafinancial/issues/29) | Monthly macro data update — NBS/CBN | Recurring | 🔲 Open |
 | [#28](https://github.com/olafinancial/olafinancial/issues/28) | Confirm sponsor partners & activate banners | High | 🔲 Blocked (partners) |
 
-### Recently closed
+### Recently closed (product)
 
 | Issue | Title | Status |
 |-------|-------|--------|
-| [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | ✅ Closed 2026-07-15 |
-| [#36](https://github.com/olafinancial/olafinancial/issues/36) | Balance Sheet split (Assets & Liabilities pages) | ✅ Closed 2026-07-15 |
-| [#23](https://github.com/olafinancial/olafinancial/issues/23) | Branding / domain → pul.llc | ✅ Closed 2026-07-15 — #25 was duplicate |
-| [#49](https://github.com/olafinancial/olafinancial/issues/49) | Reports as strategic / plain-language health narrative | ✅ Closed 2026-07-15 |
-| [#50](https://github.com/olafinancial/olafinancial/issues/50) | Income-gen assets vs interest-bearing liabilities | ✅ Closed 2026-07-15 |
-| [#46](https://github.com/olafinancial/olafinancial/issues/46) | Budget planner / Savings & Debt Payoff unclear | ✅ Closed 2026-07-15 |
-| [#47](https://github.com/olafinancial/olafinancial/issues/47) | Mark-to-market ticker under Assets (not Retirement) | ✅ Closed 2026-07-15 |
-| [#43](https://github.com/olafinancial/olafinancial/issues/43) | Your Path starts with Goals | ✅ Closed 2026-07-15 |
-| [#45](https://github.com/olafinancial/olafinancial/issues/45) | Cash flow inflows: category totals only | ✅ Closed 2026-07-15 |
-| [#44](https://github.com/olafinancial/olafinancial/issues/44) | Header “Income Statement” for Income + Expenses | ✅ Closed 2026-07-15 |
-| [#48](https://github.com/olafinancial/olafinancial/issues/48) | [Bug] Insurance currency stuck on $ | ✅ Closed 2026-07-15 |
-| [#34](https://github.com/olafinancial/olafinancial/issues/34) / [#42](https://github.com/olafinancial/olafinancial/issues/42) | Salary Calculator & active income ledger | ✅ Closed 2026-07-15 |
-| [#41](https://github.com/olafinancial/olafinancial/issues/41) | Investment questionnaire (NG) | ✅ Closed 2026-07-14 — `#/invest`, R40 |
-| [#27](https://github.com/olafinancial/olafinancial/issues/27) | Social sharing & watermarked PNG export | ✅ Closed |
-| [#30](https://github.com/olafinancial/olafinancial/issues/30) | Per-page currency selectors | ✅ Closed |
-| [#31](https://github.com/olafinancial/olafinancial/issues/31) | Scheduled / email digest reports (code) | ✅ Closed |
-| [#33](https://github.com/olafinancial/olafinancial/issues/33) | Reports page overhaul | ✅ Closed |
-| [#35](https://github.com/olafinancial/olafinancial/issues/35) | Income green / expenses red | ✅ Closed |
-| [#37](https://github.com/olafinancial/olafinancial/issues/37) | pul_logo + Pul Planning lockup | ✅ Closed |
-| [#39](https://github.com/olafinancial/olafinancial/issues/39) | X / Instagram / Facebook links | ✅ Closed |
-| [#40](https://github.com/olafinancial/olafinancial/issues/40) | PWA auto cache / no hard refresh | ✅ Closed |
-| — | Getting-started path + re-run onboarding | ✅ Completed |
+| [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | ✅ Closed |
+| [#36](https://github.com/olafinancial/olafinancial/issues/36) | Balance Sheet split (Assets & Liabilities) | ✅ Closed |
+| [#23](https://github.com/olafinancial/olafinancial/issues/23) | Branding / domain → pul.llc | ✅ Closed (#25 duplicate) |
+| [#49](https://github.com/olafinancial/olafinancial/issues/49) | Strategic plain-language reports | ✅ Closed |
+| [#50](https://github.com/olafinancial/olafinancial/issues/50) | Income-gen assets vs interest-bearing liabilities | ✅ Closed |
+| [#46](https://github.com/olafinancial/olafinancial/issues/46) | Budget Savings & Debt Payoff clarity | ✅ Closed |
+| [#47](https://github.com/olafinancial/olafinancial/issues/47) | MTM ticker under Assets | ✅ Closed |
+| [#43](https://github.com/olafinancial/olafinancial/issues/43) / [#44](https://github.com/olafinancial/olafinancial/issues/44) / [#45](https://github.com/olafinancial/olafinancial/issues/45) | Goals path, Income Statement, CF totals | ✅ Closed |
+| [#48](https://github.com/olafinancial/olafinancial/issues/48) / [#42](https://github.com/olafinancial/olafinancial/issues/42) / [#34](https://github.com/olafinancial/olafinancial/issues/34) | Insurance currency, salary net | ✅ Closed |
+| [#41](https://github.com/olafinancial/olafinancial/issues/41) | Investment questionnaire | ✅ Closed |
+| [#27](https://github.com/olafinancial/olafinancial/issues/27)–[#40](https://github.com/olafinancial/olafinancial/issues/40) | Reports share, digests, branding, PWA cache, etc. | ✅ Closed |
 
-### Suggested build order (updated 2026-07-15 · post–#32/#36)
+### Suggested build order
 
-1. **#38** Email ops  
-2. **#28 / #29** Sponsor activation & macro data updates  
+1. **#38** Email ops (Supabase Auth SMTP + Resend digests on always-on host)  
+2. **#28 / #29** Sponsors & monthly macro data  
+
+### Product complete for main UX streams (2026-07)
+
+* Sensible path batch, MTM assets, budget clarity, productive BS, strategic reports  
+* Branding to **pul.llc** / Pul Planning  
+* Sharia tools (Takaful pref, Zakat, Qard Hasan, Halal invest tips) — not app-wide filter  
+* **Settings → Testing & account**: Reset data, Load demo data, Delete account (API)
 
 ---
+
+### Session 18 — 2026-07-16 — Test without deleting account + plans refresh
+
+* **Problem**: Customer wanted to delete/recreate account to retest features  
+* **Solution (preferred)**:
+  1. **Reset my data** — wipe financial tables + local prefs; keep email/password; reopen onboarding  
+  2. **Load demo data** — sample income/expenses/assets/debts for click-through testing  
+  3. **Delete account** — `POST /api/account/delete` (needs `SUPABASE_SECRET_KEY` on API host) so email can re-signup  
+* **Files**: `js/supabase-client.js` (`resetUserData`, `seedDemoData`, `clearUserLocalState`), `js/pages/settings.js`, `server/routes/account.js`
 
 ### Session 17 — 2026-07-15 — Sharia tools (not app-wide mode)
 
