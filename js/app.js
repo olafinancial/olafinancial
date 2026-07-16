@@ -48,12 +48,14 @@ const WPApp = (() => {
         return;
       }
 
+      // Ensure router listeners exist, then land on a real app route
+      WPRouter.start();
       const currentPath = window.location.hash.replace('#', '') || '/dashboard';
-      if (['/login', '/signup', '/onboarding', '/logged-out'].includes(currentPath)) {
+      const authPaths = ['/login', '/signup', '/logged-out', 'login', 'signup', 'logged-out'];
+      if (authPaths.includes(currentPath) || currentPath === '/' || currentPath === '') {
         WPRouter.navigate('/dashboard', true);
-      } else {
-        WPRouter.start();
       }
+      // else start() already dispatched the current app path (e.g. #/income)
     } catch (err) {
       console.error("[Boot Error]", err);
       const splash = document.getElementById('app-splash');
@@ -76,6 +78,9 @@ const WPApp = (() => {
   // ── AUTH SHELL (no sidebar) ───────────────────────────────
   function _showAuth() {
     _activePage = null;
+    // Ensure no leftover logged-in state drives login→dashboard bounce
+    state.user = null;
+    state.profile = null;
     document.getElementById('root').innerHTML = '<div id="auth-root"></div>';
     _registerAuthRoutes();
     WPRouter.start();
@@ -91,47 +96,58 @@ const WPApp = (() => {
     state.profile = null;
     document.getElementById('root').innerHTML = '<div id="auth-root"></div>';
     _registerAuthRoutes();
-    // Replace hash + dispatch without relying on prior app routes
     const target = path.startsWith('/') ? path : `/${path}`;
     history.replaceState(null, '', '#' + target);
     WPRouter.start();
-    // start() dispatches current hash; force logged-out if needed
-    if (WPRouter.current() !== target) {
-      WPRouter.navigate(target, true);
+  }
+
+  function _ensureAuthRoot() {
+    let container = document.getElementById('auth-root');
+    if (!container) {
+      document.getElementById('root').innerHTML = '<div id="auth-root"></div>';
+      container = document.getElementById('auth-root');
     }
+    return container;
   }
 
   function _registerAuthRoutes() {
+    // Drop app routes so missing dashboard cannot fight with /login
+    if (typeof WPRouter.clearRoutes === 'function') WPRouter.clearRoutes();
+
     WPRouter.register('/login',  () => {
+      // If we still have a session user, rebuild the app shell instead of looping
       if (state.user) {
-        WPRouter.navigate('/dashboard', true);
+        if (document.getElementById('page-container') && WPRouter.hasRoute('/dashboard')) {
+          WPRouter.navigate('/dashboard', true);
+        } else {
+          // Stale user flag without app shell — clear and show login
+          state.user = null;
+          state.profile = null;
+          const container = _ensureAuthRoot();
+          if (container) WPAuth.renderLogin(container);
+        }
         return;
       }
-      let container = document.getElementById('auth-root');
-      if (!container) {
-        document.getElementById('root').innerHTML = '<div id="auth-root"></div>';
-        container = document.getElementById('auth-root');
-      }
+      const container = _ensureAuthRoot();
       if (container) WPAuth.renderLogin(container);
     });
     WPRouter.register('/signup', () => {
       if (state.user) {
-        WPRouter.navigate('/dashboard', true);
+        if (document.getElementById('page-container') && WPRouter.hasRoute('/dashboard')) {
+          WPRouter.navigate('/dashboard', true);
+        } else {
+          state.user = null;
+          state.profile = null;
+          const container = _ensureAuthRoot();
+          if (container) WPAuth.renderSignup(container);
+        }
         return;
       }
-      let container = document.getElementById('auth-root');
-      if (!container) {
-        document.getElementById('root').innerHTML = '<div id="auth-root"></div>';
-        container = document.getElementById('auth-root');
-      }
+      const container = _ensureAuthRoot();
       if (container) WPAuth.renderSignup(container);
     });
     WPRouter.register('/logged-out', () => {
-      let container = document.getElementById('auth-root');
-      if (!container) {
-        document.getElementById('root').innerHTML = '<div id="auth-root"></div>';
-        container = document.getElementById('auth-root');
-      }
+      const container = _ensureAuthRoot();
       if (container) {
         const social = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.brandSocialHTML)
           ? APP_CONFIG.brandSocialHTML()
@@ -185,15 +201,19 @@ const WPApp = (() => {
     _renderNav();
     _updateUserInfo();
     _registerAppRoutes();
-    WPRouter.start();
+    // Do not start() here — boot() decides initial route after onboarding checks.
+    // (Calling start() immediately re-dispatches #/login and can loop with auth handlers.)
 
-    // Mobile sidebar toggle
-    document.addEventListener('click', (e) => {
-      const sidebar = document.getElementById('sidebar');
-      if (sidebar && !sidebar.contains(e.target)) {
-        sidebar.classList.remove('open');
-      }
-    });
+    // Mobile sidebar toggle (once)
+    if (!window.__wpSidebarClickBound) {
+      window.__wpSidebarClickBound = true;
+      document.addEventListener('click', (e) => {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar && !sidebar.contains(e.target)) {
+          sidebar.classList.remove('open');
+        }
+      });
+    }
   }
 
   // ── NAV ITEMS ─────────────────────────────────────────────
@@ -312,6 +332,9 @@ const WPApp = (() => {
 
   // ── ROUTE → PAGE MAPPING ──────────────────────────────────
   function _registerAppRoutes() {
+    // Drop auth-only routes so #/login cannot fight app navigation after sign-in
+    if (typeof WPRouter.clearRoutes === 'function') WPRouter.clearRoutes();
+
     const pages = {
       '/onboarding':    WPOnboarding,
       '/dashboard':     WPDashboard,

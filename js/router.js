@@ -1,25 +1,39 @@
 // ============================================================
-// OlaFinancial — Hash Router
+// Pul Planning — Hash Router
 // ============================================================
 
 const WPRouter = (() => {
-  const _routes = {};
+  let _routes = {};
   let _current = null;
+  let _dispatching = false;
+  let _started = false;
+  let _queue = null; // path pending while dispatching
 
   function register(path, handler) {
-    console.log(`[Router] Registering route: ${path}`, !!handler);
     _routes[path] = handler;
+  }
+
+  /** Wipe all routes (switch between auth shell and app shell). */
+  function clearRoutes() {
+    _routes = {};
   }
 
   /** Normalize hash path so "#dashboard" and "#/dashboard" both resolve. */
   function _normalize(path) {
     if (!path || path === '/') return '/login';
+    // Strip query/hash fragments accidentally included
+    path = String(path).split('?')[0].split('#')[0];
     return path.startsWith('/') ? path : `/${path}`;
   }
 
   function navigate(path, replace = false) {
     path = _normalize(path);
-    console.log(`[Router] Navigating to: ${path}`);
+
+    // No-op if already on this path (stops login↔dashboard thrash)
+    if (path === _current && window.location.hash === '#' + path) {
+      return;
+    }
+
     const hash = '#' + path;
     if (replace) {
       history.replaceState(null, '', hash);
@@ -31,13 +45,38 @@ const WPRouter = (() => {
 
   function _dispatch(path) {
     path = _normalize(path);
-    console.log(`[Router] Dispatching path: "${path}". Registered routes:`, Object.keys(_routes));
-    // Match exact or with params
+
+    // Re-entrancy: if a handler navigates, finish current then run latest path once
+    if (_dispatching) {
+      _queue = path;
+      return;
+    }
+    _dispatching = true;
+
+    try {
+      let guard = 0;
+      let next = path;
+      while (next && guard++ < 8) {
+        _queue = null;
+        const resolved = _runHandler(next);
+        // Handler may have queued a new path via navigate()
+        next = _queue;
+        if (!next || next === resolved) break;
+      }
+      if (guard >= 8) {
+        console.error('[Router] Navigation loop detected; stopping at', _current);
+      }
+    } finally {
+      _dispatching = false;
+      _queue = null;
+    }
+  }
+
+  function _runHandler(path) {
     let handler = _routes[path];
     let params  = {};
 
     if (!handler) {
-      // Try parameterized routes
       for (const [pattern, fn] of Object.entries(_routes)) {
         const regex = new RegExp('^' + pattern.replace(/:[^/]+/g, '([^/]+)') + '$');
         const match = path.match(regex);
@@ -51,20 +90,32 @@ const WPRouter = (() => {
     }
 
     if (!handler) {
-      const fallback = _routes['/dashboard'] ? '/dashboard' : (_routes['/login'] ? '/login' : null);
+      // Prefer staying put / login over bouncing between missing routes
+      const fallback = _routes['/login']
+        ? '/login'
+        : (_routes['/dashboard'] ? '/dashboard' : null);
       if (fallback && fallback !== path) {
-        navigate(fallback, true);
+        console.warn(`[Router] No handler for ${path}; falling back to ${fallback}`);
+        const hash = '#' + fallback;
+        history.replaceState(null, '', hash);
+        path = fallback;
+        handler = _routes[path];
       } else {
-        console.warn(`Route not found: ${path} and no valid fallback registered.`);
+        console.warn(`[Router] Route not found: ${path}`);
+        return path;
       }
-      return;
     }
 
-    _current = path;
-    handler(params);
-  }
+    if (!handler) return path;
 
-  let _started = false;
+    _current = path;
+    try {
+      handler(params);
+    } catch (err) {
+      console.error(`[Router] Handler error for ${path}`, err);
+    }
+    return path;
+  }
 
   function start() {
     if (!_started) {
@@ -73,9 +124,10 @@ const WPRouter = (() => {
         const path = window.location.hash.replace('#', '') || '/login';
         _dispatch(path);
       });
-      // Also react to hash-only navigations (e.g. direct #/route links / tests)
       window.addEventListener('hashchange', () => {
         const path = window.location.hash.replace('#', '') || '/login';
+        // Ignore if we already handled this path via navigate()
+        if (_normalize(path) === _current && !_dispatching) return;
         _dispatch(path);
       });
     }
@@ -85,5 +137,9 @@ const WPRouter = (() => {
 
   function current() { return _current; }
 
-  return { register, navigate, start, current };
+  function hasRoute(path) {
+    return !!_routes[_normalize(path)];
+  }
+
+  return { register, clearRoutes, navigate, start, current, hasRoute };
 })();
