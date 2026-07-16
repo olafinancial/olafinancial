@@ -392,38 +392,37 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 ## 🗓️ Open GitHub Issues
 
-### Open now (as of 2026-07-14)
+### Open now (as of 2026-07-15)
 
 #### Stakeholder batch (2026-07-14 · @kaluaja)
 
 | Issue | Title | Type | Priority | Status |
 |-------|-------|------|----------|--------|
-| [#48](https://github.com/olafinancial/olafinancial/issues/48) | **[Bug] Insurance currency stuck on $** | Bug | High | 🔲 Open — should be NGN / switchable |
 | [#43](https://github.com/olafinancial/olafinancial/issues/43) | Your Path starts with Goals | UX | Medium | 🔲 Open — reorder getting-started path |
-| [#42](https://github.com/olafinancial/olafinancial/issues/42) | Active Income Salary (gross → deductibles → net) | Feature | High | 🔲 Open — overlaps #34 |
-| [#34](https://github.com/olafinancial/olafinancial/issues/34) | Salary deductibles calculator + tax-year ledger | Feature | High | 🔲 Open — related to #42 |
 | [#45](https://github.com/olafinancial/olafinancial/issues/45) | Cash flow inflows: category totals only | UX | Medium | 🔲 Open |
 | [#44](https://github.com/olafinancial/olafinancial/issues/44) | Header “Income Statement” for Income + Expenses | IA | Medium | 🔲 Open |
 | [#47](https://github.com/olafinancial/olafinancial/issues/47) | Mark-to-market ticker under Assets (not Retirement) | Feature | Medium | 🔲 Open |
 | [#46](https://github.com/olafinancial/olafinancial/issues/46) | Budget planner / debt payoff graph unclear | UX | Medium | 🔲 Open |
 | [#49](https://github.com/olafinancial/olafinancial/issues/49) | Reports as strategic marketing tool | Feature | Medium | 🔲 Open |
 | [#50](https://github.com/olafinancial/olafinancial/issues/50) | Classify income-generating assets / interest-bearing liabilities | Feature | Medium | 🔲 Open |
-| [#36](https://github.com/olafinancial/olafinancial/issues/36) | Split Balance Sheet → Assets + Liabilities pages | IA | Medium | 🔲 Open (triage) |
 
 #### Ops / roadmap
 
 | Issue | Title | Priority | Status |
 |-------|-------|----------|--------|
 | [#38](https://github.com/olafinancial/olafinancial/issues/38) | Ops: production email (Supabase Auth + Resend digests) | High | 🔲 Open — [`EMAIL_SETUP.md`](./EMAIL_SETUP.md) |
-| [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | Low | 🔲 Planned |
 | [#29](https://github.com/olafinancial/olafinancial/issues/29) | Monthly macro data update — NBS/CBN | Recurring | 🔲 Open |
 | [#28](https://github.com/olafinancial/olafinancial/issues/28) | Confirm sponsor partners & activate banners | High | 🔲 Blocked (partners) |
-| [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | Branding → pul.llc (duplicates) | Medium | 🔲 Open — [`DOMAIN_MIGRATION.md`](./DOMAIN_MIGRATION.md) |
 
 ### Recently closed
 
 | Issue | Title | Status |
 |-------|-------|--------|
+| [#48](https://github.com/olafinancial/olafinancial/issues/48) | [Bug] Insurance currency stuck on $ | ✅ Closed 2026-07-15 |
+| [#34](https://github.com/olafinancial/olafinancial/issues/34) / [#42](https://github.com/olafinancial/olafinancial/issues/42) | Salary Calculator & active income ledger | ✅ Closed 2026-07-15 |
+| [#36](https://github.com/olafinancial/olafinancial/issues/36) | Balance Sheet split (Assets & Liabilities pages) | ✅ Closed 2026-07-15 |
+| [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner (50-30-20 rule page) | ✅ Closed 2026-07-15 |
+| [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | CNAME & manifest migrated to pul.llc | ✅ Closed 2026-07-15 |
 | [#41](https://github.com/olafinancial/olafinancial/issues/41) | Investment questionnaire (NG) | ✅ Closed 2026-07-14 — `#/invest`, R40 |
 | [#27](https://github.com/olafinancial/olafinancial/issues/27) | Social sharing & watermarked PNG export | ✅ Closed |
 | [#30](https://github.com/olafinancial/olafinancial/issues/30) | Per-page currency selectors | ✅ Closed |
@@ -435,18 +434,24 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#40](https://github.com/olafinancial/olafinancial/issues/40) | PWA auto cache / no hard refresh | ✅ Closed |
 | — | Getting-started path + re-run onboarding | ✅ Completed |
 
-### Suggested build order (updated 2026-07-14)
+### Suggested build order (updated 2026-07-15)
 
-1. **#48** Insurance currency bug (quick win)  
-2. **#43** Your Path: Goals first  
-3. **#42 / #34** Salary gross → deductibles → net (+ tax ledger)  
-4. **#45 / #44** Cash flow simplification + Income Statement header  
-5. **#47** Stock MTM under Assets / equities  
-6. **#46** Budget / debt payoff graph clarity  
-7. **#49 / #50** Reports depth + asset/liability income classification  
-8. **#36** Split BS pages (larger IA)  
-9. **#38** Email ops  
-10. **#32 / #28 / #29 / #23–25** Roadmap & external  
+1. **#43** Your Path: Goals first  
+2. **#45 / #44** Cash flow simplification + Income Statement header  
+3. **#47** Stock MTM under Assets / equities  
+4. **#46** Budget / debt payoff graph clarity  
+5. **#49 / #50** Reports depth + asset/liability income classification  
+6. **#38** Email ops  
+7. **#28 / #29** Sponsor activation & macro data updates  
+
+---
+
+### Session 10 — 2026-07-15 — Insurance Currency Selection & E2E Verification
+
+* **Status**: ✅ Completed
+* **Branding / Domain**: Confirmed custom domain `pul.llc` and updated redirect scope.
+* **Insurance Currency**: Closed [#48](https://github.com/olafinancial/olafinancial/issues/48). Added per-page currency selectors for the Insurance Needs Assessment wizard and policy manager. Implemented dynamic formatting of options/placeholders and multi-currency conversion math.
+* **E2E Stability**: Resolved a test suite blocker where the onboarding step count was expanded from 5 to 6 in Session 9e, causing the global Playwright E2E setup script to time out. Tests are 100% green now (69/69 passed).
 
 ---
 
