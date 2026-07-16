@@ -346,22 +346,25 @@ const WPApp = (() => {
     if (typeof WPRouter.clearRoutes === 'function') WPRouter.clearRoutes();
 
     const pages = {
-      '/onboarding':    WPOnboarding,
-      '/dashboard':     WPDashboard,
-      '/income':        WPIncome,
-      '/expenses':      WPExpenses,
-      '/budget':        WPBudget,
-      '/balance-sheet': WPBalanceSheet,
-      '/assets':        WPAssets,
-      '/liabilities':   WPLiabilities,
-      '/cashflow':      WPCashflow,
-      '/debt':          WPDebt,
-      '/emergency-fund':WPEmergencyFund,
-      '/goals':         WPGoals,
-      '/retirement':    WPRetirement,
-      '/estate-planner':WPEstatePlanner,
-      '/insurance':     WPInsurance,
-      '/invest':        WPInvestmentQuiz,
+      '/onboarding':    typeof WPOnboarding !== 'undefined' ? WPOnboarding : null,
+      '/dashboard':     typeof WPDashboard !== 'undefined' ? WPDashboard : null,
+      '/income':        typeof WPIncome !== 'undefined' ? WPIncome : null,
+      '/expenses':      typeof WPExpenses !== 'undefined' ? WPExpenses : null,
+      '/budget':        typeof WPBudget !== 'undefined' ? WPBudget : null,
+      '/balance-sheet': typeof WPBalanceSheet !== 'undefined' ? WPBalanceSheet : null,
+      '/assets':        typeof WPAssets !== 'undefined' ? WPAssets : null,
+      '/liabilities':   typeof WPLiabilities !== 'undefined' ? WPLiabilities : null,
+      '/cashflow':      typeof WPCashflow !== 'undefined' ? WPCashflow : null,
+      '/debt':          typeof WPDebt !== 'undefined' ? WPDebt : null,
+      '/emergency-fund':typeof WPEmergencyFund !== 'undefined' ? WPEmergencyFund : null,
+      '/goals':         typeof WPGoals !== 'undefined' ? WPGoals : null,
+      '/retirement':    typeof WPRetirement !== 'undefined' ? WPRetirement : null,
+      '/estate-planner':typeof WPEstatePlanner !== 'undefined' ? WPEstatePlanner : null,
+      '/insurance':     typeof WPInsurance !== 'undefined' ? WPInsurance : null,
+      '/invest':        typeof WPInvestmentQuiz !== 'undefined' ? WPInvestmentQuiz : null,
+      '/calculators':   typeof WPCalculators !== 'undefined' ? WPCalculators : null,
+      '/reports':       typeof WPReports !== 'undefined' ? WPReports : null,
+      '/settings':      typeof WPSettings !== 'undefined' ? WPSettings : null,
       // Legacy: salary calculator lives under Calculators → Salary / PAYE
       '/salary-calc':   {
         async init(container) {
@@ -369,15 +372,23 @@ const WPApp = (() => {
           WPRouter.navigate('/calculators', true);
         },
         destroy() {},
-      },
-      '/calculators':    WPCalculators,
-      '/reports':       WPReports,
-      '/settings':      WPSettings,
+      }
     };
 
     for (const [path, page] of Object.entries(pages)) {
       WPRouter.register(path, async (params, token) => {
         _setActiveNav(path);
+        if (!page) {
+          const container = document.getElementById('page-container');
+          if (container) {
+            container.innerHTML = `<div class="page-body" style="padding:2rem"><div class="card" style="padding:1.5rem">
+              <h3 style="margin:0 0 0.5rem;color:#fff">Page failed to load</h3>
+              <p class="text-muted text-sm">This module is missing or failed to load. Hard-refresh (Ctrl+Shift+R) to load the latest version.</p>
+              <button class="btn btn-primary btn-sm" onclick="location.reload()">Reload</button>
+            </div></div>`;
+          }
+          return;
+        }
         await _loadPage(page, params, token);
       });
     }
