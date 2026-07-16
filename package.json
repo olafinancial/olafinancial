@@ -1,7 +1,7 @@
 {
   "name": "olafinancial",
   "version": "1.0.0",
-  "description": "OlaFinancial — Nigerian Personal Finance Platform",
+  "description": "Pul Planning (pul.llc) — personal finance platform (org: olafinancial)",
   "type": "module",
   "main": "server/index.js",
   "scripts": {

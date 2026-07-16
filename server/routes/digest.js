@@ -10,7 +10,7 @@ const RESEND_API_KEY  = process.env.RESEND_API_KEY
 const RESEND_FROM     = process.env.RESEND_FROM || 'digest@pul.llc'
 const SUPABASE_URL    = process.env.SUPABASE_URL
 const SUPABASE_SECRET = process.env.SUPABASE_SECRET_KEY
-const APP_URL         = process.env.APP_URL || 'https://olafinancial.org'
+const APP_URL         = process.env.APP_URL || 'https://pul.llc'
 
 // Admin Supabase client — bypasses RLS to read all user data
 function adminClient() {
@@ -195,7 +195,7 @@ function buildEmailHTML(name, summary, month, appUrl) {
               <a href="${appUrl}/#/settings" style="color:#8B949E;text-decoration:underline;">Manage preferences</a> &nbsp;·&nbsp; 
               <a href="${appUrl}/#/settings" style="color:#8B949E;text-decoration:underline;">Unsubscribe</a>
             </p>
-            <p style="margin:12px 0 0;color:#30363D;font-size:0.72rem;">pul.llc · olafinancial.org · Not financial advice.</p>
+            <p style="margin:12px 0 0;color:#30363D;font-size:0.72rem;">pul.llc · Not financial advice.</p>
           </td>
         </tr>
 

@@ -548,7 +548,7 @@ const WPReports = (() => {
       const month  = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
       const title  = `My ${month} Financial Report`;
       const text   = `${name ? name + "'s " : ''}financial snapshot — tracked with pul.llc`;
-      const url    = 'https://olafinancial.org';
+      const url    = 'https://pul.llc';
 
       // ── Path 1: Web Share API with image (mobile / modern browsers)
       const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));

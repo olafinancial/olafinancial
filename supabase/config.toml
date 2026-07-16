@@ -31,11 +31,18 @@ file_size_limit = "50MiB"
 
 [auth]
 enabled = true
-site_url = "https://olafinancial.org"
+site_url = "https://pul.llc"
 additional_redirect_urls = [
+  "https://pul.llc",
+  "https://pul.llc/**",
+  "https://www.pul.llc",
+  "https://www.pul.llc/**",
   "https://olafinancial.org",
+  "https://olafinancial.org/**",
   "https://www.olafinancial.org",
-  "http://127.0.0.1:3000"
+  "https://www.olafinancial.org/**",
+  "http://127.0.0.1:3000",
+  "http://localhost:3000"
 ]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true

@@ -266,10 +266,10 @@ Quick production gates:
 
 - **Row Level Security (RLS)** is enabled on all tables — users only see their own data
 - The `anon` key in `config.js` **cannot bypass RLS** — safe for public repos
-- Supabase Auth uses **bcrypt** — Ola Financial never stores raw passwords
+- Supabase Auth uses **bcrypt** — Pul Planning never stores raw passwords
 - **NDPR compliance**: all user data lives in your own Supabase project
 - Enable **Email Confirmations** in Supabase → Auth → Settings for production use
 
 ---
 
-*Ola Financial v1.0.0 — Built for Nigeria 🇳🇬*
+*Pul Planning (pul.llc) v1.0.0 — Built for Nigeria 🇳🇬*

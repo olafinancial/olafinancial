@@ -154,7 +154,7 @@ const server = createServer(async (req, res) => {
 })
 
 server.listen(PORT, () => {
-  console.log(`\n⚡ Ola Financial server running`)
+  console.log(`\n⚡ Pul Planning server running`)
   console.log(`   http://localhost:${PORT}`)
   console.log(`   Supabase URL: ${process.env.SUPABASE_URL ?? "(not set)"}`)
   console.log(`   ENV: ${process.env.NODE_ENV ?? "development"}\n`)

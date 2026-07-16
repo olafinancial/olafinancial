@@ -105,7 +105,7 @@ Optional short period: leave `.org` on GitHub DNS for parallel testing, then swi
 
 ## Phase 3 — Supabase auth URLs
 
-**Authentication → URL configuration**
+**Authentication → URL configuration** (mirror local `supabase/config.toml`)
 
 | Setting | Value |
 |---------|--------|
@@ -116,7 +116,10 @@ Optional short period: leave `.org` on GitHub DNS for parallel testing, then swi
 | | `https://www.olafinancial.org/**` |
 | | `http://localhost:3000/**` |
 
-App code already uses pul.llc for some OAuth / password-reset redirects (`js/supabase-client.js`). Those only work after Phase 1 HTTPS is live.
+**Repo:** `supabase/config.toml` uses `site_url = "https://pul.llc"` with the allowlist above (bridge domains kept).  
+**Dashboard:** apply the same values under Supabase → Authentication → URL configuration if the hosted project differs.
+
+App code uses pul.llc for OAuth / password-reset redirects (`js/supabase-client.js`).
 
 After the bridge is 301-only and logins no longer hit `.org`, remove olafinancial.org from the allowlist.
 
