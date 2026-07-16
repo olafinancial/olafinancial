@@ -430,6 +430,13 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 * Sharia tools (Takaful pref, Zakat, Qard Hasan, Halal invest tips) — not app-wide filter  
 * **Settings → Testing & account**: Reset data, Load demo data, Delete account (API)
 
+### Session 20 — 2026-07-16 — Popstate Duplication, Blank Screen & E2E Test Fixes
+
+* **Fix**: Added current path check `if (path === _current) return;` to `popstate` listener in `js/router.js` to stop duplicate dispatch loops.
+* **Fix**: Implemented robust `typeof` checks for all registered page modules in `js/app.js` to prevent fatal ReferenceErrors on boot when browsers load cached `index.html` copies.
+* **Fix**: Configured custom reload fallback inside `js/app.js` to gracefully show a reload action card instead of a blank screen when page modules are missing.
+* **E2E**: Cleaned up the `/salary-calc` redirection logic in `js/app.js` to navigate cleanly to `/calculators` and resolved CSS selector format bugs in E2E tests, resulting in a 100% pass rate (70/70 passed).
+
 ---
 
 ### Session 19 — 2026-07-16 — Salary Calculator under Calculators hub
