@@ -196,16 +196,47 @@ const WPBudget = (() => {
           </div>
         </div>
 
-        <!-- Prominent Total Income Info -->
+        <!-- Guided creation: net income + recommended 50/30/20 (#32) -->
         <div class="card" style="margin-bottom:1.5rem;background:linear-gradient(135deg,var(--clr-surface-2),var(--clr-surface-1));padding:1.5rem">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1rem">
             <div>
-              <div class="card-title" style="margin-bottom:0.25rem">Total Net Income</div>
+              <div class="card-title" style="margin-bottom:0.25rem">Net monthly income for this plan</div>
               <div class="card-value accent" id="budget-income-total" style="font-size:2.5rem">₦0.00</div>
-              <div class="card-meta">Deduction-adjusted active + passive + investment income</div>
+              <div class="card-meta" id="budget-income-source">From logged Income (after tax &amp; deductions)</div>
             </div>
             <div style="text-align:right" id="budget-allocation-status"></div>
           </div>
+          <div class="form-row" style="align-items:flex-end;gap:0.75rem;flex-wrap:wrap">
+            <div class="form-group" style="flex:1;min-width:180px;margin:0">
+              <label for="budget-income-override" style="font-size:0.8rem">Override net income (optional)</label>
+              <div class="input-prefix-group">
+                <span class="input-prefix" id="budget-income-sym">₦</span>
+                <input class="input" type="text" inputmode="decimal" id="budget-income-override" placeholder="Use logged income if blank">
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" id="budget-income-apply">Apply</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="budget-income-clear">Use logged income</button>
+          </div>
+          <p class="text-xs text-muted" style="margin:0.65rem 0 0">
+            Enter a number to build a 50/30/20 plan even before Income is fully logged. Saved on this device.
+          </p>
+        </div>
+
+        <!-- Recommended allocation amounts -->
+        <div class="card" style="margin-bottom:1.5rem;padding:1.25rem">
+          <div class="section-header" style="margin-bottom:0.75rem">
+            <span class="section-title">Recommended budget (guided 50/30/20)</span>
+            <span class="badge badge-accent" id="budget-rec-mode">50 / 30 / 20</span>
+          </div>
+          <p class="text-xs text-muted" style="margin:0 0 1rem">How much you <em>should</em> allocate from net income. Compare with actuals below.</p>
+          <div class="kpi-grid" id="budget-recommended-kpis"></div>
+        </div>
+
+        <!-- Budget vs actual comparison -->
+        <div class="card" style="margin-bottom:1.5rem;padding:1.25rem">
+          <div class="section-title" style="margin-bottom:0.35rem">Budget vs actual</div>
+          <p class="text-xs text-muted" style="margin:0 0 1rem">Traffic light: green = within target, amber = close, red = over (Needs/Wants) or under (Savings).</p>
+          <div id="budget-vs-actual" style="display:flex;flex-direction:column;gap:1rem"></div>
         </div>
 
         <!-- 3 Progress Rings -->
@@ -343,7 +374,49 @@ const WPBudget = (() => {
       _render();
     });
 
+    const overrideInput = document.getElementById('budget-income-override');
+    const uid = () => WPApp.state.user?.id || 'anon';
+    const overrideKey = () => 'wp_budget_income_override_' + uid();
+
+    if (overrideInput) {
+      WPUtils.maskNumberInput(overrideInput);
+      try {
+        const saved = localStorage.getItem(overrideKey());
+        if (saved && parseFloat(saved) > 0) {
+          overrideInput.value = WPUtils.koboToNaira(parseInt(saved, 10)).toLocaleString();
+        }
+      } catch { /* ignore */ }
+    }
+
+    document.getElementById('budget-income-apply')?.addEventListener('click', () => {
+      const major = WPUtils.cleanNum(overrideInput?.value);
+      if (!major || major <= 0) {
+        WPToast.warning('Enter a positive net income amount.');
+        return;
+      }
+      localStorage.setItem(overrideKey(), String(WPUtils.nairaToKobo(major)));
+      WPToast.success('Budget plan uses your entered net income.');
+      _render();
+    });
+
+    document.getElementById('budget-income-clear')?.addEventListener('click', () => {
+      localStorage.removeItem(overrideKey());
+      if (overrideInput) overrideInput.value = '';
+      WPToast.info('Using logged Income entries again.');
+      _render();
+    });
+
     await _load();
+  }
+
+  function _getPlanIncomeKobo(loggedNetKobo, currency) {
+    const uid = WPApp.state.user?.id || 'anon';
+    const raw = localStorage.getItem('wp_budget_income_override_' + uid);
+    if (raw) {
+      const k = parseInt(raw, 10);
+      if (k > 0) return { income: k, source: 'override' };
+    }
+    return { income: loggedNetKobo, source: 'logged' };
   }
 
   async function _load() {
@@ -407,8 +480,23 @@ const WPBudget = (() => {
       ? `<span class="badge badge-gold">Custom Mode: ${targetNeeds}/${targetWants}/${targetSavings}</span>`
       : `<span class="badge badge-accent">Standard Mode: 50/30/20</span>`;
 
-    const totalNetIncome = _incomeNetInBase(_income, currency);
+    const recMode = document.getElementById('budget-rec-mode');
+    if (recMode) recMode.textContent = `${targetNeeds} / ${targetWants} / ${targetSavings}`;
+
+    const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£' };
+    const symEl = document.getElementById('budget-income-sym');
+    if (symEl) symEl.textContent = symbols[currency] || '₦';
+
+    const loggedNet = _incomeNetInBase(_income, currency);
+    const { income: totalNetIncome, source: incomeSource } = _getPlanIncomeKobo(loggedNet, currency);
+
     document.getElementById('budget-income-total').textContent = WPUtils.fmt(totalNetIncome, { currency });
+    const srcEl = document.getElementById('budget-income-source');
+    if (srcEl) {
+      srcEl.textContent = incomeSource === 'override'
+        ? 'Using your override (not recalculated from Income entries)'
+        : 'From logged Income (after tax & deductions)';
+    }
 
     const {
       needsTotal,
@@ -425,6 +513,74 @@ const WPBudget = (() => {
     const needsPct = totalNetIncome > 0 ? (needsTotal / totalNetIncome) * 100 : 0;
     const wantsPct = totalNetIncome > 0 ? (wantsTotal / totalNetIncome) * 100 : 0;
     const savingsPct = totalNetIncome > 0 ? (savingsTotal / totalNetIncome) * 100 : 0;
+
+    // Recommended currency amounts
+    const recNeeds = Math.round(totalNetIncome * (targetNeeds / 100));
+    const recWants = Math.round(totalNetIncome * (targetWants / 100));
+    const recSavings = Math.round(totalNetIncome * (targetSavings / 100));
+
+    const recEl = document.getElementById('budget-recommended-kpis');
+    if (recEl) {
+      if (totalNetIncome <= 0) {
+        recEl.innerHTML = `<div class="text-sm text-muted" style="grid-column:1/-1">Add Income or enter a net income override above to generate a 50/30/20 plan.</div>`;
+      } else {
+        recEl.innerHTML = `
+          <div class="card"><div class="card-title">Needs budget (${targetNeeds}%)</div>
+            <div class="card-value" style="color:#38BDF8">${WPUtils.fmt(recNeeds, { currency })}</div>
+            <div class="card-meta">Essentials ceiling</div></div>
+          <div class="card"><div class="card-title">Wants budget (${targetWants}%)</div>
+            <div class="card-value" style="color:#F59E0B">${WPUtils.fmt(recWants, { currency })}</div>
+            <div class="card-meta">Discretionary ceiling</div></div>
+          <div class="card"><div class="card-title">Savings &amp; debt (${targetSavings}%)</div>
+            <div class="card-value" style="color:#00C896">${WPUtils.fmt(recSavings, { currency })}</div>
+            <div class="card-meta">Invest / pay down target</div></div>`;
+      }
+    }
+
+    // Budget vs actual bars
+    const vsEl = document.getElementById('budget-vs-actual');
+    if (vsEl) {
+      const row = (label, actual, budget, mode) => {
+        // mode: 'ceil' = stay under budget (needs/wants); 'floor' = hit at least budget (savings)
+        const pctOfBudget = budget > 0 ? (actual / budget) * 100 : (actual > 0 ? 100 : 0);
+        let light = 'good';
+        if (mode === 'ceil') {
+          if (pctOfBudget > 110) light = 'risk';
+          else if (pctOfBudget > 100) light = 'watch';
+        } else {
+          if (pctOfBudget < 50) light = 'risk';
+          else if (pctOfBudget < 90) light = 'watch';
+        }
+        const color = light === 'good' ? 'var(--clr-accent)' : light === 'watch' ? 'var(--clr-gold)' : 'var(--clr-danger)';
+        const icon = light === 'good' ? '🟢' : light === 'watch' ? '🟡' : '🔴';
+        const barW = Math.min(100, pctOfBudget);
+        const status = mode === 'ceil'
+          ? (actual <= budget ? 'Within budget' : `Over by ${WPUtils.fmt(actual - budget, { currency, compact: true })}`)
+          : (actual >= budget ? 'On / above target' : `Short by ${WPUtils.fmt(budget - actual, { currency, compact: true })}`);
+        return `
+          <div>
+            <div style="display:flex;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.35rem;font-size:0.875rem">
+              <span>${icon} <strong>${label}</strong></span>
+              <span class="text-muted">${status}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.25rem">
+              <span>Actual <strong class="td-mono">${WPUtils.fmt(actual, { currency })}</strong></span>
+              <span>Budget <strong class="td-mono">${WPUtils.fmt(budget, { currency })}</strong></span>
+            </div>
+            <div class="progress-bar" style="height:10px;background:var(--clr-surface-3)">
+              <div class="progress-fill" style="width:${barW}%;background:${color};transition:width 0.5s ease"></div>
+            </div>
+          </div>`;
+      };
+      if (totalNetIncome <= 0) {
+        vsEl.innerHTML = `<p class="text-sm text-muted" style="margin:0">Set net income to compare budget vs spending.</p>`;
+      } else {
+        vsEl.innerHTML =
+          row('Needs', needsTotal, recNeeds, 'ceil') +
+          row('Wants', wantsTotal, recWants, 'ceil') +
+          row('Savings & Debt', savingsTotal, recSavings, 'floor');
+      }
+    }
 
     document.getElementById('ring-needs-value').textContent = WPUtils.fmt(needsTotal, { currency });
     document.getElementById('ring-needs-meta').textContent = `Actual: ${needsPct.toFixed(1)}% | Target: ${targetNeeds}%`;

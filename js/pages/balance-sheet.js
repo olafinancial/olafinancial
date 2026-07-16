@@ -11,8 +11,12 @@ const WPBalanceSheet = (() => {
     container.innerHTML = `
       <div class="page-header">
         <div>
-          <h1 class="page-title">Balance Sheet Summary</h1>
-          <p class="page-subtitle">Unified Net Worth, coverage, and ratios for ${WPUtils.periodLabel(PERIOD)}</p>
+          <h1 class="page-title">Balance Sheet · Overview</h1>
+          <p class="page-subtitle">
+            Net worth for ${WPUtils.periodLabel(PERIOD)} —
+            manage detail on separate <a href="#/assets" style="color:var(--clr-accent)">Assets</a> and
+            <a href="#/liabilities" style="color:var(--clr-accent)">Liabilities</a> pages
+          </p>
         </div>
         <div class="flex gap-4" style="align-items:center">
           <select id="bs-page-currency" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">

@@ -58,7 +58,10 @@ const WPExpenses = (() => {
             <div class="chart-container" style="height:220px"><canvas id="chart-exp-donut"></canvas></div>
           </div>
           <div class="card">
-            <div class="section-title" style="margin-bottom:1rem">50/30/20 Budget Check</div>
+            <div class="section-header" style="margin-bottom:1rem">
+              <span class="section-title">50/30/20 Budget Check</span>
+              <a href="#/budget" class="btn btn-secondary btn-sm">Open Budget Planner</a>
+            </div>
             <div id="exp-budget-rule"><p class="text-muted text-sm">Log expenses to see your budget analysis.</p></div>
           </div>
         </div>
