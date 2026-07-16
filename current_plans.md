@@ -400,7 +400,7 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 |-------|-------|------|----------|--------|
 | [#36](https://github.com/olafinancial/olafinancial/issues/36) | Balance Sheet split (Assets & Liabilities pages) | Feature | Medium | 🔲 Open — verify vs shipped pages |
 | [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | Feature | Medium | 🔲 Open — verify vs `budget.js` |
-| [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | Branding / domain → pul.llc | Ops | Medium | 🔲 Open — code mostly done; confirm live DNS |
+| [#23](https://github.com/olafinancial/olafinancial/issues/23) | Branding / domain → pul.llc | Ops | Medium | 🔲 Open — code mostly done; confirm live DNS (#25 closed as duplicate) |
 
 #### Ops / roadmap
 
