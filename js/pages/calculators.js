@@ -31,7 +31,7 @@ const WPCalculators = (() => {
           <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="car-loan">🚗 Car Loan</button>
           <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="mortgage">🏠 Mortgage</button>
           <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="fixed-deposit">🔒 Fixed Deposit / CD</button>
-          <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="nigeria-paye">🇳🇬 Nigeria PAYE (SME)</button>
+          <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="salary">🇳🇬 Salary / PAYE</button>
           <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="inflation">🎈 Inflation Impact</button>
           <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="zakat">🕌 Zakat</button>
         </div>
@@ -39,6 +39,11 @@ const WPCalculators = (() => {
         <!-- Calculator Content Area -->
         <div id="calc-content-wrap"></div>
       </div>`;
+
+    // Map legacy hints from old PAYE tab / salary-calc route
+    if (_activeTab === 'nigeria-paye' || _activeTab === 'salary-calc' || _activeTab === 'paye') {
+      _activeTab = 'salary';
+    }
 
     container.querySelectorAll('.calc-tab-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -51,6 +56,11 @@ const WPCalculators = (() => {
   }
 
   function _renderActiveTab() {
+    // Tear down embedded salary calculator if leaving that tab
+    if (typeof WPSalaryCalculator !== 'undefined' && _activeTab !== 'salary') {
+      try { WPSalaryCalculator.destroy(); } catch { /* ignore */ }
+    }
+
     // Set active tab buttons styling
     document.querySelectorAll('.calc-tab-btn').forEach(btn => {
       btn.classList.toggle('btn-primary', btn.dataset.tab === _activeTab);
@@ -59,6 +69,17 @@ const WPCalculators = (() => {
 
     const wrap = document.getElementById('calc-content-wrap');
     if (!wrap) return;
+
+    // Full Salary Calculator replaces the old simple PAYE SME tool
+    if (_activeTab === 'salary' || _activeTab === 'nigeria-paye') {
+      _activeTab = 'salary';
+      if (typeof WPSalaryCalculator !== 'undefined') {
+        WPSalaryCalculator.init(wrap, { embedded: true });
+      } else {
+        wrap.innerHTML = '<div class="card" style="padding:2rem">Salary calculator module failed to load.</div>';
+      }
+      return;
+    }
 
     const baseCurrency = WPApp.state.profile?.currency || 'NGN';
     const symbols = { NGN: '₦', USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', AED: 'د.إ', CNY: '¥', XOF: 'CFA', XAF: 'FCFA', KES: 'KSh', GHS: 'GH₵', ZAR: 'R', SAR: 'ر.س' };
@@ -397,50 +418,6 @@ const WPCalculators = (() => {
               <div class="flex justify-between"><span class="text-muted">Principal & Interest</span><strong id="mc-res-pi">₦0.00</strong></div>
               <div class="flex justify-between"><span class="text-muted">Monthly Property Tax</span><strong id="mc-res-tax">₦0.00</strong></div>
               <div class="flex justify-between"><span class="text-muted">Monthly Insurance</span><strong id="mc-res-ins">₦0.00</strong></div>
-            </div>
-          </div>
-        </div>`;
-    }
-
-    else if (_activeTab === 'nigeria-paye') {
-      html = `
-        <div class="grid-2">
-          <div class="card" style="padding:2rem">
-            <h3 style="margin-bottom:1.5rem;font-weight:700;color:#ffffff">Nigeria PAYE (SME) Calculator</h3>
-            <div class="form-group">
-              <label for="paye-gross">Monthly Gross Emoluments (₦)</label>
-              <div class="input-prefix-group"><span class="input-prefix">₦</span>
-                <input class="input" type="text" inputmode="decimal" id="paye-gross" placeholder="e.g. 500,000" value="500,000">
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="paye-pension-rate">Pension Employee Contribution (%)</label>
-                <input class="input" type="number" id="paye-pension-rate" min="0" max="100" value="8">
-              </div>
-              <div class="form-group">
-                <label for="paye-nhf-rate">NHF Rate (%)</label>
-                <input class="input" type="number" id="paye-nhf-rate" min="0" max="100" value="2.5">
-              </div>
-            </div>
-            <button class="btn btn-primary" style="width:100%;margin-top:1.5rem" id="run-paye">Calculate Payroll</button>
-          </div>
-          <div class="card" style="display:flex;flex-direction:column;justify-content:center;gap:1rem;padding:2rem">
-            <div class="section-title">Monthly Payroll Payslip</div>
-            <div class="flex justify-between" style="border-bottom: 1px solid var(--clr-border); padding-bottom: 0.5rem;">
-              <span class="text-muted">Monthly Gross</span><strong id="paye-res-gross">₦0.00</strong>
-            </div>
-            <div class="flex justify-between" style="border-bottom: 1px solid var(--clr-border); padding-bottom: 0.5rem;">
-              <span class="text-muted">Pension (8% Base)</span><strong id="paye-res-pension" class="text-danger">₦0.00</strong>
-            </div>
-            <div class="flex justify-between" style="border-bottom: 1px solid var(--clr-border); padding-bottom: 0.5rem;">
-              <span class="text-muted">NHF (2.5% Base)</span><strong id="paye-res-nhf" class="text-danger">₦0.00</strong>
-            </div>
-            <div class="flex justify-between" style="border-bottom: 1px solid var(--clr-border); padding-bottom: 0.5rem;">
-              <span class="text-muted">Estimated PAYE Tax</span><strong id="paye-res-tax" class="text-danger">₦0.00</strong>
-            </div>
-            <div class="flex justify-between" style="font-size:1.2rem; margin-top:0.5rem">
-              <span><strong>Estimated Take-Home Net</strong></span><strong id="paye-res-net" class="text-accent">₦0.00</strong>
             </div>
           </div>
         </div>`;
@@ -873,29 +850,6 @@ const WPCalculators = (() => {
       calc();
     }
 
-    else if (_activeTab === 'nigeria-paye') {
-      const calc = () => {
-        const grossNaira = WPUtils.cleanNum(document.getElementById('paye-gross').value) || 0;
-        const grossKobo = WPUtils.nairaToKobo(grossNaira);
-        const pensionRate = parseFloat(document.getElementById('paye-pension-rate').value) || 0;
-        const nhfRate = parseFloat(document.getElementById('paye-nhf-rate').value) || 0;
-
-        const pensionKobo = Math.round(grossKobo * (pensionRate / 100));
-        const nhfKobo = Math.round(grossKobo * (nhfRate / 100));
-        const taxKobo = WPUtils.calcPIT(grossKobo, pensionKobo);
-        const netKobo = grossKobo - pensionKobo - nhfKobo - taxKobo;
-
-        document.getElementById('paye-res-gross').textContent = WPUtils.fmt(grossKobo, { currency: 'NGN' });
-        document.getElementById('paye-res-pension').textContent = WPUtils.fmt(pensionKobo, { currency: 'NGN' });
-        document.getElementById('paye-res-nhf').textContent = WPUtils.fmt(nhfKobo, { currency: 'NGN' });
-        document.getElementById('paye-res-tax').textContent = WPUtils.fmt(taxKobo, { currency: 'NGN' });
-        document.getElementById('paye-res-net').textContent = WPUtils.fmt(netKobo, { currency: 'NGN' });
-      };
-
-      document.getElementById('run-paye').addEventListener('click', calc);
-      calc();
-    }
-
     else if (_activeTab === 'inflation') {
       const calc = () => {
         const amount = WPUtils.cleanNum(document.getElementById('inf-amount').value) || 0;
@@ -972,6 +926,10 @@ const WPCalculators = (() => {
     }
   }
 
-  function destroy() {}
+  function destroy() {
+    if (typeof WPSalaryCalculator !== 'undefined') {
+      try { WPSalaryCalculator.destroy(); } catch { /* ignore */ }
+    }
+  }
   return { init, destroy };
 })();

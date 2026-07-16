@@ -212,7 +212,6 @@ const WPApp = (() => {
     { path: '/estate-planner', icon: '&#x1F4DC;', label: 'Estate Planner', section: 'Tools' },
     { path: '/insurance',      icon: '&#x1F6E1;', label: 'Insurance',      section: 'Tools' },
     { path: '/invest',         icon: '&#x1F4C8;', label: 'Invest Profile', section: 'Tools' },
-    { path: '/salary-calc',    icon: '&#x1F4B5;', label: 'Salary Calculator', section: 'Tools' },
     { path: '/calculators',    icon: '&#x1F5A5;', label: 'Calculators',    section: 'Tools' },
     { path: '/reports',        icon: '&#x1F4CA;', label: 'Reports',        section: 'Reports' },
     { path: '/settings',       icon: '&#x2699;',  label: 'Settings',       section: 'Account' },
@@ -329,7 +328,20 @@ const WPApp = (() => {
       '/estate-planner':WPEstatePlanner,
       '/insurance':     WPInsurance,
       '/invest':        WPInvestmentQuiz,
-      '/salary-calc':   WPSalaryCalculator,
+      // Legacy route: salary calculator now lives under Calculators → Salary / PAYE
+      '/salary-calc':   {
+        init() {
+          try { sessionStorage.setItem('wp_calc_tab', 'salary'); } catch { /* ignore */ }
+          if (!String(window.location.hash || '').includes('/calculators')) {
+            window.location.hash = '#/calculators';
+          } else if (typeof WPCalculators !== 'undefined') {
+            // Already on calculators (edge case) — force salary tab
+            const wrap = document.getElementById('calc-content-wrap') || document.querySelector('.page-body');
+            if (wrap && WPSalaryCalculator) WPSalaryCalculator.init(wrap, { embedded: true });
+          }
+        },
+        destroy() {},
+      },
       '/calculators':    WPCalculators,
       '/reports':       WPReports,
       '/settings':      WPSettings,

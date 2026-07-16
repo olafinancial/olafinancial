@@ -432,6 +432,13 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 ---
 
+### Session 19 — 2026-07-16 — Salary Calculator under Calculators hub
+
+* **Change**: Full **Salary Calculator** (gross→net, NHF, rent relief, tax-year ledger) replaces the simple **Nigeria PAYE (SME)** tab on **Calculators**
+* **Nav**: Removed standalone “Salary Calculator” menu item
+* **Legacy**: `#/salary-calc` redirects to `#/calculators` with Salary / PAYE tab open
+* **Income** page link opens Calculators → salary tab
+
 ### Session 18 — 2026-07-16 — Test without deleting account + plans refresh
 
 * **Problem**: Customer wanted to delete/recreate account to retest features  

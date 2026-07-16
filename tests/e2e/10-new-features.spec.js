@@ -1,6 +1,6 @@
 /**
  * E2E Test Suite 10 — New Features
- * Covers: Salary Calculator (#34) and Budget Planner (#32)
+ * Covers: Salary Calculator (#34, under Calculators) and Budget Planner (#32)
  */
 import { test, expect } from '@playwright/test';
 
@@ -9,13 +9,27 @@ test.use({ storageState: '.playwright/auth-state.json' });
 
 test.describe('Salary Deductibles Calculator', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`${BASE}/#/salary-calc`);
+    await page.goto(`${BASE}/#/calculators`);
     await page.waitForLoadState('networkidle');
+    // Open Salary / PAYE tab (replaces old Nigeria PAYE SME calculator)
+    const salaryTab = page.locator('.calc-tab-btn[data-tab="salary"]');
+    if (await salaryTab.count()) {
+      await salaryTab.click();
+      await page.waitForTimeout(300);
+    }
   });
 
-  test('salary calculator page renders', async ({ page }) => {
-    await expect(page.locator('h1, h2, .page-title').first()).toBeVisible();
+  test('salary calculator renders under Calculators hub', async ({ page }) => {
+    await expect(page.locator('h1, h2, h3, .page-title').first()).toBeVisible();
     await expect(page.locator('text=Monthly Net Breakdown')).toBeVisible();
+  });
+
+  test('legacy #/salary-calc redirects to Calculators salary tab', async ({ page }) => {
+    await page.goto(`${BASE}/#/salary-calc`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(400);
+    await expect(page).toHaveURL(/#\/calculators/);
+    await expect(page.locator('#sc-gross, text=Monthly Net Breakdown').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('adjusting gross salary recalculates take-home pay', async ({ page }) => {

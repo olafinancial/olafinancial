@@ -15,8 +15,26 @@ const WPSalaryCalculator = (() => {
 
   const PERIOD = WPUtils.currentPeriod();
 
-  async function init(container) {
-    container.innerHTML = `
+  /**
+   * @param {HTMLElement} container
+   * @param {{ embedded?: boolean }} [opts] embedded=true when mounted inside Calculators hub
+   */
+  async function init(container, opts = {}) {
+    destroy();
+    const embedded = !!opts.embedded;
+    const headerHtml = embedded
+      ? `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem">
+          <div>
+            <h3 style="margin:0;font-weight:700;color:#ffffff">🇳🇬 Salary Calculator (Gross → Net / PAYE)</h3>
+            <p class="text-xs text-muted" style="margin:0.35rem 0 0">Interactive gross-to-net, NHF, rent relief &amp; tax-year ledger (Nigeria Tax Act 2025). Replaces the simple PAYE SME tool.</p>
+          </div>
+          <select id="sc-page-currency" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
+            <option value="NGN">NGN (₦)</option>
+            <option value="USD">USD ($)</option>
+          </select>
+        </div>`
+      : `
       <div class="page-header">
         <div>
           <h1 class="page-title">Salary Calculator</h1>
@@ -28,8 +46,11 @@ const WPSalaryCalculator = (() => {
             <option value="USD">USD ($)</option>
           </select>
         </div>
-      </div>
-      <div class="page-body">
+      </div>`;
+
+    container.innerHTML = `
+      ${headerHtml}
+      <div class="${embedded ? '' : 'page-body'}">
         <div class="grid grid-2" style="gap:1.5rem;margin-bottom:1.5rem">
           <!-- Inputs Card -->
           <div class="card">

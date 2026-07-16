@@ -317,7 +317,7 @@ const WPIncome = (() => {
         <div id="if-salary-panel" style="display:${e.income_type==='active'||!e.income_type?'block':'none'};margin-bottom:1rem;padding:1rem;border:1px solid var(--clr-border);border-radius:10px;background:var(--clr-surface-2)">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
             <div class="fw-700" style="font-size:0.95rem">Salary deductibles → net pay</div>
-            <a href="#/salary-calc" style="font-size:0.8rem;color:var(--clr-accent)">Full salary calculator →</a>
+            <a href="#/calculators" style="font-size:0.8rem;color:var(--clr-accent)" onclick="try{sessionStorage.setItem('wp_calc_tab','salary')}catch(e){}">Full salary calculator →</a>
           </div>
           <p class="text-xs text-muted" style="margin:0 0 0.75rem">Enter gross, then auto-fill or edit deductibles. Net is gross minus tax, pension, NHF, and other.</p>
           <div class="form-row">
