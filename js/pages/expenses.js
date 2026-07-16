@@ -323,10 +323,14 @@ const WPExpenses = (() => {
           </div>
         </div>
         
+        <!-- Budget bucket tip for Savings & Debt (#46) -->
+        <div id="exp-budget-bucket-tip" style="display:none; border: 1px solid var(--clr-border); background:var(--clr-surface-2); padding: 0.75rem 1rem; border-radius: 8px; margin: 0.75rem 0; font-size:0.8rem; color:var(--clr-text-2)">
+        </div>
+
         <!-- Double Entry Asset Sub-form (shown only when Category === Investment) -->
         <div id="exp-asset-subform" style="display:none; border: 1px dashed var(--clr-accent); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
           <h4 style="margin-top:0; color:var(--clr-accent); font-weight:700;">🌱 Double Entry: Create Asset</h4>
-          <p style="font-size:0.75rem; color:var(--clr-text-2); margin-bottom:1rem">Since you selected 'Investment', this expense will automatically flow to your Balance Sheet as an asset.</p>
+          <p style="font-size:0.75rem; color:var(--clr-text-2); margin-bottom:1rem">Since you selected 'Investment', this expense will automatically flow to your Balance Sheet as an asset. It also counts toward <strong>Budget → Savings &amp; Debt Payoff</strong>.</p>
           <div class="form-row">
             <div class="form-group">
               <label for="ef-asset-type">Asset Type</label>
@@ -438,8 +442,22 @@ const WPExpenses = (() => {
     const retirementContainer = document.getElementById('ef-retirement-sub-container');
 
     if (catSelect && assetSubform) {
+      const budgetTip = document.getElementById('exp-budget-bucket-tip');
       const toggleSubform = () => {
-        assetSubform.style.display = catSelect.value === 'Investment' ? 'block' : 'none';
+        const v = catSelect.value;
+        assetSubform.style.display = v === 'Investment' ? 'block' : 'none';
+        if (budgetTip) {
+          if (v === 'Investment') {
+            budgetTip.style.display = 'block';
+            budgetTip.innerHTML = '📈 Counts in <a href="#/budget" style="color:var(--clr-accent)">Budget Planner</a> as <strong>Savings &amp; Debt Payoff</strong> (investing).';
+          } else if (v === 'Interest & Debt') {
+            budgetTip.style.display = 'block';
+            budgetTip.innerHTML = '💳 Counts in <a href="#/budget" style="color:var(--clr-accent)">Budget Planner</a> as <strong>Savings &amp; Debt Payoff</strong> (debt repayment). Adding a liability alone is not enough — log the payment here or set a monthly payment on the liability.';
+          } else {
+            budgetTip.style.display = 'none';
+            budgetTip.innerHTML = '';
+          }
+        }
       };
       catSelect.addEventListener('change', toggleSubform);
       toggleSubform();

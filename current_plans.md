@@ -398,7 +398,6 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 | Issue | Title | Type | Priority | Status |
 |-------|-------|------|----------|--------|
-| [#46](https://github.com/olafinancial/olafinancial/issues/46) | Budget planner / debt payoff graph unclear | UX | Medium | 🔲 Open |
 | [#49](https://github.com/olafinancial/olafinancial/issues/49) | Reports as strategic marketing tool | Feature | Medium | 🔲 Open |
 | [#50](https://github.com/olafinancial/olafinancial/issues/50) | Classify income-generating assets / interest-bearing liabilities | Feature | Medium | 🔲 Open |
 | [#36](https://github.com/olafinancial/olafinancial/issues/36) | Balance Sheet split (Assets & Liabilities pages) | Feature | Medium | 🔲 Open — verify vs shipped pages |
@@ -417,6 +416,7 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 | Issue | Title | Status |
 |-------|-------|--------|
+| [#46](https://github.com/olafinancial/olafinancial/issues/46) | Budget planner / Savings & Debt Payoff unclear | ✅ Closed 2026-07-15 |
 | [#47](https://github.com/olafinancial/olafinancial/issues/47) | Mark-to-market ticker under Assets (not Retirement) | ✅ Closed 2026-07-15 |
 | [#43](https://github.com/olafinancial/olafinancial/issues/43) | Your Path starts with Goals | ✅ Closed 2026-07-15 |
 | [#45](https://github.com/olafinancial/olafinancial/issues/45) | Cash flow inflows: category totals only | ✅ Closed 2026-07-15 |
@@ -434,16 +434,23 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#40](https://github.com/olafinancial/olafinancial/issues/40) | PWA auto cache / no hard refresh | ✅ Closed |
 | — | Getting-started path + re-run onboarding | ✅ Completed |
 
-### Suggested build order (updated 2026-07-15 · post–sensible path)
+### Suggested build order (updated 2026-07-15 · post–#46)
 
-1. **#46** Budget / debt payoff graph clarity  
-2. **#50** Income-generating assets vs interest-bearing liabilities  
-3. **#49** Reports as strategic / plain-language narrative  
-4. **#38** Email ops  
-5. **#28 / #29** Sponsor activation & macro data updates  
-6. Confirm / close stale opens: **#36**, **#32**, **#23/#25** if already shipped  
+1. **#50** Income-generating assets vs interest-bearing liabilities  
+2. **#49** Reports as strategic / plain-language narrative  
+3. **#38** Email ops  
+4. **#28 / #29** Sponsor activation & macro data updates  
+5. Confirm / close stale opens: **#36**, **#32**, **#23/#25** if already shipped  
 
 ---
+
+### Session 12 — 2026-07-15 — Budget Savings & Debt Payoff clarity (#46)
+
+* **Status**: ✅ Completed · closes [#46](https://github.com/olafinancial/olafinancial/issues/46)
+* **Bug**: Ring stayed at 0% because classifier only matched snake_case `investment` / `interest_debt`, while Expenses store labels **Investment** and **Interest & Debt**
+* **Fix**: Normalize category labels; map Investment + Interest & Debt → Savings/Debt bucket
+* **Liabilities**: If no debt expenses, use **monthly_payment** schedules from Liabilities so adding a loan can populate the ring
+* **UX**: “What these rings track” explainer, empty-state how-to, Investing vs Debt breakdown under the ring, CTAs to Expenses / Liabilities / Debt simulator; expense form tips when those categories are chosen
 
 ### Session 11 — 2026-07-15 — Sensible path batch + MTM under Assets
 
