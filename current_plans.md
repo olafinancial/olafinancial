@@ -398,7 +398,6 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 | Issue | Title | Type | Priority | Status |
 |-------|-------|------|----------|--------|
-| [#49](https://github.com/olafinancial/olafinancial/issues/49) | Reports as strategic marketing tool | Feature | Medium | 🔲 Open |
 | [#36](https://github.com/olafinancial/olafinancial/issues/36) | Balance Sheet split (Assets & Liabilities pages) | Feature | Medium | 🔲 Open — verify vs shipped pages |
 | [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | Feature | Medium | 🔲 Open — verify vs `budget.js` |
 | [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | Branding / domain → pul.llc | Ops | Medium | 🔲 Open — code mostly done; confirm live DNS |
@@ -415,6 +414,7 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 | Issue | Title | Status |
 |-------|-------|--------|
+| [#49](https://github.com/olafinancial/olafinancial/issues/49) | Reports as strategic / plain-language health narrative | ✅ Closed 2026-07-15 |
 | [#50](https://github.com/olafinancial/olafinancial/issues/50) | Income-gen assets vs interest-bearing liabilities | ✅ Closed 2026-07-15 |
 | [#46](https://github.com/olafinancial/olafinancial/issues/46) | Budget planner / Savings & Debt Payoff unclear | ✅ Closed 2026-07-15 |
 | [#47](https://github.com/olafinancial/olafinancial/issues/47) | Mark-to-market ticker under Assets (not Retirement) | ✅ Closed 2026-07-15 |
@@ -434,14 +434,20 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#40](https://github.com/olafinancial/olafinancial/issues/40) | PWA auto cache / no hard refresh | ✅ Closed |
 | — | Getting-started path + re-run onboarding | ✅ Completed |
 
-### Suggested build order (updated 2026-07-15 · post–#50)
+### Suggested build order (updated 2026-07-15 · post–#49)
 
-1. **#49** Reports as strategic / plain-language narrative  
-2. **#38** Email ops  
-3. **#28 / #29** Sponsor activation & macro data updates  
-4. Confirm / close stale opens: **#36**, **#32**, **#23/#25** if already shipped  
+1. **#38** Email ops  
+2. **#28 / #29** Sponsor activation & macro data updates  
+3. Confirm / close stale opens: **#36**, **#32**, **#23/#25** if already shipped  
 
 ---
+
+### Session 14 — 2026-07-15 — Strategic plain-language Reports (#49)
+
+* **Status**: ✅ Completed · closes [#49](https://github.com/olafinancial/olafinancial/issues/49)
+* **`WPUtils.buildStrategicHealthReport`**: 10-check narrative (income/passive, expense cover, passive+EF, assets, liabilities, net worth, retirement, insurance, investments, estate)
+* Traffic-light status + CTAs; opportunity cards for lead-gen style next steps
+* **Reports page**: “Your Financial Health Report” card at top of share/export area (included in Share PNG)
 
 ### Session 13 — 2026-07-15 — Productive Balance Sheet (#50)
 

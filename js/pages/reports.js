@@ -71,6 +71,19 @@ const WPReports = (() => {
         <div id="reports-kpis" style="margin-bottom:1.5rem"></div>
         <!-- Shareable snapshot section — captured by html2canvas on Share -->
         <div id="reports-share-card">
+          <!-- Strategic plain-language health report (#49) -->
+          <div class="card" style="margin-bottom:1.5rem;border:1px solid var(--clr-border)" id="rpt-strategic-card">
+            <div class="section-header" style="margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
+              <span class="section-title">Your Financial Health Report</span>
+              <span class="badge badge-neutral" id="rpt-strategic-overall">—</span>
+            </div>
+            <p class="text-sm" id="rpt-strategic-summary" style="margin:0 0 1rem;line-height:1.55;color:var(--clr-text-1);max-width:52rem"></p>
+            <div id="rpt-strategic-scores" class="flex gap-2" style="flex-wrap:wrap;margin-bottom:1rem"></div>
+            <div id="rpt-strategic-checks" style="display:flex;flex-direction:column;gap:0.75rem"></div>
+            <div id="rpt-strategic-opps" style="margin-top:1.25rem"></div>
+            <p class="text-xs text-muted" id="rpt-strategic-closing" style="margin:1rem 0 0"></p>
+          </div>
+
           <!-- Net Worth Trend -->
           <div class="card" style="margin-bottom:1.5rem">
             <div class="section-header">
@@ -168,21 +181,106 @@ const WPReports = (() => {
       const now       = new Date();
       const start     = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
       const end       = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10);
-      const [income, expenses, assets, liabs] = await Promise.all([
+      const [income, expenses, assets, liabs, goals] = await Promise.all([
         WPDb.getIncomeByPeriod(uid, PERIOD),
         WPDb.getExpensesByDateRange(uid, start, end),
         WPDb.getAssetsByPeriod(uid, PERIOD),
         WPDb.getLiabilitiesByPeriod(uid, PERIOD),
+        WPDb.fetchAll('goals', { user_id: uid }).catch(() => []),
       ]);
       const baseCur = WPApp.state.profile?.currency || 'NGN';
       const pageCurrency = localStorage.getItem('wp_page_currency_reports') || baseCur;
 
+      // Local enrichment for insurance / estate / invest quiz
+      let insuranceData = null;
+      let estateData = null;
+      let investQuiz = null;
+      try { insuranceData = JSON.parse(localStorage.getItem('wp_insurance_data_' + uid) || 'null'); } catch { /* ignore */ }
+      try { estateData = JSON.parse(localStorage.getItem('wp_estate_planning_' + uid) || 'null'); } catch { /* ignore */ }
+      try { investQuiz = JSON.parse(localStorage.getItem('wp_invest_quiz_' + uid) || 'null'); } catch { /* ignore */ }
+
       _renderKPIs(snapshots, income, expenses, assets, liabs, baseCur, pageCurrency);
+      _renderStrategicReport({
+        income, expenses, assets, liabilities: liabs, snapshots, goals,
+        profile: WPApp.state.profile || {},
+        currency: pageCurrency,
+        insuranceData, estateData, investQuiz, userId: uid,
+      });
       _renderCharts(snapshots, assets, liabs, baseCur);
       _renderProductiveReport(assets, liabs, pageCurrency);
       _renderTable(snapshots, baseCur, pageCurrency);
       _renderRatios(income, expenses, assets, liabs, baseCur, pageCurrency);
-    } catch (err) { WPToast.error('Failed to load report data.'); }
+    } catch (err) {
+      console.error(err);
+      WPToast.error('Failed to load report data.');
+    }
+  }
+
+  function _renderStrategicReport(ctx) {
+    const report = WPUtils.buildStrategicHealthReport(ctx);
+    const overallEl = document.getElementById('rpt-strategic-overall');
+    const summaryEl = document.getElementById('rpt-strategic-summary');
+    const scoresEl = document.getElementById('rpt-strategic-scores');
+    const checksEl = document.getElementById('rpt-strategic-checks');
+    const oppsEl = document.getElementById('rpt-strategic-opps');
+    const closingEl = document.getElementById('rpt-strategic-closing');
+    if (!checksEl) return;
+
+    const overallMap = {
+      strong: { label: 'Strong', cls: 'badge-accent' },
+      steady: { label: 'Steady', cls: 'badge-accent' },
+      attention: { label: 'Needs attention', cls: 'badge-gold' },
+      urgent: { label: 'Urgent focus', cls: 'badge-danger' },
+    };
+    const og = overallMap[report.overall] || overallMap.steady;
+    if (overallEl) {
+      overallEl.textContent = og.label;
+      overallEl.className = `badge ${og.cls}`;
+    }
+    if (summaryEl) summaryEl.textContent = report.summary;
+    if (closingEl) closingEl.textContent = report.closing;
+
+    if (scoresEl) {
+      scoresEl.innerHTML = `
+        <span class="badge badge-accent">${report.scores.good} on track</span>
+        <span class="badge badge-gold">${report.scores.watch} watch</span>
+        <span class="badge badge-danger">${report.scores.risk} needs work</span>
+        <span class="badge badge-neutral">${report.monthLabel}</span>`;
+    }
+
+    const statusIcon = { good: '✅', watch: '🟡', risk: '🔴' };
+    const statusBorder = { good: 'var(--clr-accent)', watch: 'var(--clr-gold)', risk: 'var(--clr-danger)' };
+
+    checksEl.innerHTML = report.checks.map(c => `
+      <div style="border-left:3px solid ${statusBorder[c.status] || 'var(--clr-border)'};padding:0.75rem 1rem;background:var(--clr-surface-2);border-radius:0 8px 8px 0">
+        <div style="display:flex;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;align-items:flex-start">
+          <div style="flex:1;min-width:200px">
+            <div class="text-xs text-muted" style="margin-bottom:0.25rem">${statusIcon[c.status] || '•'} ${c.q}</div>
+            <div style="font-weight:600;color:var(--clr-text-1);margin-bottom:0.35rem">${c.headline}</div>
+            <div class="text-sm text-muted" style="line-height:1.45">${c.detail}</div>
+          </div>
+          ${c.cta ? `<a href="${c.cta.href}" class="btn btn-secondary btn-sm" style="flex-shrink:0">${c.cta.label}</a>` : ''}
+        </div>
+      </div>`).join('');
+
+    if (oppsEl) {
+      if (!report.opportunities.length) {
+        oppsEl.innerHTML = `
+          <div class="section-title" style="margin-bottom:0.5rem;font-size:1rem">Opportunities</div>
+          <p class="text-sm text-muted" style="margin:0">No urgent gaps flagged — keep logging data and re-check after major money moves.</p>`;
+      } else {
+        oppsEl.innerHTML = `
+          <div class="section-title" style="margin-bottom:0.65rem;font-size:1rem">🎯 Opportunities &amp; next steps</div>
+          <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0.75rem">
+            ${report.opportunities.map(o => `
+              <a href="${o.href}" style="text-decoration:none;color:inherit;display:block;padding:0.9rem;border-radius:10px;background:linear-gradient(135deg,var(--clr-surface-2),var(--clr-surface-3));border:1px solid var(--clr-border)">
+                <span class="badge badge-gold" style="margin-bottom:0.4rem">${o.tag}</span>
+                <div style="font-weight:700;margin-bottom:0.3rem;color:var(--clr-text-1)">${o.title}</div>
+                <div class="text-xs text-muted" style="line-height:1.4">${o.msg}</div>
+              </a>`).join('')}
+          </div>`;
+      }
+    }
   }
 
   function _renderProductiveReport(assets, liabs, pageCurrency) {

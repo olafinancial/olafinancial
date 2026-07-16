@@ -746,6 +746,388 @@ const WPUtils = (() => {
     return null;
   }
 
+  /**
+   * Plain-language strategic health report (#49).
+   * Rule-based narrative answering cash flow, balance sheet, EF, retirement,
+   * insurance, investments, and estate questions — with opportunity CTAs.
+   *
+   * @param {object} ctx
+   * @param {Array} ctx.income
+   * @param {Array} ctx.expenses
+   * @param {Array} ctx.assets
+   * @param {Array} ctx.liabilities
+   * @param {Array} ctx.snapshots
+   * @param {Array} [ctx.goals]
+   * @param {object} [ctx.profile]
+   * @param {string} [ctx.currency]
+   * @param {object|null} [ctx.insuranceData]  localStorage insurance payload
+   * @param {object|null} [ctx.estateData]
+   * @param {object|null} [ctx.investQuiz]
+   * @param {string} [ctx.userId]
+   */
+  function buildStrategicHealthReport(ctx = {}) {
+    const currency = ctx.currency || 'NGN';
+    const income = ctx.income || [];
+    const expenses = ctx.expenses || [];
+    const assets = ctx.assets || [];
+    const liabilities = ctx.liabilities || [];
+    const snapshots = Array.isArray(ctx.snapshots) ? ctx.snapshots : [];
+    const goals = ctx.goals || [];
+    const profile = ctx.profile || {};
+    const f = (k) => fmt(k, { currency, compact: true });
+    const fFull = (k) => fmt(k, { currency });
+
+    const bal = (item) => {
+      const cur = getEntryCurrency(item.notes);
+      return convert(item.close_balance || item.open_balance || 0, cur, currency);
+    };
+
+    const cf = calcCashFlow(income, expenses);
+    const netIncome = cf.netIncome || 0;
+    const totalExp = cf.totalExpenses || 0;
+    const netCF = cf.netCashFlow || 0;
+    const passive = passiveIncomeKPI(income, totalExp);
+    const passiveKobo = passive.passiveKobo || 0;
+    const passivePctOfInc = netIncome > 0 ? (passiveKobo / netIncome) * 100 : 0;
+
+    // Expense coverage: share of expenses funded by income (vs implied debt/drawdown)
+    const expCoveredByIncomePct = totalExp > 0
+      ? Math.min(100, (Math.max(0, netIncome) / totalExp) * 100)
+      : (netIncome > 0 ? 100 : 0);
+    const fundedByDebtOrSavings = totalExp > netIncome && totalExp > 0;
+
+    const totalAssets = assets.reduce((s, a) => s + bal(a), 0);
+    const totalLiab = liabilities.reduce((s, l) => s + bal(l), 0);
+    const netWorth = totalAssets - totalLiab;
+
+    // Trends from snapshots (stored in profile base currency — convert if needed)
+    // Assume snapshot amounts are in profile currency matching currency or NGN base.
+    const baseCur = profile.currency || currency;
+    let nwTrend = 'flat';
+    let nwChange = 0;
+    let assetsTrend = 'flat';
+    let assetsChange = 0;
+    let liabTrend = 'flat';
+    let liabChange = 0;
+    if (snapshots.length >= 2) {
+      const first = snapshots[0];
+      const last = snapshots[snapshots.length - 1];
+      nwChange = convert((last.net_worth || 0) - (first.net_worth || 0), baseCur, currency);
+      assetsChange = convert((last.total_assets || 0) - (first.total_assets || 0), baseCur, currency);
+      liabChange = convert((last.total_liabilities || 0) - (first.total_liabilities || 0), baseCur, currency);
+      nwTrend = nwChange > 0 ? 'up' : nwChange < 0 ? 'down' : 'flat';
+      assetsTrend = assetsChange > 0 ? 'up' : assetsChange < 0 ? 'down' : 'flat';
+      liabTrend = liabChange > 0 ? 'up' : liabChange < 0 ? 'down' : 'flat';
+    } else {
+      // Fall back to current open/close on assets if no history
+      const openA = assets.reduce((s, a) => {
+        const cur = getEntryCurrency(a.notes);
+        return s + convert(a.open_balance || 0, cur, currency);
+      }, 0);
+      const closeA = totalAssets;
+      assetsChange = closeA - openA;
+      assetsTrend = assetsChange > 0 ? 'up' : assetsChange < 0 ? 'down' : 'flat';
+      nwTrend = netWorth >= 0 ? 'up' : 'down';
+    }
+
+    // Emergency fund
+    const efAssets = assets.filter(a => a.notes && String(a.notes).includes('[Emergency Fund]'));
+    const efBal = efAssets.reduce((s, a) => s + bal(a), 0);
+    const essentialExp = expenses.filter(e => !e.is_discretionary).reduce((s, e) => {
+      const cur = getEntryCurrency(e.description || e.notes);
+      return s + convert(e.amount || 0, cur, currency);
+    }, 0);
+    const monthlyEssential = essentialExp > 0 ? essentialExp : totalExp;
+    const efTarget = emergencyFundTarget(monthlyEssential);
+    const efStatus = emergencyFundStatus(efBal, efTarget);
+    const efMonths = monthlyEssential > 0 ? efBal / monthlyEssential : 0;
+    const efOperational = efMonths >= 3 || efStatus.status === 'on_track';
+
+    // Retirement
+    const retAssets = assets.filter(a => {
+      const t = (a.asset_type || '').toLowerCase();
+      return t === 'retirement_contribution' || t === 'pension' || t.includes('retirement');
+    });
+    const retBal = retAssets.reduce((s, a) => s + bal(a), 0);
+    const age = profile.age || null;
+    const retAge = profile.retirement_age || 60;
+    const yearsToRet = age != null ? Math.max(0, retAge - age) : null;
+    // crude: funded if retirement assets >= 3× annual net income or any plan exists with progress
+    const annualNet = netIncome * 12;
+    const retFundedRatio = annualNet > 0 ? retBal / annualNet : (retBal > 0 ? 1 : 0);
+    const retOk = retBal > 0 && (retFundedRatio >= 1 || (yearsToRet != null && yearsToRet > 20 && retBal > 0));
+
+    // Insurance
+    const ins = ctx.insuranceData || {};
+    const policies = Array.isArray(ins.policies) ? ins.policies : [];
+    const hasLife = policies.some(p => (p.type || '').toLowerCase() === 'life') ||
+      ins.answers?.hasCurrentLife === 'yes';
+    const hasHealth = policies.some(p => (p.type || '').toLowerCase() === 'health');
+    const insOptimal = hasLife && (hasHealth || policies.length >= 2);
+    const insPartial = policies.length > 0 || hasLife || hasHealth;
+
+    // Investments (equity / income-gen / ticker)
+    const investAssets = assets.filter(a => {
+      const t = (a.asset_type || '').toLowerCase();
+      const tags = parseNotesTags(a.notes);
+      return a.is_income_generating || t === 'equity' || t === 'crypto' || tags.ticker;
+    });
+    const investBal = investAssets.reduce((s, a) => s + bal(a), 0);
+    let investGain = 0;
+    investAssets.forEach(a => {
+      const cur = getEntryCurrency(a.notes);
+      const open = convert(a.open_balance || 0, cur, currency);
+      const close = convert(a.close_balance || a.open_balance || 0, cur, currency);
+      investGain += (close - open);
+    });
+    const investTrend = investGain > 0 ? 'up' : investGain < 0 ? 'down' : 'flat';
+    const quiz = ctx.investQuiz;
+    const hasQuiz = !!(quiz && (quiz.profile || quiz.band || quiz.score != null));
+
+    // Estate / legacy
+    const estate = ctx.estateData || {};
+    const legacyReviewed = !!(
+      estate.will_status === 'yes' ||
+      estate.has_will === 'yes' ||
+      estate.will === 'yes' ||
+      estate.completed ||
+      estate.step_completed ||
+      (estate.beneficiaries && estate.beneficiaries.length)
+    );
+
+    // Goals
+    const goalsCount = goals.length;
+    const goalsOnTrack = goals.filter(g => {
+      try { return goalProgress(g).progressPct >= 50; } catch { return false; }
+    }).length;
+
+    const productive = productiveBalanceSheet(assets, liabilities, currency);
+
+    const statusOf = (ok, warn) => (ok ? 'good' : warn ? 'watch' : 'risk');
+
+    const checks = [
+      {
+        id: 'income',
+        q: 'Is income positive? How much is passive?',
+        status: statusOf(netIncome > 0 && netCF >= 0, netIncome > 0 && netCF < 0),
+        headline: netIncome > 0
+          ? `Your net income this month is ${fFull(netIncome)}.`
+          : 'No positive net income is recorded for this month.',
+        detail: netIncome > 0
+          ? `About ${passivePctOfInc.toFixed(0)}% (${f(passiveKobo)}) is passive. Active earnings still do most of the work${passivePctOfInc < 20 ? ' — growing passive income reduces job risk.' : '.'}`
+          : 'Log salary and other income on the Income page so we can score cash flow.',
+        cta: netIncome <= 0 ? { label: 'Add income', href: '#/income' } : (passivePctOfInc < 15 ? { label: 'Grow passive income', href: '#/income' } : null),
+      },
+      {
+        id: 'expense_cover',
+        q: 'Are expenses covered by income or debt?',
+        status: statusOf(!fundedByDebtOrSavings && totalExp > 0, fundedByDebtOrSavings && expCoveredByIncomePct >= 70),
+        headline: totalExp <= 0
+          ? 'No expenses logged this month.'
+          : fundedByDebtOrSavings
+            ? `Expenses exceed net income — only ${expCoveredByIncomePct.toFixed(0)}% of spending is covered by take-home pay.`
+            : `Income covers ${expCoveredByIncomePct.toFixed(0)}% of expenses with room to spare.`,
+        detail: fundedByDebtOrSavings
+          ? `The gap of ${f(totalExp - netIncome)} is likely funded by savings drawdown or new debt. Cut discretionary spend or raise income.`
+          : `You are not relying on debt to fund day-to-day living. Keep it that way.`,
+        cta: fundedByDebtOrSavings ? { label: 'Review expenses', href: '#/expenses' } : { label: 'Budget planner', href: '#/budget' },
+      },
+      {
+        id: 'passive_ef',
+        q: 'Can passive income cover expenses? Is the emergency fund ready?',
+        status: statusOf(passive.pctOfExpenses >= 100 && efOperational, passive.pctOfExpenses >= 25 || efMonths >= 1),
+        headline: `Passive income covers ${passive.pctOfExpenses.toFixed(0)}% of expenses.`,
+        detail: efOperational
+          ? `Emergency fund looks operational (~${efMonths.toFixed(1)} months of essentials, ${f(efBal)}).`
+          : `Emergency fund is thin (~${efMonths.toFixed(1)} months, ${f(efBal)} vs target ${f(efTarget)}). Build liquid savings before aggressive investing.`,
+        cta: !efOperational ? { label: 'Emergency fund', href: '#/emergency-fund' } : (passive.pctOfExpenses < 50 ? { label: 'Track passive income', href: '#/cashflow' } : null),
+      },
+      {
+        id: 'assets',
+        q: 'Are assets growing or falling?',
+        status: statusOf(assetsTrend === 'up', assetsTrend === 'flat'),
+        headline: snapshots.length >= 2
+          ? `Assets are ${assetsTrend === 'up' ? 'growing' : assetsTrend === 'down' ? 'falling' : 'flat'} (${f(assetsChange)} over the recorded period).`
+          : `Assets total ${f(totalAssets)} this period${assetsTrend !== 'flat' ? ` (${assetsTrend === 'up' ? 'up' : 'down'} vs opening balances)` : ''}.`,
+        detail: assetsTrend === 'down'
+          ? 'Declining assets may mean spending capital, market drops, or under-saving. Review big outflows and investment marks.'
+          : assetsTrend === 'up'
+            ? 'Asset growth compounds long-term wealth — stay consistent with savings and rebalancing.'
+            : 'Add monthly snapshots from the Dashboard to see clearer multi-month asset trends.',
+        cta: { label: 'View assets', href: '#/assets' },
+      },
+      {
+        id: 'liabilities',
+        q: 'Are liabilities growing or falling?',
+        status: statusOf(liabTrend === 'down' || totalLiab === 0, liabTrend === 'flat'),
+        headline: totalLiab <= 0
+          ? 'No liabilities on the books — excellent for optionality.'
+          : snapshots.length >= 2
+            ? `Liabilities are ${liabTrend === 'up' ? 'rising' : liabTrend === 'down' ? 'falling' : 'flat'} (${f(liabChange)} over the period). Total: ${f(totalLiab)}.`
+            : `Liabilities total ${f(totalLiab)}.`,
+        detail: liabTrend === 'up'
+          ? 'Rising debt increases interest cost. Prefer paying high-APR balances and avoid new consumer credit.'
+          : totalLiab > 0
+            ? 'Keep payoff on track with the Debt Planner (avalanche or snowball).'
+            : 'Channel surplus into emergency fund and investments rather than lifestyle creep.',
+        cta: totalLiab > 0 ? { label: 'Debt planner', href: '#/debt' } : null,
+      },
+      {
+        id: 'net_worth',
+        q: 'Did net worth rise or fall?',
+        status: statusOf(netWorth >= 0 && nwTrend !== 'down', netWorth >= 0),
+        headline: `Net worth is ${fFull(netWorth)} (${netWorth >= 0 ? 'positive' : 'negative'}).`,
+        detail: snapshots.length >= 2
+          ? `Over your snapshot history, net worth is ${nwTrend === 'up' ? 'up' : nwTrend === 'down' ? 'down' : 'flat'} by ${f(nwChange)}.`
+          : 'Save Dashboard monthly snapshots to track net worth month-over-month.',
+        cta: netWorth < 0 ? { label: 'Balance sheet', href: '#/balance-sheet' } : { label: 'Reports trends', href: '#/reports' },
+      },
+      {
+        id: 'retirement',
+        q: 'Is the retirement plan funded?',
+        status: statusOf(retOk, retBal > 0),
+        headline: retBal > 0
+          ? `Retirement-linked assets total ${f(retBal)}${yearsToRet != null ? ` with ~${yearsToRet} years to target age ${retAge}` : ''}.`
+          : 'No retirement / pension balances are tagged yet.',
+        detail: retOk
+          ? 'You have a meaningful retirement base. Revisit contribution rate and risk profile annually.'
+          : 'Add RSA/pension/AVC under Assets (retirement type) and run the Retirement planner for a funding gap estimate.',
+        cta: { label: 'Retirement planner', href: '#/retirement' },
+      },
+      {
+        id: 'insurance',
+        q: 'Is insurance coverage optimal?',
+        status: statusOf(insOptimal, insPartial),
+        headline: insOptimal
+          ? 'Life and broader cover look present in your insurance log.'
+          : insPartial
+            ? 'Some insurance is logged, but coverage may still have gaps.'
+            : 'No insurance policies logged — households are often under-insured for income loss and health shocks.',
+        detail: 'Run the Insurance needs assessment and log policies so this score stays accurate. Gaps here are a common risk for families.',
+        cta: { label: 'Insurance assessment', href: '#/insurance' },
+      },
+      {
+        id: 'investments',
+        q: 'Are investments growing or falling?',
+        status: statusOf(investBal > 0 && investTrend !== 'down', investBal > 0 || hasQuiz),
+        headline: investBal > 0
+          ? `Investment-style assets total ${f(investBal)} and are ${investTrend === 'up' ? 'up' : investTrend === 'down' ? 'down' : 'flat'} vs cost/open this period.`
+          : 'No investment holdings flagged yet (equities, funds, or income-generating assets).',
+        detail: hasQuiz
+          ? 'You have an investment profile quiz on file — use it to guide allocation, not day-trading.'
+          : 'Take the Invest Profile quiz and add equity holdings with tickers on Assets for mark-to-market tracking.',
+        cta: investBal <= 0 ? { label: 'Invest profile quiz', href: '#/invest' } : { label: 'Assets / MTM', href: '#/assets' },
+      },
+      {
+        id: 'legacy',
+        q: 'Has legacy / estate planning been reviewed?',
+        status: statusOf(legacyReviewed, false),
+        headline: legacyReviewed
+          ? 'Estate planning notes are on file — good stewardship for dependants.'
+          : 'Legacy planning has not been marked complete.',
+        detail: 'A will, beneficiaries, and guardianship choices protect family when life happens. Review at least yearly or after major life events.',
+        cta: { label: 'Estate planner', href: '#/estate-planner' },
+      },
+    ];
+
+    // Opportunity / lead-gen style suggestions
+    const opportunities = [];
+    if (!efOperational) {
+      opportunities.push({
+        title: 'Stabilise first',
+        msg: 'Build 3 months of essential expenses in an emergency fund before increasing investment risk.',
+        href: '#/emergency-fund',
+        tag: 'Protection',
+      });
+    }
+    if (fundedByDebtOrSavings) {
+      opportunities.push({
+        title: 'Stop the leak',
+        msg: 'Spending runs above income. A 50/30/20 budget check often frees cash for debt and savings.',
+        href: '#/budget',
+        tag: 'Cash flow',
+      });
+    }
+    if (!insPartial) {
+      opportunities.push({
+        title: 'Income protection gap',
+        msg: 'Without life/health cover, one event can erase years of saving. Assess needs and log policies.',
+        href: '#/insurance',
+        tag: 'Insurance',
+      });
+    }
+    if (productive.grade === 'weak' || productive.grade === 'watch') {
+      opportunities.push({
+        title: 'Debt costs more than assets earn',
+        msg: 'Interest-bearing debt outpaces income-generating assets. Attack high APR or grow productive capital.',
+        href: '#/debt',
+        tag: 'Balance sheet',
+      });
+    }
+    if (investBal <= 0 && netCF > 0 && efOperational) {
+      opportunities.push({
+        title: 'Put surplus to work',
+        msg: 'You have room to invest. Complete the Invest Profile quiz and start small, diversified holdings.',
+        href: '#/invest',
+        tag: 'Growth',
+      });
+    }
+    if (!legacyReviewed && (netWorth > 0 || goalsCount > 0)) {
+      opportunities.push({
+        title: 'Protect what you are building',
+        msg: 'Document beneficiaries and a simple will so progress is not lost to admin chaos.',
+        href: '#/estate-planner',
+        tag: 'Legacy',
+      });
+    }
+    if (passivePctOfInc < 10 && netIncome > 0) {
+      opportunities.push({
+        title: 'Diversify income',
+        msg: 'Almost all income is active. Even small rental, dividends, or side cash flow improves resilience.',
+        href: '#/income',
+        tag: 'Income',
+      });
+    }
+
+    const goodN = checks.filter(c => c.status === 'good').length;
+    const riskN = checks.filter(c => c.status === 'risk').length;
+    const watchN = checks.filter(c => c.status === 'watch').length;
+    let overall = 'steady';
+    if (riskN >= 4) overall = 'urgent';
+    else if (riskN >= 2 || watchN >= 4) overall = 'attention';
+    else if (goodN >= 7) overall = 'strong';
+
+    const name = profile.full_name || profile.name || 'there';
+    const monthLabel = new Date().toLocaleDateString('en-NG', { month: 'long', year: 'numeric' });
+
+    const summary =
+      overall === 'strong'
+        ? `${name}, your ${monthLabel} picture is solid: cash flow, buffers, and balance sheet mostly support long-term goals.`
+        : overall === 'urgent'
+          ? `${name}, several core areas need attention this month — focus on cash flow, emergency savings, and high-cost debt before new goals.`
+          : overall === 'attention'
+            ? `${name}, you are making progress, but a few gaps could derail plans if ignored. Prioritise the red/amber items below.`
+            : `${name}, here is a plain-language read of your finances for ${monthLabel}.`;
+
+    const closing =
+      'This report is educational, not personalised investment advice. Numbers update when you log income, expenses, assets, and debts in Pul Planning.';
+
+    return {
+      monthLabel,
+      overall,
+      summary,
+      closing,
+      checks,
+      opportunities: opportunities.slice(0, 5),
+      scores: { good: goodN, watch: watchN, risk: riskN, total: checks.length },
+      metrics: {
+        netIncome, totalExp, netCF, passiveKobo, passivePctOfInc,
+        totalAssets, totalLiab, netWorth, efBal, efMonths, investBal,
+        productiveGrade: productive.grade,
+      },
+    };
+  }
+
   return {
     fmt, cleanNum, maskNumberInput, nairaToKobo, koboToNaira, pct, fmtPct, fmtDate,
     calcPIT, effectiveTaxRate, taxBracket,
@@ -765,5 +1147,7 @@ const WPUtils = (() => {
     parseNotesTags, cleanNotesDisplay,
     estimateMarketPrice, fetchMarketPrice,
     isInterestBearingLiability, isIncomeGeneratingAsset, productiveBalanceSheet,
+    buildStrategicHealthReport,
   };
 })();
+
