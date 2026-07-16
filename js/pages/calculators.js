@@ -7,11 +7,17 @@ const WPCalculators = (() => {
   let _activeTab = 'savings-goal';
 
   async function init(container) {
+    const hint = sessionStorage.getItem('wp_calc_tab');
+    if (hint) {
+      _activeTab = hint;
+      sessionStorage.removeItem('wp_calc_tab');
+    }
+
     container.innerHTML = `
       <div class="page-header">
         <div>
           <h1 class="page-title">Financial Calculators</h1>
-          <p class="page-subtitle">Verify investment yields, simulate loans, and project saving goals</p>
+          <p class="page-subtitle">Verify investment yields, simulate loans, project savings, and estimate Zakat</p>
         </div>
       </div>
       <div class="page-body">
@@ -27,6 +33,7 @@ const WPCalculators = (() => {
           <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="fixed-deposit">🔒 Fixed Deposit / CD</button>
           <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="nigeria-paye">🇳🇬 Nigeria PAYE (SME)</button>
           <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="inflation">🎈 Inflation Impact</button>
+          <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="zakat">🕌 Zakat</button>
         </div>
         
         <!-- Calculator Content Area -->
@@ -482,6 +489,92 @@ const WPCalculators = (() => {
         </div>`;
     }
 
+    else if (_activeTab === 'zakat') {
+      // Default nisab ≈ 85g gold * rough NGN price — user should update. Educational only.
+      const defaultNisab = baseCurrency === 'NGN' ? '8,500,000' : baseCurrency === 'USD' ? '5,500' : '5,000,000';
+      html = `
+        <div class="grid-2">
+          <div class="card" style="padding:2rem">
+            <h3 style="margin-bottom:0.5rem;font-weight:700;color:#ffffff">🕌 Zakat Estimator</h3>
+            <p class="text-xs text-muted" style="margin:0 0 1.25rem;line-height:1.5">
+              Educational estimate: <strong>2.5%</strong> of net zakatable wealth above nisab.
+              Not a fatwa — confirm nisab, holdings, and due date with a qualified scholar or imam.
+            </p>
+            <div class="form-group">
+              <label for="zk-cash">Cash &amp; bank balances (${symbol})</label>
+              <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
+                <input class="input" type="text" inputmode="decimal" id="zk-cash" placeholder="0" value="0">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="zk-gold">Gold value (${symbol})</label>
+                <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
+                  <input class="input" type="text" inputmode="decimal" id="zk-gold" placeholder="0">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="zk-silver">Silver value (${symbol})</label>
+                <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
+                  <input class="input" type="text" inputmode="decimal" id="zk-silver" placeholder="0">
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="zk-invest">Investments (shares, funds — if zakatable) (${symbol})</label>
+              <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
+                <input class="input" type="text" inputmode="decimal" id="zk-invest" placeholder="0">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="zk-biz">Business inventory / working capital (${symbol})</label>
+              <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
+                <input class="input" type="text" inputmode="decimal" id="zk-biz" placeholder="0">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="zk-recv">Receivables / money owed to you (${symbol})</label>
+              <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
+                <input class="input" type="text" inputmode="decimal" id="zk-recv" placeholder="0">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="zk-debt">Deductible short-term debts you owe (${symbol})</label>
+              <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
+                <input class="input" type="text" inputmode="decimal" id="zk-debt" placeholder="0">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="zk-nisab">Nisab threshold (${symbol})</label>
+              <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
+                <input class="input" type="text" inputmode="decimal" id="zk-nisab" placeholder="0" value="${defaultNisab}">
+              </div>
+              <div class="input-hint">Often based on gold (~85g) or silver (~595g) market value. Update to today’s price.</div>
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:1rem" id="run-zakat">Calculate Zakat</button>
+            <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:0.5rem" id="zk-prefill">Prefill from Assets (this period)</button>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;justify-content:center;gap:1rem;padding:2rem">
+            <div class="section-title">Estimate</div>
+            <div class="flex justify-between" style="border-bottom:1px solid var(--clr-border);padding-bottom:0.5rem">
+              <span class="text-muted">Gross zakatable wealth</span><strong id="zk-res-gross">${symbol}0</strong>
+            </div>
+            <div class="flex justify-between" style="border-bottom:1px solid var(--clr-border);padding-bottom:0.5rem">
+              <span class="text-muted">Net after debts</span><strong id="zk-res-net">${symbol}0</strong>
+            </div>
+            <div class="flex justify-between" style="border-bottom:1px solid var(--clr-border);padding-bottom:0.5rem">
+              <span class="text-muted">Above nisab?</span><strong id="zk-res-nisab">—</strong>
+            </div>
+            <div style="margin-top:0.5rem">
+              <div class="text-xs text-muted">Estimated Zakat due (2.5%)</div>
+              <div class="card-value text-accent" id="zk-res-due" style="font-size:2.2rem;font-weight:800">${symbol}0</div>
+            </div>
+            <p class="text-xs text-muted" id="zk-res-note" style="margin:0;line-height:1.45"></p>
+            <a href="#/settings" class="btn btn-ghost btn-sm">Set Takaful preference in Settings</a>
+          </div>
+        </div>`;
+    }
+
     wrap.innerHTML = html;
     _bindCalculatorLogic(baseCurrency);
   }
@@ -819,6 +912,62 @@ const WPCalculators = (() => {
         document.getElementById('inf-res-pct').textContent = pct.toFixed(2) + '%';
       };
       document.getElementById('run-inflation').addEventListener('click', calc);
+      calc();
+    }
+
+    else if (_activeTab === 'zakat') {
+      const kobo = (id) => WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById(id)?.value) || 0);
+      const calc = () => {
+        const result = WPUtils.calcZakat({
+          cashKobo: kobo('zk-cash'),
+          goldKobo: kobo('zk-gold'),
+          silverKobo: kobo('zk-silver'),
+          investmentsKobo: kobo('zk-invest'),
+          businessKobo: kobo('zk-biz'),
+          receivablesKobo: kobo('zk-recv'),
+          debtsKobo: kobo('zk-debt'),
+          nisabKobo: kobo('zk-nisab'),
+          rate: 0.025,
+        });
+        document.getElementById('zk-res-gross').textContent = WPUtils.fmt(result.grossWealthKobo, { currency });
+        document.getElementById('zk-res-net').textContent = WPUtils.fmt(result.netWealthKobo, { currency });
+        document.getElementById('zk-res-nisab').textContent = result.aboveNisab
+          ? 'Yes — Zakat may be due'
+          : 'No — net wealth below nisab';
+        document.getElementById('zk-res-nisab').className = result.aboveNisab ? 'text-accent' : 'text-muted';
+        document.getElementById('zk-res-due').textContent = WPUtils.fmt(result.zakatDueKobo, { currency });
+        document.getElementById('zk-res-note').textContent = result.aboveNisab
+          ? 'Pay to eligible recipients (asnaf). Lunar year (hawl) rules may apply — verify with a scholar.'
+          : 'Keep tracking wealth; once above nisab for a full hawl, reassess.';
+      };
+      document.getElementById('run-zakat')?.addEventListener('click', calc);
+      document.getElementById('zk-prefill')?.addEventListener('click', async () => {
+        try {
+          const uid = WPApp.state.user.id;
+          const PERIOD = WPUtils.currentPeriod();
+          const assets = await WPDb.getAssetsByPeriod(uid, PERIOD);
+          let cash = 0, invest = 0, other = 0;
+          assets.forEach(a => {
+            const cur = WPUtils.getEntryCurrency(a.notes);
+            const bal = WPUtils.convert(a.close_balance || a.open_balance || 0, cur, currency);
+            const t = (a.asset_type || '').toLowerCase();
+            if (t === 'savings' || t === 'fixed_deposit' || t === 'currency' || t === 'cash') cash += bal;
+            else if (t === 'equity' || t === 'crypto' || a.is_income_generating) invest += bal;
+            else other += bal;
+          });
+          const setMaj = (id, koboAmt) => {
+            const el = document.getElementById(id);
+            if (el) el.value = WPUtils.koboToNaira(koboAmt).toLocaleString(undefined, { maximumFractionDigits: 0 });
+          };
+          setMaj('zk-cash', cash);
+          setMaj('zk-invest', invest);
+          setMaj('zk-biz', other);
+          WPToast.success('Prefill from Assets — review which items are zakatable.');
+          calc();
+        } catch (err) {
+          WPToast.error('Could not load assets.');
+        }
+      });
       calc();
     }
   }

@@ -408,6 +408,33 @@ const WPInvestmentQuiz = (() => {
           Implement via SEC-licensed managers, NGX stockbrokers, or reputable platforms. Rebalance periodically.
         </div>
 
+        ${APP_CONFIG.showShariaTools(WPApp.state.user?.id) ? `
+        <div class="card" style="margin-bottom:1.25rem;padding:1.15rem 1.25rem;border-left:3px solid var(--clr-accent)">
+          <div class="section-title" style="margin:0 0 0.5rem">🕌 Sharia-conscious investing notes</div>
+          <p class="text-sm text-muted" style="margin:0 0 0.65rem;line-height:1.5">
+            Your Settings preference highlights ethical / Halal-aware options. This quiz still shows a general market mix —
+            it does <strong>not</strong> screen every ticker. Prefer:
+          </p>
+          <ul class="text-sm" style="margin:0 0 0.75rem;padding-left:1.15rem;color:var(--clr-text-2);line-height:1.55">
+            <li>Sharia-compliant equity funds / ETFs where available (avoid pure interest-based fixed income if required)</li>
+            <li>REITs and real assets after screening for core business activity</li>
+            <li>Cash / money-market with care — conventional interest may not suit; ask your advisor for compliant alternatives</li>
+            <li>Limit speculative crypto / high-gharar structures</li>
+          </ul>
+          <div class="flex gap-2" style="flex-wrap:wrap">
+            <a href="#/assets" class="btn btn-secondary btn-sm">Flag holdings on Assets</a>
+            <a href="#/calculators" class="btn btn-ghost btn-sm" onclick="sessionStorage.setItem('wp_calc_tab','zakat')">Zakat calculator</a>
+            <a href="#/settings" class="btn btn-ghost btn-sm">Takaful preference</a>
+          </div>
+        </div>` : `
+        <div class="card" style="margin-bottom:1.25rem;padding:1rem 1.15rem;background:var(--clr-surface-2)">
+          <p class="text-sm text-muted" style="margin:0">
+            Prefer Halal / Takaful framing? Set preference in
+            <a href="#/settings" style="color:var(--clr-accent)">Settings → Sharia &amp; Takaful</a>
+            for investing tips and Insurance Takaful wording.
+          </p>
+        </div>`}
+
         <div class="kpi-grid" style="margin-bottom:1.25rem">
           <div class="card">
             <div class="card-title">Total score</div>

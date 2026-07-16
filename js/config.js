@@ -147,6 +147,36 @@ const APP_CONFIG = {
       </div>`;
   },
 
+  /**
+   * Sharia / Takaful preference (not an app-wide filter).
+   * Values: 'yes' | 'no_preference' | 'both'
+   * Shared by Settings + Insurance.
+   */
+  takafulKey(userId) {
+    return 'wp_takaful_preference_' + (userId || 'anon');
+  },
+  getTakafulPreference(userId) {
+    try {
+      const v = localStorage.getItem(this.takafulKey(userId));
+      if (v === 'yes' || v === 'both' || v === 'no_preference') return v;
+    } catch { /* ignore */ }
+    return 'no_preference';
+  },
+  setTakafulPreference(userId, value) {
+    const v = (value === 'yes' || value === 'both') ? value : 'no_preference';
+    try { localStorage.setItem(this.takafulKey(userId), v); } catch { /* ignore */ }
+    return v;
+  },
+  /** True when user wants Takaful-only product framing. */
+  prefersTakafulOnly(userId) {
+    return this.getTakafulPreference(userId) === 'yes';
+  },
+  /** True when Sharia-conscious tools should be highlighted (yes or both). */
+  showShariaTools(userId) {
+    const v = this.getTakafulPreference(userId);
+    return v === 'yes' || v === 'both';
+  },
+
   exchangeRates: {
     NGN: 1,
     USD: 1500,

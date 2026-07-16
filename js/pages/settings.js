@@ -73,6 +73,30 @@ const WPSettings = (() => {
           <button class="btn btn-primary" style="width:100%;margin-top:1.5rem" id="save-settings-btn">Save Changes</button>
         </div>
 
+        <!-- Sharia / Takaful preference (not app-wide filter) -->
+        <div class="card" style="max-width:600px;padding:2rem;margin-bottom:1.5rem;">
+          <h3 style="margin-bottom:0.5rem;font-weight:700;color:#ffffff">🕌 Sharia &amp; Takaful preference</h3>
+          <p style="color:var(--clr-text-2);font-size:0.85rem;margin:0 0 1.25rem;line-height:1.55">
+            Guides <strong>Insurance (Takaful)</strong> wording, highlights Zakat / interest-free debt tools,
+            and Halal investing tips. This does <em>not</em> hide conventional features app-wide.
+          </p>
+          <div class="form-group">
+            <label for="set-takaful">Do you prefer Sharia-compliant products where available?</label>
+            <select class="select" id="set-takaful">
+              <option value="yes" ${APP_CONFIG.getTakafulPreference(WPApp.state.user?.id) === 'yes' ? 'selected' : ''}>Yes — prefer Takaful / Sharia-conscious options</option>
+              <option value="both" ${APP_CONFIG.getTakafulPreference(WPApp.state.user?.id) === 'both' ? 'selected' : ''}>Open to both / Not sure</option>
+              <option value="no_preference" ${APP_CONFIG.getTakafulPreference(WPApp.state.user?.id) === 'no_preference' ? 'selected' : ''}>No preference — conventional is fine</option>
+            </select>
+          </div>
+          <div class="flex gap-2" style="flex-wrap:wrap;margin-top:0.75rem">
+            <a href="#/insurance" class="btn btn-secondary btn-sm">Insurance / Takaful</a>
+            <a href="#/calculators" class="btn btn-secondary btn-sm" id="set-zakat-link">Zakat calculator</a>
+            <a href="#/debt" class="btn btn-ghost btn-sm">Debt (interest-free notes)</a>
+            <a href="#/invest" class="btn btn-ghost btn-sm">Invest profile</a>
+          </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:1.25rem" id="save-takaful-btn">Save preference</button>
+        </div>
+
         <!-- Getting started / onboarding replay -->
         <div class="card" style="max-width:600px;padding:2rem;margin-bottom:1.5rem;">
           <h3 style="margin-bottom:0.5rem;font-weight:700;color:#ffffff">🗺️ Getting started</h3>
@@ -150,6 +174,30 @@ const WPSettings = (() => {
     document.getElementById('set-replay-onboarding-btn')?.addEventListener('click', () => {
       WPToast.info('Opening setup wizard — you can exit without saving.');
       WPRouter.navigate('/onboarding');
+    });
+
+    document.getElementById('save-takaful-btn')?.addEventListener('click', () => {
+      const uid = WPApp.state.user?.id;
+      const v = document.getElementById('set-takaful')?.value || 'no_preference';
+      APP_CONFIG.setTakafulPreference(uid, v);
+      // Keep insurance payload in sync if present
+      try {
+        const key = 'wp_insurance_data_' + uid;
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const data = JSON.parse(raw);
+          data.takaful = v;
+          localStorage.setItem(key, JSON.stringify(data));
+        }
+      } catch { /* ignore */ }
+      WPToast.success(v === 'yes'
+        ? 'Takaful preference saved — Insurance and Sharia tools will emphasise compliance.'
+        : 'Preference saved.');
+    });
+
+    document.getElementById('set-zakat-link')?.addEventListener('click', (e) => {
+      // Open calculators with hash hint for zakat tab
+      sessionStorage.setItem('wp_calc_tab', 'zakat');
     });
 
     // ── Profile save ─────────────────────────────────────────

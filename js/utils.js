@@ -689,6 +689,7 @@ const WPUtils = (() => {
       .replace(/\[qty:[^\]]+\]/gi, '')
       .replace(/\[unit_cost:[^\]]+\]/gi, '')
       .replace(/\[ticker:[^\]]+\]/gi, '')
+      .replace(/\[sharia:yes\]/gi, '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -744,6 +745,36 @@ const WPUtils = (() => {
       }
     }
     return null;
+  }
+
+  /**
+   * Zakat calculator (educational). Classic 2.5% of net zakatable wealth above nisab.
+   * Amounts in minor units (kobo). Not a fatwa — consult a scholar for edge cases.
+   */
+  function calcZakat({
+    cashKobo = 0,
+    goldKobo = 0,
+    silverKobo = 0,
+    investmentsKobo = 0,
+    businessKobo = 0,
+    receivablesKobo = 0,
+    debtsKobo = 0,
+    nisabKobo = 0,
+    rate = 0.025,
+  } = {}) {
+    const gross = Math.max(0, cashKobo) + Math.max(0, goldKobo) + Math.max(0, silverKobo)
+      + Math.max(0, investmentsKobo) + Math.max(0, businessKobo) + Math.max(0, receivablesKobo);
+    const net = Math.max(0, gross - Math.max(0, debtsKobo));
+    const aboveNisab = net >= Math.max(0, nisabKobo);
+    const due = aboveNisab ? Math.round(net * rate) : 0;
+    return {
+      grossWealthKobo: gross,
+      netWealthKobo: net,
+      nisabKobo: Math.max(0, nisabKobo),
+      aboveNisab,
+      rate,
+      zakatDueKobo: due,
+    };
   }
 
   /**
@@ -1148,6 +1179,7 @@ const WPUtils = (() => {
     estimateMarketPrice, fetchMarketPrice,
     isInterestBearingLiability, isIncomeGeneratingAsset, productiveBalanceSheet,
     buildStrategicHealthReport,
+    calcZakat,
   };
 })();
 

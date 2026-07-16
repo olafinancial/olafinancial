@@ -5,6 +5,7 @@
 const WPDebt = (() => {
 
   let _liabilities = [];
+  let _allLiabilities = [];
   const PERIOD = WPUtils.currentPeriod();
 
   async function init(container) {
@@ -41,6 +42,21 @@ const WPDebt = (() => {
       </div>
       <div class="page-body">
         <div class="disclaimer mb-6">${APP_CONFIG.disclaimer}</div>
+        <!-- Interest-free / Qard Hasan guidance (not app-wide filter) -->
+        <div class="card" style="margin-bottom:1.5rem;padding:1.15rem 1.25rem;border-left:3px solid var(--clr-accent)" id="debt-sharia-card">
+          <div class="section-title" style="margin:0 0 0.5rem">🕌 Interest-free debt (Qard Hasan &amp; 0% loans)</div>
+          <p class="text-sm text-muted" style="margin:0 0 0.75rem;line-height:1.5;max-width:48rem">
+            Conventional payoff tools (avalanche / snowball) prioritise <strong>interest-bearing</strong> debts.
+            For Sharia-conscious planning: mark family loans and Qard Hasan as <strong>non-interest-bearing</strong>
+            on Liabilities (toggle off “Interest-bearing”), and pay them with discipline without riba-based APR math.
+          </p>
+          <div id="debt-interest-free-summary" class="text-sm" style="margin-bottom:0.75rem"></div>
+          <div class="flex gap-2" style="flex-wrap:wrap">
+            <a href="#/liabilities" class="btn btn-secondary btn-sm">Add / edit interest-free liability</a>
+            <a href="#/calculators" class="btn btn-ghost btn-sm" onclick="sessionStorage.setItem('wp_calc_tab','zakat')">Zakat calculator</a>
+            <a href="#/settings" class="btn btn-ghost btn-sm">Takaful preference</a>
+          </div>
+        </div>
         <!-- Mini Goal Widget -->
         <div class="card" style="margin-bottom:1.5rem;display:flex;justify-content:space-between;align-items:center;padding:1.5rem">
           <div>
@@ -109,14 +125,18 @@ const WPDebt = (() => {
     await _load();
   }
 
+  let _allLiabilities = [];
+
   async function _load() {
     try {
-      _liabilities = await WPDb.getLiabilitiesByPeriod(WPApp.state.user.id, PERIOD);
-      _liabilities = _liabilities.filter(l => WPUtils.isInterestBearingLiability(l) && (l.close_balance || l.open_balance) > 0);
-      
+      _allLiabilities = await WPDb.getLiabilitiesByPeriod(WPApp.state.user.id, PERIOD);
+      // Simulator focuses on interest-bearing debts with balance
+      _liabilities = _allLiabilities.filter(l => WPUtils.isInterestBearingLiability(l) && (l.close_balance || l.open_balance) > 0);
+
       const baseCur = WPApp.state.profile?.currency || 'NGN';
       const pageCurrency = localStorage.getItem('wp_page_currency_debt') || baseCur;
 
+      _renderInterestFreeSummary(pageCurrency);
       _renderKPIs(baseCur, pageCurrency);
       _renderDebtCards(baseCur, pageCurrency);
       if (_liabilities.length > 0) _simulate();
@@ -136,6 +156,28 @@ const WPDebt = (() => {
         }),
       }, document.getElementById('debt-insights'));
     } catch (err) { WPToast.error('Failed to load debts.'); }
+  }
+
+  function _renderInterestFreeSummary(pageCurrency) {
+    const el = document.getElementById('debt-interest-free-summary');
+    if (!el) return;
+    const free = (_allLiabilities || []).filter(l => !WPUtils.isInterestBearingLiability(l));
+    const total = free.reduce((s, l) => {
+      const cur = WPUtils.getEntryCurrency(l.notes);
+      return s + WPUtils.convert(l.close_balance || l.open_balance || 0, cur, pageCurrency);
+    }, 0);
+    if (!free.length) {
+      el.innerHTML = `<span class="text-muted">No non-interest liabilities logged yet. On Liabilities, uncheck “Interest-bearing” for Qard Hasan / 0% family loans.</span>`;
+      return;
+    }
+    el.innerHTML = `
+      <strong class="text-accent">${free.length}</strong> interest-free balance${free.length === 1 ? '' : 's'} totalling
+      <strong>${WPUtils.fmt(total, { currency: pageCurrency })}</strong>
+      — not included in APR avalanche/snowball (pay by agreement, not riba schedule).
+      <ul style="margin:0.5rem 0 0;padding-left:1.1rem;color:var(--clr-text-2)">
+        ${free.slice(0, 5).map(l => `<li>${l.liability_name || 'Loan'}</li>`).join('')}
+        ${free.length > 5 ? `<li class="text-muted">+${free.length - 5} more…</li>` : ''}
+      </ul>`;
   }
 
   function _renderKPIs(baseCur, pageCurrency) {

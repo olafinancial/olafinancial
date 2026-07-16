@@ -435,7 +435,8 @@ const WPAssets = (() => {
           const unitCostPage = WPUtils.convert(tags.unitCostKobo, cur, pageCurrency);
           const basisPage = WPUtils.convert(Math.round(tags.qty * tags.unitCostKobo), cur, pageCurrency);
           const tickerBit = tags.ticker ? `<span class="badge badge-accent" style="margin-right:4px">${tags.ticker}</span>` : '';
-          stockInfo = `<br>${tickerBit}<span class="text-xs text-accent">Qty: ${tags.qty || '—'} | Avg Cost: ${WPUtils.fmt(unitCostPage, { currency: pageCurrency })} | Basis: ${WPUtils.fmt(basisPage, { currency: pageCurrency })}</span>`;
+          const shariaBit = (a.notes || '').includes('[sharia:yes]') ? ' <span class="badge badge-gold" style="font-size:0.65rem">Sharia</span>' : '';
+          stockInfo = `<br>${tickerBit}${shariaBit}<span class="text-xs text-accent">Qty: ${tags.qty || '—'} | Avg Cost: ${WPUtils.fmt(unitCostPage, { currency: pageCurrency })} | Basis: ${WPUtils.fmt(basisPage, { currency: pageCurrency })}</span>`;
         }
 
         const cleanNotes = WPUtils.cleanNotesDisplay(a.notes);
@@ -581,6 +582,11 @@ const WPAssets = (() => {
             <input class="input" id="af-ticker" value="${tags.ticker || ''}" placeholder="e.g. AAPL, TSLA, MTNN.LG" autocomplete="off" style="text-transform:uppercase">
             <span class="text-xs text-muted" style="display:block;margin-top:0.35rem">With a ticker, closing value refreshes from market data so your balance sheet stays current.</span>
           </div>
+          <div class="toggle-group" style="margin:0.75rem 0">
+            <label class="toggle"><input type="checkbox" id="af-sharia" ${e.notes && e.notes.includes('[sharia:yes]') ? 'checked' : ''}><span class="toggle-slider"></span></label>
+            <span class="toggle-label">Sharia-conscious holding (self-screened / Halal intent)</span>
+          </div>
+          <p class="text-xs text-muted" style="margin:0 0 0.5rem">Optional tag only — Pul does not auto-screen tickers. Review business activity, debt ratios, and purification with your advisor.</p>
           <div class="form-row">
             <div class="form-group">
               <label for="af-qty">Quantity</label>
@@ -800,6 +806,10 @@ const WPAssets = (() => {
       finalNotes += ` [ticker:${ticker}] [qty:${qtyVal}] [unit_cost:${unitCostKobo}]`;
     } else if (isFinancial && qtyVal > 0 && unitCostKobo > 0) {
       finalNotes += ` [qty:${qtyVal}] [unit_cost:${unitCostKobo}]`;
+    }
+    finalNotes = finalNotes.replace(/\[sharia:yes\]/gi, '').trim();
+    if (document.getElementById('af-sharia')?.checked) {
+      finalNotes += ' [sharia:yes]';
     }
     finalNotes = WPUtils.setEntryCurrency(finalNotes.trim(), currency);
 

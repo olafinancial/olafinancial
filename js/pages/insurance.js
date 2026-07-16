@@ -26,9 +26,10 @@ const WPInsurance = (() => {
 
   async function init(container) {
     const uid = WPApp.state.user.id;
+    const pref = APP_CONFIG.getTakafulPreference(uid);
     const local = localStorage.getItem('wp_insurance_data_' + uid);
     _data = local ? JSON.parse(local) : {
-      takaful: 'no_preference',
+      takaful: pref,
       policies: [],
       answers: {
         age: WPApp.state.profile?.age || '',
@@ -53,6 +54,8 @@ const WPInsurance = (() => {
         otherConcerns: ''
       }
     };
+    // Settings preference wins if insurance never set, or keep stored answer
+    if (!_data.takaful) _data.takaful = pref;
 
     if (!_data.answers) {
       _data.answers = {
@@ -491,6 +494,7 @@ const WPInsurance = (() => {
       answers.otherConcerns = document.getElementById('ob-ins-concerns').value.trim();
     }
 
+    APP_CONFIG.setTakafulPreference(WPApp.state.user.id, _data.takaful);
     localStorage.setItem('wp_takaful_preference_' + WPApp.state.user.id, _data.takaful);
     localStorage.setItem('wp_insurance_data_' + WPApp.state.user.id, JSON.stringify(_data));
     return true;

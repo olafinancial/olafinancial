@@ -176,12 +176,13 @@ const WPLiabilities = (() => {
               <option value="auto_loan"     ${e.liability_type==='auto_loan'    ?'selected':''}>Auto Loan</option>
               <option value="credit_card"   ${e.liability_type==='credit_card'  ?'selected':''}>Credit Card</option>
               <option value="student_loan"  ${e.liability_type==='student_loan' ?'selected':''}>Student Loan</option>
+              <option value="qard_hasan"    ${e.liability_type==='qard_hasan'   ?'selected':''}>Qard Hasan (interest-free)</option>
               <option value="other"         ${e.liability_type==='other'        ?'selected':''}>Other</option>
             </select>
           </div>
           <div class="form-group">
             <label for="lf-lender">Lender / Creditor</label>
-            <input class="input" id="lf-lender" value="${e.lender_name||''}" placeholder="e.g. Access Bank, Renmoney">
+            <input class="input" id="lf-lender" value="${e.lender_name||''}" placeholder="e.g. Access Bank, Renmoney, family">
           </div>
         </div>
         <div class="form-row">
@@ -194,10 +195,13 @@ const WPLiabilities = (() => {
         </div>
         <div style="display:flex;flex-direction:column;gap:0.75rem;margin:0.75rem 0 1rem">
           <div class="toggle-group">
-            <label class="toggle"><input type="checkbox" id="lf-interest" ${e.id ? (e.is_interest_bearing !== false && e.is_interest_bearing !== 0 ? 'checked' : '') : 'checked'}><span class="toggle-slider"></span></label>
-            <span class="toggle-label">Interest-bearing (loan / credit that charges interest)</span>
+            <label class="toggle"><input type="checkbox" id="lf-interest" ${e.id ? (e.is_interest_bearing !== false && e.is_interest_bearing !== 0 ? 'checked' : '') : (e.liability_type === 'qard_hasan' ? '' : 'checked')}><span class="toggle-slider"></span></label>
+            <span class="toggle-label">Interest-bearing (loan / credit that charges interest / riba)</span>
           </div>
-          <p class="text-xs text-muted" style="margin:0;padding-left:0.25rem">Turn off for 0% family loans, interest-free advances, or amounts you do not pay interest on. Used on Balance Sheet &amp; Reports.</p>
+          <p class="text-xs text-muted" style="margin:0;padding-left:0.25rem">
+            Turn <strong>off</strong> for Qard Hasan, 0% family loans, or interest-free advances.
+            Debt Planner’s APR avalanche ignores non-interest debts. Used on Balance Sheet &amp; Reports.
+          </p>
           <div class="toggle-group">
             <label class="toggle"><input type="checkbox" id="lf-no-apr" ${!e.apr?'checked':''}><span class="toggle-slider"></span></label>
             <span class="toggle-label">I don't know the APR (Enter monthly payment manually)</span>
@@ -278,7 +282,15 @@ const WPLiabilities = (() => {
 
     aprInput.addEventListener('input', updateCalculatedPayment);
     openInput.addEventListener('input', updateCalculatedPayment);
-    typeSelect.addEventListener('change', updateCalculatedPayment);
+    typeSelect.addEventListener('change', () => {
+      if (typeSelect.value === 'qard_hasan') {
+        const ib = document.getElementById('lf-interest');
+        if (ib) ib.checked = false;
+        noAprCheck.checked = true;
+        noAprCheck.dispatchEvent(new Event('change'));
+      }
+      updateCalculatedPayment();
+    });
   }
 
   async function _saveLiab(existingId) {

@@ -412,6 +412,8 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 | Issue | Title | Status |
 |-------|-------|--------|
+| [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | ✅ Closed 2026-07-15 |
+| [#36](https://github.com/olafinancial/olafinancial/issues/36) | Balance Sheet split (Assets & Liabilities pages) | ✅ Closed 2026-07-15 |
 | [#23](https://github.com/olafinancial/olafinancial/issues/23) | Branding / domain → pul.llc | ✅ Closed 2026-07-15 — #25 was duplicate |
 | [#49](https://github.com/olafinancial/olafinancial/issues/49) | Reports as strategic / plain-language health narrative | ✅ Closed 2026-07-15 |
 | [#50](https://github.com/olafinancial/olafinancial/issues/50) | Income-gen assets vs interest-bearing liabilities | ✅ Closed 2026-07-15 |
@@ -433,13 +435,26 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#40](https://github.com/olafinancial/olafinancial/issues/40) | PWA auto cache / no hard refresh | ✅ Closed |
 | — | Getting-started path + re-run onboarding | ✅ Completed |
 
-### Suggested build order (updated 2026-07-15 · post–#23)
+### Suggested build order (updated 2026-07-15 · post–#32/#36)
 
 1. **#38** Email ops  
 2. **#28 / #29** Sponsor activation & macro data updates  
-3. Confirm / close stale opens: **#36**, **#32** if already shipped  
 
 ---
+
+### Session 17 — 2026-07-15 — Sharia tools (not app-wide mode)
+
+* **Scope**: Takaful/Sharia helpers without filtering the whole app
+* **Settings**: Sharia & Takaful preference (shared with Insurance)
+* **Zakat**: Calculators tab + `WPUtils.calcZakat` + prefill from Assets
+* **Debt**: Interest-free / Qard Hasan guidance; non-interest balances listed; Liabilities type `qard_hasan`
+* **Invest**: Halal-conscious notes on quiz results; Assets optional `[sharia:yes]` tag on ticker holdings
+* **Insurance**: already had Takaful wizard; preference sync via `APP_CONFIG`
+
+### Session 16 — 2026-07-15 — Close R17 Budget (#32) & BS split (#36)
+
+* **#32**: Budget Planner already had 50/30/20 rings, mapping, custom %; added net-income override, recommended ₦ amounts, budget-vs-actual traffic lights; Expenses link to Budget
+* **#36**: Already shipped as `#/assets` + `#/liabilities` + Balance Sheet overview; clarified Overview subtitle links
 
 ### Session 15 — 2026-07-15 — Finish branding / domain #23
 
