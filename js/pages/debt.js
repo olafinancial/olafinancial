@@ -125,8 +125,6 @@ const WPDebt = (() => {
     await _load();
   }
 
-  let _allLiabilities = [];
-
   async function _load() {
     try {
       _allLiabilities = await WPDb.getLiabilitiesByPeriod(WPApp.state.user.id, PERIOD);
