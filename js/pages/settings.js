@@ -78,7 +78,7 @@ const WPSettings = (() => {
           <h3 style="margin-bottom:0.5rem;font-weight:700;color:#ffffff">🗺️ Getting started</h3>
           <p style="color:var(--clr-text-2);font-size:0.85rem;margin:0 0 1.25rem;line-height:1.55">
             New to Pul Planning? Use the same step-by-step path shown after signup:
-            <strong>Income → Expenses → Balance Sheet → Dashboard → Goals</strong>.
+            <strong>Goals → Income → Expenses → Balance Sheet → Dashboard</strong>.
             You can re-run the full setup wizard anytime to refresh your profile.
           </p>
           <div style="display:flex;flex-direction:column;gap:0.75rem">

@@ -24,17 +24,26 @@ const APP_CONFIG = {
    * Naive-user “common path” — start here, then go there.
    * Used in onboarding finale + Dashboard getting-started card.
    */
+  // Order: Goals first (strategic intent), then money in/out, balance sheet, dashboard, optional tools
   gettingStartedPath: [
     {
       n: 1,
+      route: '/goals',
+      title: 'Set your goals',
+      blurb: 'Start with intent — what are you building toward? Emergency fund, debt freedom, home, retirement.',
+      tip: 'Why: goals are your strategic north star; numbers follow purpose.',
+      cta: 'Go to Goals',
+    },
+    {
+      n: 2,
       route: '/income',
       title: 'Add your income',
-      blurb: 'Money in first. Without income logged, tax, savings rate, and cash flow cannot be calculated.',
+      blurb: 'Money in. Without income logged, tax, savings rate, and cash flow cannot be calculated.',
       tip: 'Why: everything else is measured against what you earn.',
       cta: 'Go to Income',
     },
     {
-      n: 2,
+      n: 3,
       route: '/expenses',
       title: 'Log a few expenses',
       blurb: 'Money out. Even 5–10 real bills show where cash leaks each month.',
@@ -42,7 +51,7 @@ const APP_CONFIG = {
       cta: 'Go to Expenses',
     },
     {
-      n: 3,
+      n: 4,
       route: '/balance-sheet',
       title: 'List assets & debts',
       blurb: 'What you own minus what you owe = net worth — your true financial scoreboard.',
@@ -50,20 +59,12 @@ const APP_CONFIG = {
       cta: 'Go to Balance Sheet',
     },
     {
-      n: 4,
+      n: 5,
       route: '/dashboard',
       title: 'Review your dashboard',
       blurb: 'Your snapshot: health score, surplus/deficit, and plain-language alerts.',
       tip: 'Why: one screen tells you what needs attention first.',
       cta: 'Open Dashboard',
-    },
-    {
-      n: 5,
-      route: '/goals',
-      title: 'Set one goal',
-      blurb: 'Pick one target (emergency fund is a great first). Goals turn numbers into a plan.',
-      tip: 'Why: vague wishes do not get funded — named goals do.',
-      cta: 'Go to Goals',
     },
     {
       n: 6,
@@ -77,7 +78,7 @@ const APP_CONFIG = {
       n: 7,
       route: '/invest',
       title: 'Optional: investment profile quiz',
-      blurb: 'Answer 10 scored questions to see Conservative / Balanced / Aggressive mixes for the Nigerian market (NGX, T-bills, REITs, etc.).',
+      blurb: 'Answer scored questions to see Conservative / Balanced / Aggressive mixes for the Nigerian market.',
       tip: 'Educational only — not personalised investment advice.',
       cta: 'Invest Profile',
     },

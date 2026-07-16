@@ -192,10 +192,11 @@ const WPInsurance = (() => {
     const sym = CURRENCY_OPTIONS.find(c => c.code === pageCurrency)?.symbol || '₦';
 
     if (_step === 1) {
-      // Dynamic brackets calculation based on selected currency
-      const bracket50 = WPUtils.fmt(WPUtils.convert(50000 * 100, 'USD', pageCurrency), { currency: pageCurrency, compact: true });
-      const bracket100 = WPUtils.fmt(WPUtils.convert(100000 * 100, 'USD', pageCurrency), { currency: pageCurrency, compact: true });
-      const bracket200 = WPUtils.fmt(WPUtils.convert(200000 * 100, 'USD', pageCurrency), { currency: pageCurrency, compact: true });
+      // Annual household income brackets in NGN (converted to page currency for display)
+      // Bands: under ₦6M · ₦6–15M · ₦15–36M · ₦36M+ (Nigeria-oriented)
+      const bracket50 = WPUtils.fmt(WPUtils.convert(6_000_000 * 100, 'NGN', pageCurrency), { currency: pageCurrency, compact: true });
+      const bracket100 = WPUtils.fmt(WPUtils.convert(15_000_000 * 100, 'NGN', pageCurrency), { currency: pageCurrency, compact: true });
+      const bracket200 = WPUtils.fmt(WPUtils.convert(36_000_000 * 100, 'NGN', pageCurrency), { currency: pageCurrency, compact: true });
 
       container.innerHTML = `
         <div class="form-row">
@@ -274,8 +275,10 @@ const WPInsurance = (() => {
         { key: 'tax_grow', label: 'Tax-advantaged growth or retirement income' }
       ];
 
-      const refCoverage = WPUtils.fmt(WPUtils.convert(500000 * 100, 'USD', pageCurrency), { currency: pageCurrency, compact: true });
-      const refBudget = `${sym}5,000 - ${sym}10,000`;
+      const refCoverage = WPUtils.fmt(WPUtils.convert(50_000_000 * 100, 'NGN', pageCurrency), { currency: pageCurrency, compact: true });
+      const premLo = WPUtils.fmt(WPUtils.convert(25_000 * 100, 'NGN', pageCurrency), { currency: pageCurrency, compact: true });
+      const premHi = WPUtils.fmt(WPUtils.convert(100_000 * 100, 'NGN', pageCurrency), { currency: pageCurrency, compact: true });
+      const refBudget = `${premLo} – ${premHi}`;
 
       container.innerHTML = `
         <div class="form-group">
@@ -373,7 +376,7 @@ const WPInsurance = (() => {
     }
 
     if (_step === 4) {
-      const refExisting = WPUtils.fmt(WPUtils.convert(100000 * 100, 'USD', pageCurrency), { currency: pageCurrency, compact: true });
+      const refExisting = WPUtils.fmt(WPUtils.convert(15_000_000 * 100, 'NGN', pageCurrency), { currency: pageCurrency, compact: true });
       container.innerHTML = `
         <div class="form-row">
           <div class="form-group">
@@ -603,9 +606,9 @@ const WPInsurance = (() => {
 
     const answers = _data.answers;
     const pageCurrency = localStorage.getItem('wp_page_currency_insurance') || WPApp.state.profile?.currency || 'NGN';
-    const bracket50 = WPUtils.fmt(WPUtils.convert(50000 * 100, 'USD', pageCurrency), { currency: pageCurrency, compact: true });
-    const bracket100 = WPUtils.fmt(WPUtils.convert(100000 * 100, 'USD', pageCurrency), { currency: pageCurrency, compact: true });
-    const bracket200 = WPUtils.fmt(WPUtils.convert(200000 * 100, 'USD', pageCurrency), { currency: pageCurrency, compact: true });
+    const bracket50 = WPUtils.fmt(WPUtils.convert(6_000_000 * 100, 'NGN', pageCurrency), { currency: pageCurrency, compact: true });
+    const bracket100 = WPUtils.fmt(WPUtils.convert(15_000_000 * 100, 'NGN', pageCurrency), { currency: pageCurrency, compact: true });
+    const bracket200 = WPUtils.fmt(WPUtils.convert(36_000_000 * 100, 'NGN', pageCurrency), { currency: pageCurrency, compact: true });
 
     let incomeLabel = '';
     if (answers.income === 'under_50k') incomeLabel = `Under ${bracket50}`;

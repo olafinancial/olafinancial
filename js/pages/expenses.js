@@ -17,7 +17,7 @@ const WPExpenses = (() => {
       <div class="page-theme-expenses">
       <div class="page-header">
         <div>
-          <h1 class="page-title">Expenses</h1>
+          <h1 class="page-title">Income Statement · Expenses</h1>
           <p class="page-subtitle">Track and categorize your spending</p>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:center">

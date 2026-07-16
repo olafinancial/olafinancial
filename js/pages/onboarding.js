@@ -256,7 +256,7 @@ const WPOnboarding = (() => {
       <p class="onboarding-step-desc">
         ${_isReplay
           ? 'Confirm your summary, then return to the dashboard. The getting-started checklist will show again so you can pick up where you left off.'
-          : "Here's a summary of your profile. Click <strong>Get Started</strong> and follow the path: Income → Expenses → Balance Sheet → Dashboard."}
+          : "Here's a summary of your profile. Click <strong>Get Started</strong> and follow the path: Goals → Income → Expenses → Balance Sheet → Dashboard."}
       </p>
       <div class="card" style="margin-bottom:1rem">
         <div class="card-title">Profile Summary</div>
@@ -272,9 +272,9 @@ const WPOnboarding = (() => {
       <div class="card" style="margin-bottom:1rem;padding:1rem 1.25rem">
         <div class="card-title" style="margin-bottom:0.5rem">Remember the path</div>
         <ol style="margin:0;padding-left:1.25rem;color:var(--clr-text-2);font-size:0.9rem;line-height:1.7">
-          <li><strong>Income</strong> → <strong>Expenses</strong> → <strong>Balance Sheet</strong></li>
-          <li>Then check <strong>Dashboard</strong> insights</li>
-          <li>Set a <strong>Goal</strong> (and Debt Planner if you have loans)</li>
+          <li><strong>Goals</strong> first (your strategic intent)</li>
+          <li>Then <strong>Income</strong> → <strong>Expenses</strong> → <strong>Balance Sheet</strong></li>
+          <li>Check <strong>Dashboard</strong> insights; optional Debt Planner &amp; Invest Profile</li>
         </ol>
       </div>
       <div class="disclaimer">${APP_CONFIG.disclaimer}</div>`;

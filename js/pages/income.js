@@ -12,7 +12,7 @@ const WPIncome = (() => {
       <div class="page-theme-income">
       <div class="page-header">
         <div>
-          <h1 class="page-title">Income</h1>
+          <h1 class="page-title">Income Statement · Income</h1>
           <p class="page-subtitle">Track all income sources for ${WPUtils.periodLabel(PERIOD)}</p>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:center">
@@ -312,26 +312,68 @@ const WPIncome = (() => {
             <input class="input" type="text" inputmode="decimal" id="if-gross" value="${e.gross_amount?WPUtils.koboToNaira(e.gross_amount):''}" placeholder="0" required>
           </div>
         </div>
-        <div class="form-row">
-          <div class="form-group" id="if-tax-group">
-            <label for="if-tax" id="if-tax-label">PAYE Tax (${symbol})</label>
-            <div class="input-prefix-group">
-              <span class="input-prefix">${symbol}</span>
-              <input class="input" type="text" inputmode="decimal" id="if-tax" value="${e.paye_tax?WPUtils.koboToNaira(e.paye_tax):''}" placeholder="0">
-            </div>
-            <div class="input-hint" id="if-tax-hint"><a id="calc-tax-link" style="color:var(--clr-accent);cursor:pointer">Auto-calculate from gross (Tax Act 2025)</a></div>
+
+        <!-- Active salary: gross → deductibles → net calculator -->
+        <div id="if-salary-panel" style="display:${e.income_type==='active'||!e.income_type?'block':'none'};margin-bottom:1rem;padding:1rem;border:1px solid var(--clr-border);border-radius:10px;background:var(--clr-surface-2)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
+            <div class="fw-700" style="font-size:0.95rem">Salary deductibles → net pay</div>
+            <a href="#/salary-calc" style="font-size:0.8rem;color:var(--clr-accent)">Full salary calculator →</a>
           </div>
-          <div class="form-group" id="if-pension-group" style="display: ${e.income_type==='active'||!e.income_type?'block':'none'}">
-            <label for="if-pension">Pension 8% (${symbol})</label>
-            <div class="input-prefix-group">
-              <span class="input-prefix">${symbol}</span>
-              <input class="input" type="text" inputmode="decimal" id="if-pension" value="${e.pension_contrib?WPUtils.koboToNaira(e.pension_contrib):''}" placeholder="0">
+          <p class="text-xs text-muted" style="margin:0 0 0.75rem">Enter gross, then auto-fill or edit deductibles. Net is gross minus tax, pension, NHF, and other.</p>
+          <div class="form-row">
+            <div class="form-group" id="if-tax-group">
+              <label for="if-tax" id="if-tax-label">PAYE Tax (${symbol})</label>
+              <div class="input-prefix-group">
+                <span class="input-prefix">${symbol}</span>
+                <input class="input" type="text" inputmode="decimal" id="if-tax" value="${e.paye_tax?WPUtils.koboToNaira(e.paye_tax):''}" placeholder="0">
+              </div>
+            </div>
+            <div class="form-group" id="if-pension-group">
+              <label for="if-pension">Pension / RSA 8% (${symbol})</label>
+              <div class="input-prefix-group">
+                <span class="input-prefix">${symbol}</span>
+                <input class="input" type="text" inputmode="decimal" id="if-pension" value="${e.pension_contrib?WPUtils.koboToNaira(e.pension_contrib):''}" placeholder="0">
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="if-nhf">NHF 2.5% (${symbol})</label>
+              <div class="input-prefix-group">
+                <span class="input-prefix">${symbol}</span>
+                <input class="input" type="text" inputmode="decimal" id="if-nhf" value="${e.nhf_contrib?WPUtils.koboToNaira(e.nhf_contrib):''}" placeholder="0">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="if-other">Other deductibles (${symbol})</label>
+              <div class="input-prefix-group">
+                <span class="input-prefix">${symbol}</span>
+                <input class="input" type="text" inputmode="decimal" id="if-other" value="${e.other_deductions?WPUtils.koboToNaira(e.other_deductions):''}" placeholder="e.g. NHIS, loan">
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;margin-top:0.5rem">
+            <button type="button" class="btn btn-secondary btn-sm" id="if-auto-deduct">Auto-calculate from gross (Tax Act 2025)</button>
+            <div class="fw-700" style="font-size:1.05rem">
+              Net pay: <span class="text-accent" id="if-net-display">—</span>
             </div>
           </div>
         </div>
+
+        <!-- Passive/investment: simpler tax only -->
+        <div id="if-simple-tax" style="display:${e.income_type&&e.income_type!=='active'?'block':'none'}">
+          <div class="form-group">
+            <label for="if-tax-simple">Tax (${symbol})</label>
+            <div class="input-prefix-group">
+              <span class="input-prefix">${symbol}</span>
+              <input class="input" type="text" inputmode="decimal" id="if-tax-simple" value="${e.paye_tax?WPUtils.koboToNaira(e.paye_tax):''}" placeholder="0">
+            </div>
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="if-notes">Notes (optional)</label>
-          <textarea class="textarea" id="if-notes" placeholder="e.g. Includes ₦80,000 transport allowance">${e.notes?e.notes.replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').trim():''}</textarea>
+          <textarea class="textarea" id="if-notes" placeholder="e.g. Includes transport allowance">${e.notes?e.notes.replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').trim():''}</textarea>
         </div>
       </form>`;
 
@@ -343,56 +385,85 @@ const WPIncome = (() => {
     const grossInput = document.getElementById('if-gross');
     const taxInput = document.getElementById('if-tax');
     const pensionInput = document.getElementById('if-pension');
+    const nhfInput = document.getElementById('if-nhf');
+    const otherInput = document.getElementById('if-other');
+    const taxSimple = document.getElementById('if-tax-simple');
     const currencySelect = document.getElementById('if-currency');
     const typeSelect = document.getElementById('if-type');
-    const pensionGroup = document.getElementById('if-pension-group');
+    const salaryPanel = document.getElementById('if-salary-panel');
+    const simpleTax = document.getElementById('if-simple-tax');
     const taxLabel = document.getElementById('if-tax-label');
-    const taxHint = document.getElementById('if-tax-hint');
+    const netDisplay = document.getElementById('if-net-display');
 
-    WPUtils.maskNumberInput(grossInput);
-    WPUtils.maskNumberInput(taxInput);
-    WPUtils.maskNumberInput(pensionInput);
+    [grossInput, taxInput, pensionInput, nhfInput, otherInput, taxSimple].forEach(el => {
+      if (el) WPUtils.maskNumberInput(el);
+    });
+
+    const updateNetDisplay = () => {
+      if (!netDisplay) return;
+      const type = typeSelect.value;
+      const gross = WPUtils.nairaToKobo(WPUtils.cleanNum(grossInput.value) || 0);
+      let tax = 0, pension = 0, nhf = 0, other = 0;
+      if (type === 'active') {
+        tax = WPUtils.nairaToKobo(WPUtils.cleanNum(taxInput?.value) || 0);
+        pension = WPUtils.nairaToKobo(WPUtils.cleanNum(pensionInput?.value) || 0);
+        nhf = WPUtils.nairaToKobo(WPUtils.cleanNum(nhfInput?.value) || 0);
+        other = WPUtils.nairaToKobo(WPUtils.cleanNum(otherInput?.value) || 0);
+      } else {
+        tax = WPUtils.nairaToKobo(WPUtils.cleanNum(taxSimple?.value) || 0);
+      }
+      const net = Math.max(0, gross - tax - pension - nhf - other);
+      const cur = currencySelect.value;
+      const sym = symbols[cur] || '₦';
+      netDisplay.textContent = `${sym}${WPUtils.koboToNaira(net).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
+    };
+
+    const autoDeduct = () => {
+      const gross = WPUtils.nairaToKobo(WPUtils.cleanNum(grossInput.value) || 0);
+      if (!gross) { WPToast.warning('Enter gross amount first.'); return; }
+      // Approximate monthly → annual for PIT (Tax Act 2025 is annual); treat entered amount by frequency
+      const freq = document.getElementById('if-freq')?.value || 'monthly';
+      const months = freq === 'annual' ? 1 : freq === 'semiannual' ? 2 : freq === 'quarterly' ? 4 : freq === 'biweekly' ? 26 : 12;
+      const annualGross = freq === 'annual' ? gross : Math.round(gross * (freq === 'biweekly' ? 26 : months));
+      const annualPension = WPUtils.calcPensionEmployee(annualGross);
+      const annualTax = WPUtils.calcPIT(annualGross, annualPension);
+      const periodPension = freq === 'annual' ? annualPension : Math.round(annualPension / (freq === 'biweekly' ? 26 : months));
+      const periodTax = freq === 'annual' ? annualTax : Math.round(annualTax / (freq === 'biweekly' ? 26 : months));
+      // NHF is typically 2.5% of basic — approximate as 2.5% of gross when basic unknown
+      const nhf = WPUtils.calcNHF ? WPUtils.calcNHF(gross) : Math.round(gross * 0.025);
+
+      if (taxInput) taxInput.value = WPUtils.koboToNaira(periodTax).toFixed(0);
+      if (pensionInput) pensionInput.value = WPUtils.koboToNaira(periodPension).toFixed(0);
+      if (nhfInput) nhfInput.value = WPUtils.koboToNaira(nhf).toFixed(0);
+      [taxInput, pensionInput, nhfInput].forEach(el => el?.dispatchEvent(new Event('input')));
+      updateNetDisplay();
+      WPToast.info('Deductibles calculated (PAYE + pension + NHF). Edit as needed before saving.');
+    };
 
     const updateFormLayout = () => {
       const isCur = currencySelect.value;
       const sym = symbols[isCur] || '₦';
       const type = typeSelect.value;
+      const active = type === 'active';
 
-      if (type === 'active') {
-        taxLabel.textContent = `PAYE Tax (${sym})`;
-        pensionGroup.style.display = 'block';
-        taxHint.style.display = 'block';
-      } else {
-        taxLabel.textContent = `Tax (${sym})`;
-        pensionGroup.style.display = 'none';
-        pensionInput.value = '';
-        taxHint.style.display = 'none';
-      }
+      if (salaryPanel) salaryPanel.style.display = active ? 'block' : 'none';
+      if (simpleTax) simpleTax.style.display = active ? 'none' : 'block';
+      if (taxLabel) taxLabel.textContent = `PAYE Tax (${sym})`;
+      document.querySelectorAll('#income-form .input-prefix').forEach(span => { span.textContent = sym; });
+      document.querySelector('label[for="if-gross"]').textContent = `Gross Amount (${sym})`;
+      updateNetDisplay();
     };
 
     typeSelect.addEventListener('change', updateFormLayout);
+    currencySelect.addEventListener('change', updateFormLayout);
+    [grossInput, taxInput, pensionInput, nhfInput, otherInput, taxSimple].forEach(el => {
+      el?.addEventListener('input', updateNetDisplay);
+    });
+    document.getElementById('if-auto-deduct')?.addEventListener('click', autoDeduct);
+    document.getElementById('if-freq')?.addEventListener('change', () => {
+      if (typeSelect.value === 'active') updateNetDisplay();
+    });
     updateFormLayout();
-
-    currencySelect.addEventListener('change', (ev) => {
-      const newCur = ev.target.value;
-      const newSym = symbols[newCur] || '₦';
-      document.querySelectorAll('#income-form .input-prefix').forEach(span => {
-        span.textContent = newSym;
-      });
-      document.querySelector('label[for="if-gross"]').textContent = `Gross Amount (${newSym})`;
-      updateFormLayout();
-    });
-
-    document.getElementById('calc-tax-link')?.addEventListener('click', () => {
-      const gross  = WPUtils.nairaToKobo(WPUtils.cleanNum(grossInput.value)||0);
-      const pension = WPUtils.calcPensionEmployee(gross);
-      const tax     = WPUtils.calcPIT(gross, pension);
-      taxInput.value    = WPUtils.koboToNaira(tax).toFixed(0);
-      pensionInput.value = WPUtils.koboToNaira(pension).toFixed(0);
-      taxInput.dispatchEvent(new Event('input'));
-      pensionInput.dispatchEvent(new Event('input'));
-      WPToast.info('Calculated using Nigeria Tax Act 2025 brackets.');
-    });
   }
 
   async function _save(existingId = null) {
@@ -400,37 +471,40 @@ const WPIncome = (() => {
     const notesVal = document.getElementById('if-notes').value.trim();
     const currency = document.getElementById('if-currency').value;
     const finalNotes = WPUtils.setEntryCurrency(notesVal, currency);
+    const type = document.getElementById('if-type').value;
+    const isActive = type === 'active';
 
-    const hasTaxInput = document.getElementById('if-tax').value.trim() !== '';
-    const hasPensionInput = document.getElementById('if-pension').value.trim() !== '';
-
-    const isPassiveOrInvestment = document.getElementById('if-type').value !== 'active';
-
-    let pensionVal = 0;
-    if (!isPassiveOrInvestment) {
-      if (hasPensionInput) {
-        pensionVal = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-pension').value));
-      } else {
-        pensionVal = WPUtils.calcPensionEmployee(grossKobo);
+    let taxVal = 0, pensionVal = 0, nhfVal = 0, otherVal = 0;
+    if (isActive) {
+      taxVal = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-tax')?.value) || 0);
+      pensionVal = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-pension')?.value) || 0);
+      nhfVal = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-nhf')?.value) || 0);
+      otherVal = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-other')?.value) || 0);
+      // Auto-fill if all deductibles empty but gross present
+      if (!taxVal && !pensionVal && !nhfVal && grossKobo) {
+        const freq = document.getElementById('if-freq')?.value || 'monthly';
+        const months = freq === 'annual' ? 1 : freq === 'semiannual' ? 2 : freq === 'quarterly' ? 4 : freq === 'biweekly' ? 26 : 12;
+        const annualGross = freq === 'annual' ? grossKobo : Math.round(grossKobo * (freq === 'biweekly' ? 26 : months));
+        const annualPension = WPUtils.calcPensionEmployee(annualGross);
+        const annualTax = WPUtils.calcPIT(annualGross, annualPension);
+        pensionVal = freq === 'annual' ? annualPension : Math.round(annualPension / (freq === 'biweekly' ? 26 : months));
+        taxVal = freq === 'annual' ? annualTax : Math.round(annualTax / (freq === 'biweekly' ? 26 : months));
+        nhfVal = WPUtils.calcNHF ? WPUtils.calcNHF(grossKobo) : Math.round(grossKobo * 0.025);
       }
-    }
-
-    let taxVal = 0;
-    if (hasTaxInput) {
-      taxVal = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-tax').value));
     } else {
-      // For passive/investment incomes, default fallback tax is 0 (or manually set), only run calcPIT for active salaries.
-      taxVal = isPassiveOrInvestment ? 0 : WPUtils.calcPIT(grossKobo, pensionVal);
+      taxVal = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('if-tax-simple')?.value) || 0);
     }
 
     const row = {
       user_id:         WPApp.state.user.id,
       source_name:     document.getElementById('if-name').value.trim(),
-      income_type:     document.getElementById('if-type').value,
+      income_type:     type,
       frequency:       document.getElementById('if-freq').value,
       gross_amount:    grossKobo,
       paye_tax:        taxVal,
       pension_contrib: pensionVal,
+      nhf_contrib:     nhfVal,
+      other_deductions: otherVal,
       period_month:    PERIOD,
       notes:           finalNotes,
     };
@@ -438,7 +512,12 @@ const WPIncome = (() => {
     try {
       if (existingId) await WPDb.update('income_entries', existingId, row);
       else            await WPDb.insert('income_entries', row);
-      WPToast.success(existingId ? 'Income updated.' : 'Income added.');
+      const net = grossKobo - taxVal - pensionVal - nhfVal - otherVal;
+      WPToast.success(
+        existingId
+          ? 'Income updated.'
+          : `Income added. Net ≈ ₦${WPUtils.koboToNaira(net).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`
+      );
       await _load();
       return true;
     } catch (err) { WPToast.error('Could not save: ' + err.message); return false; }

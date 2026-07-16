@@ -164,25 +164,18 @@ const WPCashflow = (() => {
       }</div>`;
   }
 
+  /** Category total only (no per-source breakdown) — matches expense side style */
   function _inflowSection(label, entries, baseCur, pageCurrency) {
     if (!entries.length) return '';
     const total = entries.reduce((s,e) => {
       const cur = WPUtils.getEntryCurrency(e.notes);
       return s + WPUtils.convert(e.gross_amount||0, cur, baseCur);
     }, 0);
-    const rows = entries.map(e => {
-      const cur = WPUtils.getEntryCurrency(e.notes);
-      const pageAmt = WPUtils.convert(e.gross_amount||0, cur, pageCurrency);
-      return `<div class="flex justify-between text-sm" style="padding:0.35rem 0;border-bottom:1px solid var(--clr-border)">
-        <span class="text-muted">${e.source_name}</span>
-        <span class="td-mono">${WPUtils.fmt(pageAmt, {currency: pageCurrency})}</span>
-      </div>`;
-    }).join('');
+    const count = entries.length;
     return `
-      <div class="text-xs fw-700 text-muted" style="margin:0.75rem 0 0.25rem;text-transform:uppercase;letter-spacing:0.06em">${label}</div>
-      ${rows}
-      <div class="flex justify-between text-sm fw-600" style="padding:0.35rem 0">
-        <span>Subtotal</span><span class="td-mono text-accent">${WPUtils.fmt(WPUtils.convert(total, baseCur, pageCurrency), {currency: pageCurrency})}</span>
+      <div class="flex justify-between text-sm" style="padding:0.5rem 0;border-bottom:1px solid var(--clr-border)">
+        <span>${label} <span class="text-muted text-xs">(${count} source${count===1?'':'s'})</span></span>
+        <span class="td-mono fw-600 text-accent">${WPUtils.fmt(WPUtils.convert(total, baseCur, pageCurrency), {currency: pageCurrency})}</span>
       </div>`;
   }
 
