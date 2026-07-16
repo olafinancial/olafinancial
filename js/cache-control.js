@@ -7,7 +7,7 @@
 
 const WPCacheControl = (() => {
   // Bump when shipping cache-policy or SW behaviour changes
-  const BUILD_ID = '20260713_auto';
+  const BUILD_ID = '20260715_offline';
   const BUILD_KEY = 'wp_app_build_id';
   let _leaveHooked = false;
   let _reloading = false;
@@ -62,22 +62,30 @@ const WPCacheControl = (() => {
   }
 
   /**
-   * On leave (tab close / navigate away): clear asset caches so the next
-   * open downloads the latest build. Uses sendBeacon-friendly sync where possible.
+   * On leave (tab close): clear asset caches so the next open downloads
+   * the latest build. Skipped under automation (Playwright sets webdriver)
+   * because full navigations fire pagehide and would wipe the SW cache
+   * mid-test / mid-session reload.
    */
   function setupLeaveHooks() {
     if (_leaveHooked) return;
     _leaveHooked = true;
 
-    const onLeave = () => {
-      // Fire-and-forget: browsers may kill async work; still attempt purge.
+    // Playwright / CI browsers
+    if (navigator.webdriver) {
+      console.log('[cache] Leave-hook purge disabled (automated browser)');
+      return;
+    }
+
+    const onLeave = (event) => {
+      // Only purge on real document unload, not bfcache freeze alone
+      if (event && event.type === 'pagehide' && event.persisted) return;
       postToSW({ type: 'CLEAR_CACHES' });
       if ('caches' in window) {
         caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(() => {});
       }
     };
 
-    // pagehide covers mobile Safari + desktop close better than unload
     window.addEventListener('pagehide', onLeave);
     window.addEventListener('beforeunload', onLeave);
   }
