@@ -399,7 +399,6 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | Issue | Title | Type | Priority | Status |
 |-------|-------|------|----------|--------|
 | [#49](https://github.com/olafinancial/olafinancial/issues/49) | Reports as strategic marketing tool | Feature | Medium | 🔲 Open |
-| [#50](https://github.com/olafinancial/olafinancial/issues/50) | Classify income-generating assets / interest-bearing liabilities | Feature | Medium | 🔲 Open |
 | [#36](https://github.com/olafinancial/olafinancial/issues/36) | Balance Sheet split (Assets & Liabilities pages) | Feature | Medium | 🔲 Open — verify vs shipped pages |
 | [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | Feature | Medium | 🔲 Open — verify vs `budget.js` |
 | [#23](https://github.com/olafinancial/olafinancial/issues/23) / [#25](https://github.com/olafinancial/olafinancial/issues/25) | Branding / domain → pul.llc | Ops | Medium | 🔲 Open — code mostly done; confirm live DNS |
@@ -416,6 +415,7 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 | Issue | Title | Status |
 |-------|-------|--------|
+| [#50](https://github.com/olafinancial/olafinancial/issues/50) | Income-gen assets vs interest-bearing liabilities | ✅ Closed 2026-07-15 |
 | [#46](https://github.com/olafinancial/olafinancial/issues/46) | Budget planner / Savings & Debt Payoff unclear | ✅ Closed 2026-07-15 |
 | [#47](https://github.com/olafinancial/olafinancial/issues/47) | Mark-to-market ticker under Assets (not Retirement) | ✅ Closed 2026-07-15 |
 | [#43](https://github.com/olafinancial/olafinancial/issues/43) | Your Path starts with Goals | ✅ Closed 2026-07-15 |
@@ -434,15 +434,23 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#40](https://github.com/olafinancial/olafinancial/issues/40) | PWA auto cache / no hard refresh | ✅ Closed |
 | — | Getting-started path + re-run onboarding | ✅ Completed |
 
-### Suggested build order (updated 2026-07-15 · post–#46)
+### Suggested build order (updated 2026-07-15 · post–#50)
 
-1. **#50** Income-generating assets vs interest-bearing liabilities  
-2. **#49** Reports as strategic / plain-language narrative  
-3. **#38** Email ops  
-4. **#28 / #29** Sponsor activation & macro data updates  
-5. Confirm / close stale opens: **#36**, **#32**, **#23/#25** if already shipped  
+1. **#49** Reports as strategic / plain-language narrative  
+2. **#38** Email ops  
+3. **#28 / #29** Sponsor activation & macro data updates  
+4. Confirm / close stale opens: **#36**, **#32**, **#23/#25** if already shipped  
 
 ---
+
+### Session 13 — 2026-07-15 — Productive Balance Sheet (#50)
+
+* **Status**: ✅ Completed · closes [#50](https://github.com/olafinancial/olafinancial/issues/50)
+* **Classification**: Assets → income-generating vs non-income (existing flag); Liabilities → interest-bearing vs non-interest (user toggle)
+* **`WPUtils.productiveBalanceSheet`**: totals, coverage ratio, grade, plain-language narrative
+* **Balance Sheet**: comparison card + bars + report text
+* **Reports**: Productive Balance Sheet section + doughnuts + ratio row
+* **Liabilities form**: “Interest-bearing” toggle (off for 0% / family loans)
 
 ### Session 12 — 2026-07-15 — Budget Savings & Debt Payoff clarity (#46)
 

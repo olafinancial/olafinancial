@@ -99,6 +99,22 @@ const WPReports = (() => {
               <div class="chart-container" style="height:240px"><canvas id="rpt-chart-liab-alloc"></canvas></div>
             </div>
           </div>
+          <!-- Productive BS report (#50) -->
+          <div class="card" style="margin-bottom:1.5rem" id="rpt-productive-card">
+            <div class="section-header" style="margin-bottom:0.75rem">
+              <span class="section-title">Productive Balance Sheet Report</span>
+              <span class="badge badge-neutral" id="rpt-productive-grade">—</span>
+            </div>
+            <p class="text-xs text-muted" style="margin:0 0 1rem">
+              Income-generating assets compared with interest-bearing liabilities — are productive assets covering costly debt?
+            </p>
+            <div class="kpi-grid" id="rpt-productive-kpis" style="margin-bottom:1rem"></div>
+            <div class="grid-2" style="margin-bottom:1rem;gap:1rem">
+              <div class="chart-container" style="height:200px"><canvas id="rpt-chart-asset-productivity"></canvas></div>
+              <div class="chart-container" style="height:200px"><canvas id="rpt-chart-liab-interest"></canvas></div>
+            </div>
+            <div id="rpt-productive-narrative" style="font-size:0.9rem;line-height:1.55;color:var(--clr-text-2)"></div>
+          </div>
         </div><!-- end #reports-share-card -->
         <!-- Snapshot Table -->
         <div class="card">
@@ -163,9 +179,72 @@ const WPReports = (() => {
 
       _renderKPIs(snapshots, income, expenses, assets, liabs, baseCur, pageCurrency);
       _renderCharts(snapshots, assets, liabs, baseCur);
+      _renderProductiveReport(assets, liabs, pageCurrency);
       _renderTable(snapshots, baseCur, pageCurrency);
       _renderRatios(income, expenses, assets, liabs, baseCur, pageCurrency);
     } catch (err) { WPToast.error('Failed to load report data.'); }
+  }
+
+  function _renderProductiveReport(assets, liabs, pageCurrency) {
+    const p = WPUtils.productiveBalanceSheet(assets, liabs, pageCurrency);
+    const gradeMap = {
+      empty: { label: 'No data', cls: 'badge-neutral' },
+      strong: { label: 'Strong coverage', cls: 'badge-accent' },
+      ok: { label: 'Balanced', cls: 'badge-accent' },
+      watch: { label: 'Watch', cls: 'badge-gold' },
+      weak: { label: 'Weak coverage', cls: 'badge-danger' },
+    };
+    const g = gradeMap[p.grade] || gradeMap.empty;
+    const gradeEl = document.getElementById('rpt-productive-grade');
+    if (gradeEl) {
+      gradeEl.textContent = g.label;
+      gradeEl.className = `badge ${g.cls}`;
+    }
+
+    const covLabel = !isFinite(p.coverage)
+      ? (p.incomeGenTotal > 0 ? '∞' : '—')
+      : `${p.coverage.toFixed(2)}×`;
+
+    const kpis = document.getElementById('rpt-productive-kpis');
+    if (kpis) {
+      kpis.innerHTML = `
+        <div class="card"><div class="card-title">Income-generating</div>
+          <div class="card-value accent">${WPUtils.fmt(p.incomeGenTotal, { compact: true, currency: pageCurrency })}</div>
+          <div class="card-meta">${p.incomeGenPctOfAssets.toFixed(0)}% of assets</div></div>
+        <div class="card"><div class="card-title">Non-income assets</div>
+          <div class="card-value">${WPUtils.fmt(p.nonIncomeTotal, { compact: true, currency: pageCurrency })}</div></div>
+        <div class="card"><div class="card-title">Interest-bearing debt</div>
+          <div class="card-value danger">${WPUtils.fmt(p.interestBearingTotal, { compact: true, currency: pageCurrency })}</div>
+          <div class="card-meta">${p.ibPctOfLiab.toFixed(0)}% of liabilities</div></div>
+        <div class="card"><div class="card-title">Productive coverage</div>
+          <div class="card-value ${p.grade === 'strong' || p.grade === 'ok' ? 'accent' : p.grade === 'watch' ? 'gold' : 'danger'}">${covLabel}</div>
+          <div class="card-meta">Income-gen ÷ interest debt</div></div>`;
+    }
+
+    const narr = document.getElementById('rpt-productive-narrative');
+    if (narr) {
+      narr.innerHTML = p.narrative.map(line => `<p style="margin:0 0 0.65rem">${line}</p>`).join('');
+    }
+
+    // Doughnuts (values in major units for chart scale)
+    if (typeof WPCharts !== 'undefined' && WPCharts.allocationDoughnut) {
+      const aEl = document.getElementById('rpt-chart-asset-productivity');
+      const lEl = document.getElementById('rpt-chart-liab-interest');
+      if (p.totalAssets > 0 && aEl) {
+        WPCharts.allocationDoughnut('rpt-chart-asset-productivity',
+          ['Income-generating', 'Non-income'],
+          [p.incomeGenTotal, p.nonIncomeTotal]);
+      } else if (aEl) {
+        aEl.parentElement.innerHTML = '<div style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--clr-text-3);font-size:0.85rem">No assets to classify.</div>';
+      }
+      if (p.totalLiab > 0 && lEl) {
+        WPCharts.allocationDoughnut('rpt-chart-liab-interest',
+          ['Interest-bearing', 'Non-interest'],
+          [p.interestBearingTotal, p.nonInterestTotal]);
+      } else if (lEl) {
+        lEl.parentElement.innerHTML = '<div style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--clr-text-3);font-size:0.85rem">No liabilities to classify.</div>';
+      }
+    }
   }
 
   function _renderKPIs(snapshots, income, expenses, assets, liabs, baseCur, pageCurrency) {
@@ -300,11 +379,16 @@ const WPReports = (() => {
     const savingsRate  = cf.netCashFlow / Math.max(1, cf.netIncome) * 100;
     const passive      = WPUtils.passiveIncomeKPI(income, cf.totalExpenses);
 
+    const prod = WPUtils.productiveBalanceSheet(assets, liabs, baseCur);
+    const prodCov = prod.coverage;
+    const prodOk = prod.grade === 'strong' || prod.grade === 'ok' || (prod.interestBearingTotal === 0 && prod.incomeGenTotal >= 0);
+
     const ratios = [
       { name:'Savings Rate',          value:`${savingsRate.toFixed(1)}%`,           target:'≥ 20%',    ok: savingsRate >= 20 },
       { name:'Debt-to-Asset Ratio',   value:`${dta.toFixed(1)}%`,                  target:'< 50%',    ok: dta < 50 },
       { name:'Coverage Ratio',        value:`${isFinite(coverage)?coverage.toFixed(2)+'x':'∞'}`,target:'≥ 1×', ok: coverage >= 1 || !isFinite(coverage) },
       { name:'Passive Income Cover',  value:`${passive.pctOfExpenses.toFixed(1)}%`, target:'≥ 100%',  ok: passive.pctOfExpenses >= 100 },
+      { name:'Productive Coverage',   value:`${!isFinite(prodCov) ? (prod.incomeGenTotal > 0 ? '∞' : '—') : prodCov.toFixed(2)+'×'}`, target:'≥ 1× income-gen / interest debt', ok: prodOk && (prod.interestBearingTotal === 0 || prodCov >= 1) },
     ];
 
     document.getElementById('rpt-ratios').innerHTML = `<div class="table-wrap"><table>

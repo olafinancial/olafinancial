@@ -112,7 +112,7 @@ const WPDebt = (() => {
   async function _load() {
     try {
       _liabilities = await WPDb.getLiabilitiesByPeriod(WPApp.state.user.id, PERIOD);
-      _liabilities = _liabilities.filter(l => l.is_interest_bearing && (l.close_balance || l.open_balance) > 0);
+      _liabilities = _liabilities.filter(l => WPUtils.isInterestBearingLiability(l) && (l.close_balance || l.open_balance) > 0);
       
       const baseCur = WPApp.state.profile?.currency || 'NGN';
       const pageCurrency = localStorage.getItem('wp_page_currency_debt') || baseCur;
@@ -417,7 +417,7 @@ const WPDebt = (() => {
       open_balance:     rawBal,
       apr:              isManual ? 0 : (parseFloat(document.getElementById('df-apr').value)||0),
       monthly_payment:  WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('df-mpmt').value)),
-      is_interest_bearing: true,
+      is_interest_bearing: true, // debt planner only tracks interest-bearing
       period_month:     PERIOD,
       notes:            finalNotes,
     };

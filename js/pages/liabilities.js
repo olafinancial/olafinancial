@@ -92,18 +92,21 @@ const WPLiabilities = (() => {
       return s + WPUtils.convert(l.close_balance || l.open_balance || 0, cur, pageCurrency);
     }, 0);
 
-    const interestBearing = _liabilities.filter(l => l.is_interest_bearing && l.apr > 0).reduce((s,l) => {
+    const interestBearing = _liabilities.filter(l => WPUtils.isInterestBearingLiability(l)).reduce((s,l) => {
       const cur = WPUtils.getEntryCurrency(l.notes);
       return s + WPUtils.convert(l.close_balance || l.open_balance || 0, cur, pageCurrency);
     }, 0);
+    const nonInterest = totalLiab - interestBearing;
 
     const maxApr = Math.max(0, ..._liabilities.map(l => l.apr || 0));
+    const ibCount = _liabilities.filter(l => WPUtils.isInterestBearingLiability(l)).length;
 
     document.getElementById('liab-page-total').textContent = WPUtils.fmt(totalLiab, {compact:true, currency: pageCurrency});
 
     document.getElementById('liab-kpis').innerHTML = `
       <div class="card"><div class="card-title">Total Liabilities</div><div class="card-value danger">${WPUtils.fmt(totalLiab,{compact:true, currency: pageCurrency})}</div><div class="card-meta">${_liabilities.length} debt${_liabilities.length!==1?'s':''}</div></div>
-      <div class="card"><div class="card-title">Interest-Bearing</div><div class="card-value danger">${WPUtils.fmt(interestBearing,{compact:true, currency: pageCurrency})}</div><div class="card-meta">Debts accruing interest</div></div>
+      <div class="card"><div class="card-title">Interest-Bearing</div><div class="card-value danger">${WPUtils.fmt(interestBearing,{compact:true, currency: pageCurrency})}</div><div class="card-meta">${ibCount} debt${ibCount!==1?'s':''} accruing interest</div></div>
+      <div class="card"><div class="card-title">Non-Interest</div><div class="card-value">${WPUtils.fmt(nonInterest,{compact:true, currency: pageCurrency})}</div><div class="card-meta">0% / non-interest debts</div></div>
       <div class="card"><div class="card-title">Highest APR</div><div class="card-value gold">${maxApr}%</div><div class="card-meta">Highest rate in portfolio</div></div>`;
 
     _renderLiabTable(totalLiab, pageCurrency);
@@ -116,18 +119,20 @@ const WPLiabilities = (() => {
       return;
     }
     wrap.innerHTML = `<table>
-      <thead><tr><th>Liability</th><th>Type</th><th>Lender</th><th>Balance</th><th>APR</th><th>Monthly Pmt</th><th></th></tr></thead>
+      <thead><tr><th>Liability</th><th>Type</th><th>Lender</th><th>Balance</th><th>Interest</th><th>APR</th><th>Monthly Pmt</th><th></th></tr></thead>
       <tbody>${_liabilities.map(l => {
-        const bal = l.open_balance || 0;
+        const bal = l.close_balance || l.open_balance || 0;
         const cur = WPUtils.getEntryCurrency(l.notes);
         const balPage = WPUtils.convert(bal, cur, pageCurrency);
         const pmtPage = WPUtils.convert(l.monthly_payment||0, cur, pageCurrency);
         const cleanNotes = (l.notes || '').replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').trim();
+        const ib = WPUtils.isInterestBearingLiability(l);
         return `<tr>
           <td><strong>${l.liability_name}</strong>${cleanNotes?`<br><span class="text-xs text-muted">${cleanNotes}</span>`:''}</td>
           <td><span class="badge badge-danger">${(l.liability_type||'').replace('_',' ')}</span></td>
           <td class="text-muted text-sm">${l.lender_name||'—'}</td>
           <td class="td-mono fw-600 text-danger">${WPUtils.fmt(balPage, { currency: pageCurrency })}</td>
+          <td>${ib ? '<span class="badge badge-danger">Interest-bearing</span>' : '<span class="badge badge-neutral">Non-interest</span>'}</td>
           <td class="td-mono ${l.apr>25?'text-danger':'text-gold'}">${l.apr||0}%</td>
           <td class="td-mono">${WPUtils.fmt(pmtPage, { currency: pageCurrency })}</td>
           <td style="white-space:nowrap">
@@ -187,13 +192,18 @@ const WPLiabilities = (() => {
             </div>
           </div>
         </div>
-        <div class="form-group">
+        <div style="display:flex;flex-direction:column;gap:0.75rem;margin:0.75rem 0 1rem">
+          <div class="toggle-group">
+            <label class="toggle"><input type="checkbox" id="lf-interest" ${e.id ? (e.is_interest_bearing !== false && e.is_interest_bearing !== 0 ? 'checked' : '') : 'checked'}><span class="toggle-slider"></span></label>
+            <span class="toggle-label">Interest-bearing (loan / credit that charges interest)</span>
+          </div>
+          <p class="text-xs text-muted" style="margin:0;padding-left:0.25rem">Turn off for 0% family loans, interest-free advances, or amounts you do not pay interest on. Used on Balance Sheet &amp; Reports.</p>
           <div class="toggle-group">
             <label class="toggle"><input type="checkbox" id="lf-no-apr" ${!e.apr?'checked':''}><span class="toggle-slider"></span></label>
             <span class="toggle-label">I don't know the APR (Enter monthly payment manually)</span>
           </div>
         </div>
-        <div class="form-row">
+        <div class="form-row" id="lf-apr-row">
           <div class="form-group" id="lf-apr-container" style="display: ${e.apr ? 'block' : 'none'}; flex: 1;">
             <label for="lf-apr">APR (%)</label>
             <input class="input" type="number" id="lf-apr" min="0" max="200" step="0.1" value="${e.apr||''}" placeholder="e.g. 22.5">
@@ -285,7 +295,7 @@ const WPLiabilities = (() => {
       close_balance:    WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('lf-open').value)),
       apr:              isManual ? 0 : (parseFloat(document.getElementById('lf-apr').value)||0),
       monthly_payment:  WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('lf-mpmt').value)),
-      is_interest_bearing: true,
+      is_interest_bearing: !!(document.getElementById('lf-interest')?.checked),
       period_month:     PERIOD,
       notes:            finalNotes,
     };

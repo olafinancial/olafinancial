@@ -538,6 +538,133 @@ const WPUtils = (() => {
     return Math.round(amountInNGN / rateTo);
   }
 
+  /** Whether a liability accrues interest (explicit flag, else APR > 0). */
+  function isInterestBearingLiability(l) {
+    if (!l) return false;
+    if (l.is_interest_bearing === false || l.is_interest_bearing === 0) return false;
+    if (l.is_interest_bearing === true || l.is_interest_bearing === 1) return true;
+    return (parseFloat(l.apr) || 0) > 0;
+  }
+
+  function isIncomeGeneratingAsset(a) {
+    if (!a) return false;
+    return !!(a.is_income_generating);
+  }
+
+  function _itemBalanceKobo(item, targetCurrency) {
+    const cur = getEntryCurrency(item.notes);
+    return convert(item.close_balance || item.open_balance || 0, cur, targetCurrency);
+  }
+
+  /**
+   * Classify assets (income-generating vs not) and liabilities (interest-bearing vs not),
+   * then compare productive assets to interest-bearing debt — #50.
+   */
+  function productiveBalanceSheet(assets, liabilities, currency) {
+    const listA = Array.isArray(assets) ? assets : [];
+    const listL = Array.isArray(liabilities) ? liabilities : [];
+    const cur = currency || 'NGN';
+
+    const incomeGen = listA.filter(isIncomeGeneratingAsset);
+    const nonIncome = listA.filter(a => !isIncomeGeneratingAsset(a));
+    const interestBearing = listL.filter(isInterestBearingLiability);
+    const nonInterest = listL.filter(l => !isInterestBearingLiability(l));
+
+    const sum = (items) => items.reduce((s, x) => s + _itemBalanceKobo(x, cur), 0);
+
+    const incomeGenTotal = sum(incomeGen);
+    const nonIncomeTotal = sum(nonIncome);
+    const interestBearingTotal = sum(interestBearing);
+    const nonInterestTotal = sum(nonInterest);
+    const totalAssets = incomeGenTotal + nonIncomeTotal;
+    const totalLiab = interestBearingTotal + nonInterestTotal;
+
+    const coverage = interestBearingTotal > 0
+      ? incomeGenTotal / interestBearingTotal
+      : (incomeGenTotal > 0 ? Infinity : 0);
+    const gap = incomeGenTotal - interestBearingTotal;
+    const incomeGenPctOfAssets = totalAssets > 0 ? (incomeGenTotal / totalAssets) * 100 : 0;
+    const ibPctOfLiab = totalLiab > 0 ? (interestBearingTotal / totalLiab) * 100 : 0;
+
+    let grade = 'empty';
+    if (totalAssets === 0 && totalLiab === 0) grade = 'empty';
+    else if (interestBearingTotal === 0 && incomeGenTotal > 0) grade = 'strong';
+    else if (coverage >= 1.5) grade = 'strong';
+    else if (coverage >= 1) grade = 'ok';
+    else if (coverage >= 0.5) grade = 'watch';
+    else grade = 'weak';
+
+    const narrative = _productiveNarrative({
+      incomeGenTotal, nonIncomeTotal, interestBearingTotal, nonInterestTotal,
+      coverage, gap, grade, incomeGenPctOfAssets, ibPctOfLiab,
+      incomeGenCount: incomeGen.length, nonIncomeCount: nonIncome.length,
+      ibCount: interestBearing.length, nibCount: nonInterest.length,
+      currency: cur,
+    });
+
+    return {
+      incomeGen, nonIncome, interestBearing, nonInterest,
+      incomeGenTotal, nonIncomeTotal, interestBearingTotal, nonInterestTotal,
+      totalAssets, totalLiab,
+      coverage, gap, grade,
+      incomeGenPctOfAssets, ibPctOfLiab,
+      narrative,
+    };
+  }
+
+  function _productiveNarrative(p) {
+    const f = (k) => fmt(k, { currency: p.currency, compact: true });
+    const lines = [];
+
+    if (p.grade === 'empty') {
+      lines.push('Add assets and liabilities to compare income-generating assets with interest-bearing debt.');
+      return lines;
+    }
+
+    lines.push(
+      `You have ${f(p.incomeGenTotal)} in income-generating assets ` +
+      `(${p.incomeGenCount} item${p.incomeGenCount === 1 ? '' : 's'}, ${p.incomeGenPctOfAssets.toFixed(0)}% of assets) ` +
+      `and ${f(p.nonIncomeTotal)} in non-income assets (home, vehicles, personal items, etc.).`
+    );
+
+    lines.push(
+      `Interest-bearing liabilities total ${f(p.interestBearingTotal)} ` +
+      `(${p.ibCount} debt${p.ibCount === 1 ? '' : 's'}` +
+      (p.totalLiab > 0 ? `, ${p.ibPctOfLiab.toFixed(0)}% of all liabilities` : '') +
+      `). Non-interest liabilities (e.g. 0% family loans, deferred tax) are ${f(p.nonInterestTotal)}.`
+    );
+
+    if (p.interestBearingTotal <= 0) {
+      lines.push('You have no interest-bearing debt on the books — productive assets are not offset by interest cost. Keep it that way when you borrow.');
+    } else if (p.coverage >= 1.5) {
+      lines.push(
+        `Strong match: income-generating assets cover interest-bearing debt about ${isFinite(p.coverage) ? p.coverage.toFixed(2) : '∞'}×. ` +
+        `Surplus productive capital is roughly ${f(p.gap)}.`
+      );
+    } else if (p.coverage >= 1) {
+      lines.push(
+        `Balanced: income-generating assets roughly match interest-bearing debt (${p.coverage.toFixed(2)}× coverage). ` +
+        `Aim for more productive assets or faster debt payoff to build a cushion.`
+      );
+    } else if (p.coverage >= 0.5) {
+      lines.push(
+        `Watch: interest-bearing debt exceeds income-generating assets (coverage ${p.coverage.toFixed(2)}×, gap ${f(Math.abs(p.gap))} short). ` +
+        `Prioritise paying down high-APR debt or growing yield-producing assets.`
+      );
+    } else {
+      lines.push(
+        `Weak: productive assets cover only ${p.coverage.toFixed(2)}× of interest-bearing debt (short by ${f(Math.abs(p.gap))}). ` +
+        `Interest is likely outrunning asset income — cut costly debt and avoid new non-productive borrowing.`
+      );
+    }
+
+    lines.push(
+      'Tip: mark assets as “income-generating” on Assets, and mark loans as interest-bearing (or not) on Liabilities so this report stays accurate.'
+    );
+
+    return lines;
+  }
+
   /** Parse structured tags embedded in asset notes: [ticker:…] [qty:…] [unit_cost:…] [sub:…] */
   function parseNotesTags(notes) {
     const out = { ticker: '', qty: 0, unitCostKobo: 0, sub: '' };
@@ -637,5 +764,6 @@ const WPUtils = (() => {
     getEntryCurrency, setEntryCurrency, convert,
     parseNotesTags, cleanNotesDisplay,
     estimateMarketPrice, fetchMarketPrice,
+    isInterestBearingLiability, isIncomeGeneratingAsset, productiveBalanceSheet,
   };
 })();

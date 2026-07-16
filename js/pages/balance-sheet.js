@@ -49,6 +49,35 @@ const WPBalanceSheet = (() => {
         <!-- NDIC Alert -->
         <div id="ndic-alert" style="display:none"></div>
 
+        <!-- Productive balance: income-gen assets vs interest-bearing debt (#50) -->
+        <div class="card" style="margin-bottom:1.5rem" id="bs-productive-card">
+          <div class="section-header" style="margin-bottom:0.75rem">
+            <span class="section-title">Income-Generating Assets vs Interest-Bearing Liabilities</span>
+            <span class="badge badge-neutral" id="bs-productive-grade">—</span>
+          </div>
+          <p class="text-xs text-muted" style="margin:0 0 1rem;max-width:48rem">
+            Productive capital should ideally cover debts that cost interest. Uses your
+            “income-generating” asset flag and interest-bearing liability flag.
+          </p>
+          <div class="kpi-grid" id="bs-productive-kpis" style="margin-bottom:1rem"></div>
+          <div class="grid grid-2" style="gap:1rem;margin-bottom:1rem">
+            <div>
+              <div class="text-sm fw-700" style="margin-bottom:0.5rem">Assets by productivity</div>
+              <div id="bs-asset-class-bars"></div>
+            </div>
+            <div>
+              <div class="text-sm fw-700" style="margin-bottom:0.5rem">Liabilities by interest</div>
+              <div id="bs-liab-class-bars"></div>
+            </div>
+          </div>
+          <div id="bs-productive-report" style="font-size:0.9rem;line-height:1.55;color:var(--clr-text-2)"></div>
+          <div style="margin-top:0.85rem;display:flex;gap:0.5rem;flex-wrap:wrap">
+            <a href="#/assets" class="btn btn-secondary btn-sm">Mark income-generating assets</a>
+            <a href="#/liabilities" class="btn btn-secondary btn-sm">Mark interest-bearing debts</a>
+            <a href="#/reports" class="btn btn-ghost btn-sm">Full report</a>
+          </div>
+        </div>
+
         <div class="grid grid-2" style="gap:1.5rem">
           <!-- Top Assets Card -->
           <div class="card flex flex-col justify-between" style="margin-bottom:1.5rem">
@@ -178,6 +207,65 @@ const WPBalanceSheet = (() => {
 
     _renderTopAssets(pageCurrency);
     _renderTopLiabilities(pageCurrency);
+    _renderProductive(pageCurrency);
+  }
+
+  function _renderProductive(pageCurrency) {
+    const p = WPUtils.productiveBalanceSheet(_assets, _liabilities, pageCurrency);
+    const gradeEl = document.getElementById('bs-productive-grade');
+    const gradeMap = {
+      empty: { label: 'No data', cls: 'badge-neutral' },
+      strong: { label: 'Strong coverage', cls: 'badge-accent' },
+      ok: { label: 'Balanced', cls: 'badge-accent' },
+      watch: { label: 'Watch', cls: 'badge-gold' },
+      weak: { label: 'Weak coverage', cls: 'badge-danger' },
+    };
+    const g = gradeMap[p.grade] || gradeMap.empty;
+    if (gradeEl) {
+      gradeEl.textContent = g.label;
+      gradeEl.className = `badge ${g.cls}`;
+    }
+
+    const covLabel = !isFinite(p.coverage)
+      ? (p.incomeGenTotal > 0 ? '∞' : '—')
+      : `${p.coverage.toFixed(2)}×`;
+
+    document.getElementById('bs-productive-kpis').innerHTML = `
+      <div class="card"><div class="card-title">Income-generating assets</div>
+        <div class="card-value accent">${WPUtils.fmt(p.incomeGenTotal, { compact: true, currency: pageCurrency })}</div>
+        <div class="card-meta">${p.incomeGen.length} asset${p.incomeGen.length !== 1 ? 's' : ''} · ${p.incomeGenPctOfAssets.toFixed(0)}% of assets</div></div>
+      <div class="card"><div class="card-title">Non-income assets</div>
+        <div class="card-value">${WPUtils.fmt(p.nonIncomeTotal, { compact: true, currency: pageCurrency })}</div>
+        <div class="card-meta">${p.nonIncome.length} asset${p.nonIncome.length !== 1 ? 's' : ''}</div></div>
+      <div class="card"><div class="card-title">Interest-bearing liabilities</div>
+        <div class="card-value danger">${WPUtils.fmt(p.interestBearingTotal, { compact: true, currency: pageCurrency })}</div>
+        <div class="card-meta">${p.interestBearing.length} debt${p.interestBearing.length !== 1 ? 's' : ''} · ${p.ibPctOfLiab.toFixed(0)}% of liabilities</div></div>
+      <div class="card"><div class="card-title">Productive coverage</div>
+        <div class="card-value ${p.grade === 'strong' || p.grade === 'ok' ? 'accent' : p.grade === 'watch' ? 'gold' : 'danger'}">${covLabel}</div>
+        <div class="card-meta">Income-gen assets ÷ interest-bearing debt</div></div>`;
+
+    const bar = (label, amt, total, color) => {
+      const pct = total > 0 ? Math.min(100, (amt / total) * 100) : 0;
+      return `
+        <div style="margin-bottom:0.65rem">
+          <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.25rem">
+            <span>${label}</span>
+            <span class="td-mono">${WPUtils.fmt(amt, { compact: true, currency: pageCurrency })} (${pct.toFixed(0)}%)</span>
+          </div>
+          <div class="progress-bar" style="height:8px"><div class="progress-fill" style="width:${pct}%;background:${color}"></div></div>
+        </div>`;
+    };
+
+    document.getElementById('bs-asset-class-bars').innerHTML =
+      bar('Income-generating', p.incomeGenTotal, p.totalAssets, '#00C896') +
+      bar('Non-income', p.nonIncomeTotal, p.totalAssets, '#64748B');
+
+    document.getElementById('bs-liab-class-bars').innerHTML =
+      bar('Interest-bearing', p.interestBearingTotal, p.totalLiab, '#F87171') +
+      bar('Non-interest', p.nonInterestTotal, p.totalLiab, '#94A3B8');
+
+    document.getElementById('bs-productive-report').innerHTML =
+      p.narrative.map(line => `<p style="margin:0 0 0.65rem">${line}</p>`).join('');
   }
 
   function _renderTopAssets(pageCurrency) {
@@ -186,7 +274,6 @@ const WPBalanceSheet = (() => {
       wrap.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--clr-text-2)">No assets recorded.</div>';
       return;
     }
-    // Sort descending by balance, take top 5
     const topAssets = [..._assets].sort((a, b) => {
       const balA = WPUtils.convert(a.close_balance || a.open_balance || 0, WPUtils.getEntryCurrency(a.notes), pageCurrency);
       const balB = WPUtils.convert(b.close_balance || b.open_balance || 0, WPUtils.getEntryCurrency(b.notes), pageCurrency);
@@ -199,8 +286,9 @@ const WPBalanceSheet = (() => {
         const bal = a.close_balance || a.open_balance || 0;
         const cur = WPUtils.getEntryCurrency(a.notes);
         const balPage = WPUtils.convert(bal, cur, pageCurrency);
+        const ig = WPUtils.isIncomeGeneratingAsset(a);
         return `<tr style="cursor:pointer" onclick="location.hash='#/assets'">
-          <td><strong>${a.asset_name}</strong></td>
+          <td><strong>${a.asset_name}</strong>${ig ? ' <span class="badge badge-accent" style="font-size:0.65rem">Income</span>' : ''}</td>
           <td><span class="badge badge-neutral">${(a.asset_type||'').replace('_',' ')}</span></td>
           <td class="td-mono text-right fw-600">${WPUtils.fmt(balPage, { currency: pageCurrency })}</td>
         </tr>`;
@@ -214,7 +302,6 @@ const WPBalanceSheet = (() => {
       wrap.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--clr-text-2)">No liabilities recorded.</div>';
       return;
     }
-    // Sort descending by balance, take top 5
     const topLiab = [..._liabilities].sort((a, b) => {
       const balA = WPUtils.convert(a.close_balance || a.open_balance || 0, WPUtils.getEntryCurrency(a.notes), pageCurrency);
       const balB = WPUtils.convert(b.close_balance || b.open_balance || 0, WPUtils.getEntryCurrency(b.notes), pageCurrency);
@@ -224,11 +311,12 @@ const WPBalanceSheet = (() => {
     wrap.innerHTML = `<table>
       <thead><tr><th>Liability</th><th>Type</th><th class="text-right">Balance</th></tr></thead>
       <tbody>${topLiab.map(l => {
-        const bal = l.open_balance || 0;
+        const bal = l.close_balance || l.open_balance || 0;
         const cur = WPUtils.getEntryCurrency(l.notes);
         const balPage = WPUtils.convert(bal, cur, pageCurrency);
+        const ib = WPUtils.isInterestBearingLiability(l);
         return `<tr style="cursor:pointer" onclick="location.hash='#/liabilities'">
-          <td><strong>${l.liability_name}</strong></td>
+          <td><strong>${l.liability_name}</strong>${ib ? ' <span class="badge badge-danger" style="font-size:0.65rem">Interest</span>' : ' <span class="badge badge-neutral" style="font-size:0.65rem">0% / no int.</span>'}</td>
           <td><span class="badge badge-danger">${(l.liability_type||'').replace('_',' ')}</span></td>
           <td class="td-mono text-right fw-600 text-danger">${WPUtils.fmt(balPage, { currency: pageCurrency })}</td>
         </tr>`;
