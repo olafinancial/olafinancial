@@ -11,7 +11,7 @@ const WPInvestmentQuiz = (() => {
   const STARTING_ALLOC = {
     aggressive: [
       { key: 'equities', label: 'Equities (NGX / equity funds & ETFs)', pct: 62, range: '55–70%' },
-      { key: 'reits', label: 'Real Estate (NGX REITs e.g. UPDCREIT, NREIT)', pct: 12, range: '10–15%' },
+      { key: 'reits', label: 'Real Estate (NGX REITs)', pct: 12, range: '10–15%' },
       { key: 'alternatives', label: 'Alternatives / Digital Assets (crypto)', pct: 10, range: '5–15%' },
       { key: 'fixed_income', label: 'Fixed Income (FGN / corporate bonds & funds)', pct: 8, range: '5–10%' },
       { key: 'money_market', label: 'Money Market + Bank Fixed Deposits', pct: 8, range: '5–10%' },
@@ -173,7 +173,13 @@ const WPInvestmentQuiz = (() => {
 
   function init(container) {
     const uid = WPApp.state.user?.id;
-    const saved = uid ? localStorage.getItem(STORAGE_KEY(uid)) : null;
+    let saved = uid ? localStorage.getItem(STORAGE_KEY(uid)) : null;
+    if (!saved && WPApp.state.user?.user_metadata?.wp_invest_quiz) {
+      saved = JSON.stringify(WPApp.state.user.user_metadata.wp_invest_quiz);
+      if (uid) {
+        try { localStorage.setItem(STORAGE_KEY(uid), saved); } catch (_) {}
+      }
+    }
     if (saved) {
       try {
         const data = JSON.parse(saved);
@@ -278,8 +284,8 @@ const WPInvestmentQuiz = (() => {
           <ul class="text-sm" style="margin:0;padding-left:1.15rem;color:var(--clr-text-2);line-height:1.65">
             <li><strong>Money Market / cash</strong> — T-bills, Money Market Funds</li>
             <li><strong>Fixed Income</strong> — FGN Bonds, corporate bonds, fixed-income funds</li>
-            <li><strong>Equities</strong> — NGX stocks, equity mutual funds / ETFs (e.g. Vetiva)</li>
-            <li><strong>Real Estate</strong> — NGX-listed REITs (e.g. UPDCREIT, NREIT)</li>
+            <li><strong>Equities</strong> — NGX stocks, equity mutual funds / ETFs</li>
+            <li><strong>Real Estate</strong> — NGX-listed REITs (Real Estate Investment Trusts)</li>
             <li><strong>Bank fixed deposits</strong> — term deposits for stability</li>
             <li><strong>Alternatives</strong> — limited crypto via reputable platforms (high risk)</li>
           </ul>
@@ -379,6 +385,22 @@ const WPInvestmentQuiz = (() => {
     };
     if (uid) {
       try { localStorage.setItem(STORAGE_KEY(uid), JSON.stringify(payload)); } catch (_) {}
+      
+      // Sync to Supabase user_profiles risk_tolerance
+      WPDb.updateProfile(uid, { risk_tolerance: result.profile })
+        .then(profile => {
+          if (profile) WPApp.state.profile = profile;
+        })
+        .catch(err => console.error('Failed to sync investment profile to DB', err));
+        
+      // Sync to auth user_metadata
+      if (window.supabase && typeof window.supabase.auth.updateUser === 'function') {
+        window.supabase.auth.updateUser({
+          data: {
+            wp_invest_quiz: payload
+          }
+        }).catch(err => console.error('Failed to sync auth metadata', err));
+      }
     }
     _view = 'results';
     _render(container);
@@ -431,7 +453,7 @@ const WPInvestmentQuiz = (() => {
           <p class="text-sm text-muted" style="margin:0">
             Prefer Halal / Takaful framing? Set preference in
             <a href="#/settings" style="color:var(--clr-accent)">Settings → Sharia &amp; Takaful</a>
-            for investing tips and Insurance Takaful wording.
+            for investing guidelines and Insurance Takaful wording.
           </p>
         </div>`}
 
@@ -517,7 +539,7 @@ const WPInvestmentQuiz = (() => {
           <div class="section-title" style="margin-bottom:0.75rem">Nigeria implementation notes</div>
           <ul class="text-sm" style="margin:0;padding-left:1.15rem;color:var(--clr-text-2);line-height:1.7">
             <li><strong>T-bills &amp; MMFs</strong> — liquid, competitive yields; good buffer / inflation-aware cash.</li>
-            <li><strong>REITs</strong> (e.g. UPDCREIT, NREIT) — property exposure without direct ownership; NGX-listed.</li>
+            <li><strong>REITs</strong> (Real Estate Investment Trusts) — property exposure without direct ownership; NGX-listed.</li>
             <li><strong>ETFs / mutual funds</strong> — diversified equity or balanced exposure via reputable managers.</li>
             <li><strong>Bank fixed deposits</strong> — ultra-conservative, predictable.</li>
             <li><strong>Crypto</strong> — extreme volatility; keep as a small satellite only, if at all.</li>

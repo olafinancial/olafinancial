@@ -582,11 +582,7 @@ const WPAssets = (() => {
             <input class="input" id="af-ticker" value="${tags.ticker || ''}" placeholder="e.g. AAPL, TSLA, MTNN.LG" autocomplete="off" style="text-transform:uppercase">
             <span class="text-xs text-muted" style="display:block;margin-top:0.35rem">With a ticker, closing value refreshes from market data so your balance sheet stays current.</span>
           </div>
-          <div class="toggle-group" style="margin:0.75rem 0">
-            <label class="toggle"><input type="checkbox" id="af-sharia" ${e.notes && e.notes.includes('[sharia:yes]') ? 'checked' : ''}><span class="toggle-slider"></span></label>
-            <span class="toggle-label">Sharia-conscious holding (self-screened / Halal intent)</span>
-          </div>
-          <p class="text-xs text-muted" style="margin:0 0 0.5rem">Optional tag only — Pul does not auto-screen tickers. Review business activity, debt ratios, and purification with your advisor.</p>
+
           <div class="form-row">
             <div class="form-group">
               <label for="af-qty">Quantity</label>
@@ -648,7 +644,7 @@ const WPAssets = (() => {
 
     WPModal.open(existing && existing.id ? 'Edit Asset' : 'Add Asset', body, {
       confirmLabel: existing && existing.id ? 'Update' : 'Add Asset',
-      onConfirm: async () => { await _saveAsset(e.id); },
+      onConfirm: async () => { return await _saveAsset(e.id); },
     });
 
     const openInput = document.getElementById('af-open');
@@ -791,7 +787,24 @@ const WPAssets = (() => {
     let rawClose = rawOpen;
     if (useTicker && ticker) {
       let px = _fetchedPrices[ticker];
-      if (px == null) px = await WPUtils.fetchMarketPrice(ticker);
+      if (px == null) {
+        const confirmBtn = document.getElementById('modal-confirm');
+        const originalText = confirmBtn ? confirmBtn.textContent : 'Add Asset';
+        if (confirmBtn) {
+          confirmBtn.disabled = true;
+          confirmBtn.textContent = 'Please wait, fetching ticker...';
+        }
+        try {
+          px = await WPUtils.fetchMarketPrice(ticker);
+        } catch (err) {
+          console.warn('[assets] ticker fetch failed', err);
+        } finally {
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = originalText;
+          }
+        }
+      }
       if (px == null) px = WPUtils.estimateMarketPrice(ticker, unitCostNaira);
       else _fetchedPrices[ticker] = px;
       rawClose = Math.round(qtyVal * WPUtils.nairaToKobo(px));
@@ -808,14 +821,20 @@ const WPAssets = (() => {
       finalNotes += ` [qty:${qtyVal}] [unit_cost:${unitCostKobo}]`;
     }
     finalNotes = finalNotes.replace(/\[sharia:yes\]/gi, '').trim();
-    if (document.getElementById('af-sharia')?.checked) {
-      finalNotes += ' [sharia:yes]';
-    }
+
     finalNotes = WPUtils.setEntryCurrency(finalNotes.trim(), currency);
 
     let assetName = document.getElementById('af-name').value.trim();
     if (!assetName && ticker) assetName = ticker;
-    if (!assetName) { WPToast.warning('Please enter an asset name.'); return false; }
+    if (!assetName) {
+      const nameInput = document.getElementById('af-name');
+      if (nameInput) {
+        nameInput.style.borderColor = 'var(--clr-danger)';
+        nameInput.focus();
+      }
+      WPToast.warning('Please enter an asset name.');
+      return false;
+    }
 
     const row = {
       user_id:              WPApp.state.user.id,

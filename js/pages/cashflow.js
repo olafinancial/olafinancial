@@ -103,7 +103,7 @@ const WPCashflow = (() => {
       <div class="card"><div class="card-title">Total Outflows</div><div class="card-value danger">${WPUtils.fmt(totalOut, {currency: pageCurrency})}</div><div class="card-meta">All spending categories</div></div>
       <div class="card"><div class="card-title">Net Cash Flow</div><div class="card-value ${cf.netCashFlow>=0?'accent':'danger'}">${WPUtils.fmt(netCF,{signed:true, currency: pageCurrency})}</div></div>
       <div class="card"><div class="card-title">Savings Rate</div><div class="card-value ${cf.netCashFlow/Math.max(1,cf.netIncome)>=0.2?'accent':'gold'}">${WPUtils.fmtPct(cf.netCashFlow/Math.max(1,cf.netIncome))}</div><div class="card-meta">Target: &ge; 20%</div></div>
-      <div class="card"><div class="card-title">Passive Coverage</div><div class="card-value ${coverage>=100?'accent':coverage>=50?'gold':'danger'}">${coverage.toFixed(1)}%</div><div class="card-meta">of expenses covered passively</div></div>`;
+      <div class="card"><div class="card-title">Financial Independence Score (FIS)</div><div class="card-value ${coverage>=100?'accent':coverage>=50?'gold':'danger'}">${coverage.toFixed(1)}%</div><div class="card-meta">passive coverage of outflows</div></div>`;
   }
 
   function _renderStatement(cf, income, expenses, baseCur, pageCurrency) {
@@ -131,22 +131,59 @@ const WPCashflow = (() => {
         <span>${WPUtils.fmt(WPUtils.convert(cf.netIncome, baseCur, pageCurrency), {currency: pageCurrency})}</span>
       </div>`;
 
-    // Outflows — group by category
-    const byCategory = {};
+    // Outflows — group by Needs, Wants, and Savings/Debt
+    const needsGroup = {};
+    const wantsGroup = {};
+    const savingsGroup = {};
+
     expenses.forEach(e => {
       const cur = WPUtils.getEntryCurrency(e.description);
       const convertedAmt = WPUtils.convert(e.amount||0, cur, baseCur);
-      byCategory[e.category] = (byCategory[e.category]||0) + convertedAmt;
+      if (e.category === 'investment' || e.category === 'interest_debt') {
+        savingsGroup[e.category] = (savingsGroup[e.category]||0) + convertedAmt;
+      } else if (e.is_discretionary) {
+        wantsGroup[e.category] = (wantsGroup[e.category]||0) + convertedAmt;
+      } else {
+        needsGroup[e.category] = (needsGroup[e.category]||0) + convertedAmt;
+      }
     });
-    const outflowRows = Object.entries(byCategory)
-      .sort((a,b) => b[1]-a[1])
-      .map(([cat, amt]) => {
-        const pageAmt = WPUtils.convert(amt, baseCur, pageCurrency);
-        return `<div class="flex justify-between text-sm" style="padding:0.35rem 0;border-bottom:1px solid var(--clr-border)">
-          <span>${cat}</span><span class="td-mono">${WPUtils.fmt(pageAmt, {currency: pageCurrency})}</span>
-        </div>`;
-      }).join('');
-    document.getElementById('cf-outflows').innerHTML = outflowRows + `
+
+    const renderGroupRows = (group, color, label) => {
+      const entries = Object.entries(group);
+      if (entries.length === 0) return '';
+      const total = entries.reduce((s, e) => s + e[1], 0);
+      const pageTotal = WPUtils.convert(total, baseCur, pageCurrency);
+      
+      const rows = entries
+        .sort((a, b) => b[1] - a[1])
+        .map(([cat, amt]) => {
+          const pageAmt = WPUtils.convert(amt, baseCur, pageCurrency);
+          return `<div class="flex justify-between text-xs" style="padding:0.25rem 0;border-bottom:1px solid var(--clr-border);padding-left:0.75rem">
+            <span style="color:var(--clr-text-2)">${cat}</span><span class="td-mono">${WPUtils.fmt(pageAmt, {currency: pageCurrency})}</span>
+          </div>`;
+        }).join('');
+
+      return `
+        <div style="margin-top:0.75rem;margin-bottom:0.25rem">
+          <div class="flex justify-between fw-700" style="font-size:0.85rem;color:${color}">
+            <span>${label}</span>
+            <span class="td-mono">${WPUtils.fmt(pageTotal, {currency: pageCurrency})}</span>
+          </div>
+          ${rows}
+        </div>
+      `;
+    };
+
+    let outflowHtml = '';
+    outflowHtml += renderGroupRows(needsGroup, '#38BDF8', 'Needs (Essential Spending)');
+    outflowHtml += renderGroupRows(wantsGroup, '#F59E0B', 'Wants (Discretionary Spending)');
+    outflowHtml += renderGroupRows(savingsGroup, '#00C896', 'Savings & Debt Payoff');
+
+    if (!outflowHtml) {
+      outflowHtml = '<div style="padding:2rem;text-align:center;color:var(--clr-text-2)">No outflows recorded this month.</div>';
+    }
+
+    document.getElementById('cf-outflows').innerHTML = outflowHtml + `
       <div class="divider"></div>
       <div class="flex justify-between fw-700 text-danger" style="font-size:1.1rem">
         <span>Total Outflows</span><span>${WPUtils.fmt(WPUtils.convert(cf.totalExpenses, baseCur, pageCurrency), {currency: pageCurrency})}</span>
@@ -189,7 +226,7 @@ const WPCashflow = (() => {
     document.getElementById('cf-passive-section').innerHTML = `
       <div class="progress-wrap">
         <div class="progress-labels">
-          <span>Passive income vs. expenses</span>
+          <span>Financial Independence Score (FIS)</span>
           <span class="text-${status} fw-700">${passive.pctOfExpenses.toFixed(1)}%</span>
         </div>
         <div class="progress-bar" style="height:14px;border-radius:8px">

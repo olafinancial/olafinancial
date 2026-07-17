@@ -10,7 +10,9 @@ const WPSalaryCalculator = (() => {
   let _transportPct = 20;
   let _annualRent = 0;
   let _avc = 0;
+  let _pensionEnabled = true;
   let _nhfEnabled = true;
+  let _nhisEnabled = true;
   let _historicalIncome = [];
 
   const PERIOD = WPUtils.currentPeriod();
@@ -84,10 +86,18 @@ const WPSalaryCalculator = (() => {
                   <input class="input" id="sc-rent" value="0">
                 </div>
               </div>
-              <div class="form-group" style="margin-top:1rem">
+              <div class="form-group" style="margin-top:1rem;display:flex;flex-direction:column;gap:0.75rem">
+                <div class="toggle-group">
+                  <label class="toggle"><input type="checkbox" id="sc-pension-toggle" checked><span class="toggle-slider"></span></label>
+                  <span class="toggle-label">Deduct Pension Contribution (8%)</span>
+                </div>
                 <div class="toggle-group">
                   <label class="toggle"><input type="checkbox" id="sc-nhf-toggle" checked><span class="toggle-slider"></span></label>
                   <span class="toggle-label">Deduct National Housing Fund (NHF 2.5%)</span>
+                </div>
+                <div class="toggle-group">
+                  <label class="toggle"><input type="checkbox" id="sc-nhis-toggle" checked><span class="toggle-slider"></span></label>
+                  <span class="toggle-label">Deduct National Health Insurance (NHIS 1.75%)</span>
                 </div>
               </div>
               <hr style="border:0;border-top:1px solid var(--clr-border);margin:1.5rem 0">
@@ -118,8 +128,9 @@ const WPSalaryCalculator = (() => {
                 <table class="text-sm">
                   <tbody>
                     <tr><td>Gross Salary</td><td class="td-mono text-right" id="row-gross">₦0.00</td></tr>
-                    <tr><td>Pension Contribution (8% + AVC)</td><td class="td-mono text-right text-gold" id="row-pension">-₦0.00</td></tr>
+                    <tr id="row-pension-tr"><td>Pension Contribution (8% + AVC)</td><td class="td-mono text-right text-gold" id="row-pension">-₦0.00</td></tr>
                     <tr id="row-nhf-tr"><td>NHF Deduction (2.5% of Basic)</td><td class="td-mono text-right text-gold" id="row-nhf">-₦0.00</td></tr>
+                    <tr id="row-nhis-tr"><td>NHIS Deduction (1.75% of Basic)</td><td class="td-mono text-right text-gold" id="row-nhis">-₦0.00</td></tr>
                     <tr><td>PAYE Tax (Estimated)</td><td class="td-mono text-right text-danger" id="row-tax">-₦0.00</td></tr>
                     <tr style="font-weight:700"><td>Net Salary</td><td class="td-mono text-right text-accent" id="row-net">₦0.00</td></tr>
                   </tbody>
@@ -146,6 +157,7 @@ const WPSalaryCalculator = (() => {
                   <th class="text-right">Gross Salary</th>
                   <th class="text-right">Pension</th>
                   <th class="text-right">NHF</th>
+                  <th class="text-right">NHIS</th>
                   <th class="text-right">PAYE Tax</th>
                   <th class="text-right">Net Take-Home</th>
                   <th class="text-right">Cumulative YTD</th>
@@ -190,7 +202,9 @@ const WPSalaryCalculator = (() => {
     const transEl = document.getElementById('sc-transport-pct');
     const rentEl = document.getElementById('sc-rent');
     const avcEl = document.getElementById('sc-avc');
+    const pensionToggle = document.getElementById('sc-pension-toggle');
     const nhfToggle = document.getElementById('sc-nhf-toggle');
+    const nhisToggle = document.getElementById('sc-nhis-toggle');
     const currencySelect = document.getElementById('sc-sc-page-currency') || document.getElementById('sc-page-currency');
 
     if (!grossEl) {
@@ -210,7 +224,9 @@ const WPSalaryCalculator = (() => {
       _transportPct = parseFloat(transEl?.value) || 0;
       _annualRent = WPUtils.nairaToKobo(WPUtils.cleanNum(rentEl?.value)) || 0;
       _avc = WPUtils.nairaToKobo(WPUtils.cleanNum(avcEl?.value)) || 0;
+      _pensionEnabled = pensionToggle ? pensionToggle.checked : true;
       _nhfEnabled = nhfToggle ? nhfToggle.checked : true;
+      _nhisEnabled = nhisToggle ? nhisToggle.checked : true;
       try { _recalculate(); } catch (e) { console.error('[salary-calc recalc]', e); }
     };
 
@@ -220,7 +236,9 @@ const WPSalaryCalculator = (() => {
     transEl?.addEventListener('input', triggerRecalc);
     rentEl?.addEventListener('input', triggerRecalc);
     avcEl?.addEventListener('input', triggerRecalc);
+    pensionToggle?.addEventListener('change', triggerRecalc);
     nhfToggle?.addEventListener('change', triggerRecalc);
+    nhisToggle?.addEventListener('change', triggerRecalc);
 
     if (currencySelect) {
       currencySelect.value = localStorage.getItem('wp_page_currency_salary_calc') || 'NGN';
@@ -261,10 +279,13 @@ const WPSalaryCalculator = (() => {
     
     // Pension Employee 8%
     const pensionBaseNGN = basicNGN + housingNGN + transportNGN;
-    const pensionEmployeeNGN = Math.round(pensionBaseNGN * 0.08) + (pageCurrency === 'USD' ? WPUtils.convert(_avc, 'USD', 'NGN') : _avc);
+    const pensionEmployeeNGN = _pensionEnabled ? (Math.round(pensionBaseNGN * 0.08) + (pageCurrency === 'USD' ? WPUtils.convert(_avc, 'USD', 'NGN') : _avc)) : (pageCurrency === 'USD' ? WPUtils.convert(_avc, 'USD', 'NGN') : _avc);
     
     // NHF 2.5% of basic
     const nhfNGN = _nhfEnabled ? Math.round(basicNGN * 0.025) : 0;
+
+    // NHIS 1.75% of basic
+    const nhisNGN = _nhisEnabled ? Math.round(basicNGN * 0.0175) : 0;
     
     // Rent Relief & PAYE
     const rentNGN = pageCurrency === 'USD' ? WPUtils.convert(_annualRent, 'USD', 'NGN') : _annualRent;
@@ -272,7 +293,10 @@ const WPSalaryCalculator = (() => {
     const annualPensionNGN = pensionEmployeeNGN * 12;
     const annualRentNGN = rentNGN;
 
-    const annualPayeNGN = WPUtils.calcPIT(annualGrossNGN, annualPensionNGN, annualRentNGN);
+    // NHF and NHIS are also tax-exempt, so they reduce taxable income in PAYE
+    const totalTaxExemptDeductionsNGN = pensionEmployeeNGN + nhfNGN + nhisNGN;
+
+    const annualPayeNGN = WPUtils.calcPIT(annualGrossNGN, totalTaxExemptDeductionsNGN * 12, annualRentNGN);
     const monthlyPayeNGN = Math.round(annualPayeNGN / 12);
 
     // Total deductions
@@ -283,8 +307,9 @@ const WPSalaryCalculator = (() => {
     const grossDisplay = pageCurrency === 'USD' ? WPUtils.convert(_monthlyGross, 'USD', pageCurrency) : _monthlyGross;
     const pensionDisplay = pageCurrency === 'USD' ? WPUtils.convert(pensionEmployeeNGN, 'NGN', pageCurrency) : pensionEmployeeNGN;
     const nhfDisplay = pageCurrency === 'USD' ? WPUtils.convert(nhfNGN, 'NGN', pageCurrency) : nhfNGN;
+    const nhisDisplay = pageCurrency === 'USD' ? WPUtils.convert(nhisNGN, 'NGN', pageCurrency) : nhisNGN;
     const payeDisplay = pageCurrency === 'USD' ? WPUtils.convert(monthlyPayeNGN, 'NGN', pageCurrency) : monthlyPayeNGN;
-    const netDisplay = grossDisplay - pensionDisplay - nhfDisplay - payeDisplay;
+    const netDisplay = grossDisplay - pensionDisplay - nhfDisplay - nhisDisplay - payeDisplay;
 
     const effectiveRate = monthlyGrossNGN > 0 ? (monthlyPayeNGN / monthlyGrossNGN) * 100 : 0;
 
@@ -295,20 +320,23 @@ const WPSalaryCalculator = (() => {
     document.getElementById('row-gross').textContent = WPUtils.fmt(grossDisplay, { currency: pageCurrency });
     document.getElementById('row-pension').textContent = `-${WPUtils.fmt(pensionDisplay, { currency: pageCurrency })}`;
     document.getElementById('row-nhf').textContent = `-${WPUtils.fmt(nhfDisplay, { currency: pageCurrency })}`;
+    document.getElementById('row-nhis').textContent = `-${WPUtils.fmt(nhisDisplay, { currency: pageCurrency })}`;
     document.getElementById('row-tax').textContent = `-${WPUtils.fmt(payeDisplay, { currency: pageCurrency })}`;
     document.getElementById('row-net').textContent = WPUtils.fmt(netDisplay, { currency: pageCurrency });
 
+    document.getElementById('row-pension-tr').style.display = _pensionEnabled || _avc > 0 ? '' : 'none';
     document.getElementById('row-nhf-tr').style.display = _nhfEnabled ? '' : 'none';
+    document.getElementById('row-nhis-tr').style.display = _nhisEnabled ? '' : 'none';
 
     // Highlight current tax bracket row
     const annualTaxableNGN = Math.max(0, annualGrossNGN - annualPensionNGN - Math.min(annualRentNGN * 0.2, 50000000));
     _highlightTaxBracket(annualTaxableNGN);
 
     // Chart.js render
-    _renderChart(netDisplay, pensionDisplay, nhfDisplay, payeDisplay);
+    _renderChart(netDisplay, pensionDisplay, nhfDisplay, nhisDisplay, payeDisplay);
 
     // Render YTD Ledger
-    _recreateLedger(monthlyGrossNGN, pensionEmployeeNGN, nhfNGN, monthlyPayeNGN, pageCurrency);
+    _recreateLedger(monthlyGrossNGN, pensionEmployeeNGN, nhfNGN, nhisNGN, monthlyPayeNGN, pageCurrency);
   }
 
   function _highlightTaxBracket(taxableKobo) {
@@ -343,20 +371,30 @@ const WPSalaryCalculator = (() => {
     }
   }
 
-  function _renderChart(net, pension, nhf, tax) {
+  function _renderChart(net, pension, nhf, nhis, tax) {
     const ctx = document.getElementById('sc-chart');
     if (!ctx) return;
 
     if (_chart) _chart.destroy();
 
-    const data = [net / 100, pension / 100];
-    const labels = ['Net Take-Home', 'Pension'];
-    const colors = ['#00C896', '#F59E0B'];
+    const data = [net / 100];
+    const labels = ['Net Take-Home'];
+    const colors = ['#00C896'];
 
+    if (_pensionEnabled || _avc > 0) {
+      data.push(pension / 100);
+      labels.push('Pension');
+      colors.push('#F59E0B');
+    }
     if (_nhfEnabled) {
       data.push(nhf / 100);
       labels.push('NHF');
       colors.push('#38BDF8');
+    }
+    if (_nhisEnabled) {
+      data.push(nhis / 100);
+      labels.push('NHIS');
+      colors.push('#A78BFA');
     }
     data.push(tax / 100);
     labels.push('PAYE Tax');
@@ -384,7 +422,7 @@ const WPSalaryCalculator = (() => {
     });
   }
 
-  function _recreateLedger(monthlyGrossNGN, pensionNGN, nhfNGN, payeNGN, pageCurrency) {
+  function _recreateLedger(monthlyGrossNGN, pensionNGN, nhfNGN, nhisNGN, payeNGN, pageCurrency) {
     const tbody = document.getElementById('sc-ledger-body');
     if (!tbody) return;
 
@@ -393,7 +431,7 @@ const WPSalaryCalculator = (() => {
     let cumulativePAYE = 0;
 
     let html = '';
-    let totalGross = 0, totalPension = 0, totalNHF = 0, totalPAYE = 0, totalNet = 0;
+    let totalGross = 0, totalPension = 0, totalNHF = 0, totalNHIS = 0, totalPAYE = 0, totalNet = 0;
 
     months.forEach((m, idx) => {
       const periodLabel = WPUtils.periodLabel(m);
@@ -402,6 +440,7 @@ const WPSalaryCalculator = (() => {
       let mg = monthlyGrossNGN;
       let pen = pensionNGN;
       let nh = nhfNGN;
+      let nhis = nhisNGN;
       let tx = payeNGN;
 
       if (actualLog) {
@@ -409,21 +448,24 @@ const WPSalaryCalculator = (() => {
         tx = actualLog.paye_tax || 0;
         pen = actualLog.pension_contrib || 0;
         nh = actualLog.nhf_contrib || 0;
+        nhis = actualLog.other_deductions || 0; // standard container in actual log
       }
 
-      const net = mg - pen - nh - tx;
+      const net = mg - pen - nh - nhis - tx;
       cumulativeGross += mg;
       cumulativePAYE += tx;
 
       totalGross += mg;
       totalPension += pen;
       totalNHF += nh;
+      totalNHIS += nhis;
       totalPAYE += tx;
       totalNet += net;
 
       const displayMg = pageCurrency === 'USD' ? WPUtils.convert(mg, 'NGN', pageCurrency) : mg;
       const displayPen = pageCurrency === 'USD' ? WPUtils.convert(pen, 'NGN', pageCurrency) : pen;
       const displayNh = pageCurrency === 'USD' ? WPUtils.convert(nh, 'NGN', pageCurrency) : nh;
+      const displayNhis = pageCurrency === 'USD' ? WPUtils.convert(nhis, 'NGN', pageCurrency) : nhis;
       const displayTx = pageCurrency === 'USD' ? WPUtils.convert(tx, 'NGN', pageCurrency) : tx;
       const displayNet = pageCurrency === 'USD' ? WPUtils.convert(net, 'NGN', pageCurrency) : net;
       const displayCumGross = pageCurrency === 'USD' ? WPUtils.convert(cumulativeGross, 'NGN', pageCurrency) : cumulativeGross;
@@ -438,8 +480,9 @@ const WPSalaryCalculator = (() => {
       html += `<tr ${crossed ? 'style="background:rgba(245, 158, 11, 0.08)"' : ''}>
         <td>${periodLabel} ${actualLog ? '<span class="badge badge-accent" style="font-size:10px">Actual</span>' : ''}</td>
         <td class="td-mono text-right">${WPUtils.fmt(displayMg, { currency: pageCurrency })}</td>
-        <td class="td-mono text-right">${WPUtils.fmt(displayPen, { currency: pageCurrency })}</td>
-        <td class="td-mono text-right">${_nhfEnabled ? WPUtils.fmt(displayNh, { currency: pageCurrency }) : '—'}</td>
+        <td class="td-mono text-right">${_pensionEnabled || actualLog ? WPUtils.fmt(displayPen, { currency: pageCurrency }) : '—'}</td>
+        <td class="td-mono text-right">${_nhfEnabled || actualLog ? WPUtils.fmt(displayNh, { currency: pageCurrency }) : '—'}</td>
+        <td class="td-mono text-right">${_nhisEnabled || actualLog ? WPUtils.fmt(displayNhis, { currency: pageCurrency }) : '—'}</td>
         <td class="td-mono text-right text-danger">${WPUtils.fmt(displayTx, { currency: pageCurrency })}</td>
         <td class="td-mono text-right fw-600 text-accent">${WPUtils.fmt(displayNet, { currency: pageCurrency })}</td>
         <td class="td-mono text-right text-muted">${WPUtils.fmt(displayCumGross, { currency: pageCurrency })}</td>
@@ -449,6 +492,7 @@ const WPSalaryCalculator = (() => {
     const displayTotalGross = pageCurrency === 'USD' ? WPUtils.convert(totalGross, 'NGN', pageCurrency) : totalGross;
     const displayTotalPen = pageCurrency === 'USD' ? WPUtils.convert(totalPension, 'NGN', pageCurrency) : totalPension;
     const displayTotalNh = pageCurrency === 'USD' ? WPUtils.convert(totalNHF, 'NGN', pageCurrency) : totalNHF;
+    const displayTotalNhis = pageCurrency === 'USD' ? WPUtils.convert(totalNHIS, 'NGN', pageCurrency) : totalNHIS;
     const displayTotalTx = pageCurrency === 'USD' ? WPUtils.convert(totalPAYE, 'NGN', pageCurrency) : totalPAYE;
     const displayTotalNet = pageCurrency === 'USD' ? WPUtils.convert(totalNet, 'NGN', pageCurrency) : totalNet;
 
@@ -457,6 +501,7 @@ const WPSalaryCalculator = (() => {
       <td class="td-mono text-right">${WPUtils.fmt(displayTotalGross, { currency: pageCurrency })}</td>
       <td class="td-mono text-right text-gold">${WPUtils.fmt(displayTotalPen, { currency: pageCurrency })}</td>
       <td class="td-mono text-right">${_nhfEnabled ? WPUtils.fmt(displayTotalNh, { currency: pageCurrency }) : '—'}</td>
+      <td class="td-mono text-right">${_nhisEnabled ? WPUtils.fmt(displayTotalNhis, { currency: pageCurrency }) : '—'}</td>
       <td class="td-mono text-right text-danger">${WPUtils.fmt(displayTotalTx, { currency: pageCurrency })}</td>
       <td class="td-mono text-right text-accent">${WPUtils.fmt(displayTotalNet, { currency: pageCurrency })}</td>
       <td></td>

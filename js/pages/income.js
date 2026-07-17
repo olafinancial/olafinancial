@@ -50,9 +50,9 @@ const WPIncome = (() => {
         </div>
 
         <div class="kpi-grid" id="income-kpis" style="margin-bottom:1.5rem"></div>
-        <div class="chart-wrap" style="margin-bottom:1.5rem">
-          <div class="chart-title">Gross vs Net Income by Source</div>
-          <div class="chart-container" style="height:200px"><canvas id="chart-income-breakdown"></canvas></div>
+        <div class="card" style="margin-bottom:1.5rem">
+          <div class="section-title" style="margin-bottom:1rem">Income Segments (Active vs Passive vs Investment)</div>
+          <div id="income-segments-visualizer"></div>
         </div>
         <div class="card">
           <div class="section-header">
@@ -120,6 +120,7 @@ const WPIncome = (() => {
         localStorage.setItem('wp_page_currency_income', e.target.value);
         _renderKPIs();
         _renderTable(document.querySelector('#income-type-filter .tab-btn.active')?.dataset.type || 'all');
+        _renderSegments(e.target.value);
       });
     }
 
@@ -131,7 +132,7 @@ const WPIncome = (() => {
       _entries = await WPDb.getIncomeByPeriod(WPApp.state.user.id, PERIOD);
       _renderKPIs();
       _renderTable('all');
-      if (_entries.length > 0) WPCharts.incomeBreakdown('chart-income-breakdown', _entries);
+      _renderSegments(pageCurrency);
       // Insights
       const currencies = [...new Set(_entries.map(e => WPUtils.getEntryCurrency(e.notes)))];
       const baseCur = WPApp.state.profile?.currency || 'NGN';
@@ -319,7 +320,7 @@ const WPIncome = (() => {
             <div class="fw-700" style="font-size:0.95rem">Salary deductibles → net pay</div>
             <a href="#/calculators" style="font-size:0.8rem;color:var(--clr-accent)" onclick="try{sessionStorage.setItem('wp_calc_tab','salary')}catch(e){}">Full salary calculator →</a>
           </div>
-          <p class="text-xs text-muted" style="margin:0 0 0.75rem">Enter gross, then auto-fill or edit deductibles. Net is gross minus tax, pension, NHF, and other.</p>
+          <p class="text-xs text-muted" style="margin:0 0 0.75rem">PAYE is the tax remaining after deductions. Approved tax-free deductions: Pension, NHF, NHIS, Mortgage interest, Rent relief (20% of rent or 500k cap), and Life insurance.</p>
           <div class="form-row">
             <div class="form-group" id="if-tax-group">
               <label for="if-tax" id="if-tax-label">PAYE Tax (${symbol})</label>
@@ -353,9 +354,13 @@ const WPIncome = (() => {
             </div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;margin-top:0.5rem">
-            <button type="button" class="btn btn-secondary btn-sm" id="if-auto-deduct">Auto-calculate from gross (Tax Act 2025)</button>
-            <div class="fw-700" style="font-size:1.05rem">
-              Net pay: <span class="text-accent" id="if-net-display">—</span>
+            <button type="button" class="btn btn-secondary btn-sm" id="if-auto-deduct" style="margin-bottom:0.5rem">Auto-calculate from gross (Tax Act 2025)</button>
+            <div class="form-group" style="width:100%;margin-top:0.5rem">
+              <label for="if-net">Net Salary (${symbol})</label>
+              <div class="input-prefix-group">
+                <span class="input-prefix">${symbol}</span>
+                <input class="input" type="text" inputmode="decimal" id="if-net" placeholder="0">
+              </div>
             </div>
           </div>
         </div>
@@ -393,29 +398,55 @@ const WPIncome = (() => {
     const salaryPanel = document.getElementById('if-salary-panel');
     const simpleTax = document.getElementById('if-simple-tax');
     const taxLabel = document.getElementById('if-tax-label');
-    const netDisplay = document.getElementById('if-net-display');
+    const netInput = document.getElementById('if-net');
 
-    [grossInput, taxInput, pensionInput, nhfInput, otherInput, taxSimple].forEach(el => {
+    [grossInput, taxInput, pensionInput, nhfInput, otherInput, taxSimple, netInput].forEach(el => {
       if (el) WPUtils.maskNumberInput(el);
     });
 
+    let _isUpdatingCalculations = false;
     const updateNetDisplay = () => {
-      if (!netDisplay) return;
-      const type = typeSelect.value;
-      const gross = WPUtils.nairaToKobo(WPUtils.cleanNum(grossInput.value) || 0);
-      let tax = 0, pension = 0, nhf = 0, other = 0;
-      if (type === 'active') {
-        tax = WPUtils.nairaToKobo(WPUtils.cleanNum(taxInput?.value) || 0);
-        pension = WPUtils.nairaToKobo(WPUtils.cleanNum(pensionInput?.value) || 0);
-        nhf = WPUtils.nairaToKobo(WPUtils.cleanNum(nhfInput?.value) || 0);
-        other = WPUtils.nairaToKobo(WPUtils.cleanNum(otherInput?.value) || 0);
-      } else {
-        tax = WPUtils.nairaToKobo(WPUtils.cleanNum(taxSimple?.value) || 0);
+      if (_isUpdatingCalculations || !netInput) return;
+      _isUpdatingCalculations = true;
+      try {
+        const type = typeSelect.value;
+        const gross = WPUtils.cleanNum(grossInput.value) || 0;
+        let tax = 0, pension = 0, nhf = 0, other = 0;
+        if (type === 'active') {
+          tax = WPUtils.cleanNum(taxInput?.value) || 0;
+          pension = WPUtils.cleanNum(pensionInput?.value) || 0;
+          nhf = WPUtils.cleanNum(nhfInput?.value) || 0;
+          other = WPUtils.cleanNum(otherInput?.value) || 0;
+        } else {
+          tax = WPUtils.cleanNum(taxSimple?.value) || 0;
+        }
+        const net = Math.max(0, gross - tax - pension - nhf - other);
+        netInput.value = net > 0 ? net.toLocaleString('en-US', {maximumFractionDigits: 0}) : '';
+      } finally {
+        _isUpdatingCalculations = false;
       }
-      const net = Math.max(0, gross - tax - pension - nhf - other);
-      const cur = currencySelect.value;
-      const sym = symbols[cur] || '₦';
-      netDisplay.textContent = `${sym}${WPUtils.koboToNaira(net).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
+    };
+
+    const updateGrossFromNet = () => {
+      if (_isUpdatingCalculations || !netInput || !grossInput) return;
+      _isUpdatingCalculations = true;
+      try {
+        const type = typeSelect.value;
+        const net = WPUtils.cleanNum(netInput.value) || 0;
+        let tax = 0, pension = 0, nhf = 0, other = 0;
+        if (type === 'active') {
+          tax = WPUtils.cleanNum(taxInput?.value) || 0;
+          pension = WPUtils.cleanNum(pensionInput?.value) || 0;
+          nhf = WPUtils.cleanNum(nhfInput?.value) || 0;
+          other = WPUtils.cleanNum(otherInput?.value) || 0;
+        } else {
+          tax = WPUtils.cleanNum(taxSimple?.value) || 0;
+        }
+        const gross = net + tax + pension + nhf + other;
+        grossInput.value = gross > 0 ? gross.toLocaleString('en-US', {maximumFractionDigits: 0}) : '';
+      } finally {
+        _isUpdatingCalculations = false;
+      }
     };
 
     const autoDeduct = () => {
@@ -459,6 +490,7 @@ const WPIncome = (() => {
     [grossInput, taxInput, pensionInput, nhfInput, otherInput, taxSimple].forEach(el => {
       el?.addEventListener('input', updateNetDisplay);
     });
+    netInput?.addEventListener('input', updateGrossFromNet);
     document.getElementById('if-auto-deduct')?.addEventListener('click', autoDeduct);
     document.getElementById('if-freq')?.addEventListener('change', () => {
       if (typeSelect.value === 'active') updateNetDisplay();
@@ -533,6 +565,60 @@ const WPIncome = (() => {
       try { await WPDb.remove('income_entries', id); WPToast.success('Deleted.'); await _load(); }
       catch (err) { WPToast.error('Could not delete.'); }
     });
+  }
+
+  function _renderSegments(pageCurrency) {
+    const visualizer = document.getElementById('income-segments-visualizer');
+    if (!visualizer) return;
+
+    let activeTotal = 0, passiveTotal = 0, investmentTotal = 0;
+    _entries.forEach(e => {
+      const cur = WPUtils.getEntryCurrency(e.notes);
+      const convertedGross = WPUtils.convert(e.gross_amount||0, cur, pageCurrency);
+      if (e.income_type === 'active') activeTotal += convertedGross;
+      else if (e.income_type === 'passive') passiveTotal += convertedGross;
+      else if (e.income_type === 'investment') investmentTotal += convertedGross;
+    });
+
+    const grandTotal = activeTotal + passiveTotal + investmentTotal;
+    const activePct = grandTotal > 0 ? (activeTotal / grandTotal) * 100 : 0;
+    const passivePct = grandTotal > 0 ? (passiveTotal / grandTotal) * 100 : 0;
+    const investmentPct = grandTotal > 0 ? (investmentTotal / grandTotal) * 100 : 0;
+
+    visualizer.innerHTML = `
+      <div class="flex flex-col gap-4">
+        <!-- Segmented Bar -->
+        <div style="display:flex;height:24px;width:100%;border-radius:12px;overflow:hidden;background:var(--clr-surface-3)">
+          ${activeTotal > 0 ? `<div style="width:${activePct}%;background:#38BDF8;height:100%" title="Active Income: ${activePct.toFixed(1)}%"></div>` : ''}
+          ${passiveTotal > 0 ? `<div style="width:${passivePct}%;background:#F59E0B;height:100%" title="Passive Income: ${passivePct.toFixed(1)}%"></div>` : ''}
+          ${investmentTotal > 0 ? `<div style="width:${investmentPct}%;background:#00C896;height:100%" title="Investment Income: ${investmentPct.toFixed(1)}%"></div>` : ''}
+        </div>
+        <!-- Legend -->
+        <div class="grid grid-3" style="gap:1rem">
+          <div style="display:flex;align-items:center;gap:0.5rem">
+            <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#38BDF8"></span>
+            <div>
+              <div class="text-xs text-muted">Active Income</div>
+              <div class="fw-700" style="font-size:0.95rem">${WPUtils.fmt(activeTotal, {currency: pageCurrency})} (${activePct.toFixed(1)}%)</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem">
+            <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#F59E0B"></span>
+            <div>
+              <div class="text-xs text-muted">Passive Income</div>
+              <div class="fw-700" style="font-size:0.95rem">${WPUtils.fmt(passiveTotal, {currency: pageCurrency})} (${passivePct.toFixed(1)}%)</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem">
+            <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#00C896"></span>
+            <div>
+              <div class="text-xs text-muted">Investment Income</div>
+              <div class="fw-700" style="font-size:0.95rem">${WPUtils.fmt(investmentTotal, {currency: pageCurrency})} (${investmentPct.toFixed(1)}%)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   function destroy() {}

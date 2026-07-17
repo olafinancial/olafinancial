@@ -196,11 +196,10 @@ const WPLiabilities = (() => {
         <div style="display:flex;flex-direction:column;gap:0.75rem;margin:0.75rem 0 1rem">
           <div class="toggle-group">
             <label class="toggle"><input type="checkbox" id="lf-interest" ${e.id ? (e.is_interest_bearing !== false && e.is_interest_bearing !== 0 ? 'checked' : '') : (e.liability_type === 'qard_hasan' ? '' : 'checked')}><span class="toggle-slider"></span></label>
-            <span class="toggle-label">Interest-bearing (loan / credit that charges interest / riba)</span>
+            <span class="toggle-label">Interest-bearing (loan/credit that charges interest/riba)</span>
           </div>
           <p class="text-xs text-muted" style="margin:0;padding-left:0.25rem">
-            Turn <strong>off</strong> for Qard Hasan, 0% family loans, or interest-free advances.
-            Debt Planner’s APR avalanche ignores non-interest debts. Used on Balance Sheet &amp; Reports.
+            Turn off Qard Hasan, 0% family loans, or interest-free advances.
           </p>
           <div class="toggle-group">
             <label class="toggle"><input type="checkbox" id="lf-no-apr" ${!e.apr?'checked':''}><span class="toggle-slider"></span></label>
@@ -223,7 +222,7 @@ const WPLiabilities = (() => {
 
     WPModal.open(existing ? 'Edit Liability' : 'Add Liability', body, {
       confirmLabel: existing ? 'Update' : 'Add Liability',
-      onConfirm: async () => { await _saveLiab(e.id); },
+      onConfirm: async () => { return await _saveLiab(e.id); },
     });
 
     const noAprCheck = document.getElementById('lf-no-apr');
@@ -311,7 +310,15 @@ const WPLiabilities = (() => {
       period_month:     PERIOD,
       notes:            finalNotes,
     };
-    if (!row.liability_name) { WPToast.warning('Please enter a liability name.'); return false; }
+    if (!row.liability_name) {
+      const nameInput = document.getElementById('lf-name');
+      if (nameInput) {
+        nameInput.style.borderColor = 'var(--clr-danger)';
+        nameInput.focus();
+      }
+      WPToast.warning('Please enter a liability name.');
+      return false;
+    }
     try {
       if (existingId) await WPDb.update('liabilities', existingId, row);
       else            await WPDb.insert('liabilities', row);

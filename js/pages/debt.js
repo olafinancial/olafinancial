@@ -380,7 +380,7 @@ const WPDebt = (() => {
 
     WPModal.open(existing ? 'Edit Debt' : 'Add Debt', body, {
       confirmLabel: existing ? 'Update' : 'Add Debt',
-      onConfirm: async () => { await _save(e.id); },
+      onConfirm: async () => { return await _save(e.id); },
     });
 
     const noAprCheck = document.getElementById('df-no-apr');
@@ -461,13 +461,23 @@ const WPDebt = (() => {
       period_month:     PERIOD,
       notes:            finalNotes,
     };
-    if (!row.liability_name || !row.close_balance) { WPToast.warning('Name and balance are required.'); return; }
+    if (!row.liability_name || !row.close_balance) {
+      const nameInput = document.getElementById('df-name');
+      const balInput = document.getElementById('df-bal');
+      if (nameInput && !row.liability_name) nameInput.style.borderColor = 'var(--clr-danger)';
+      if (balInput && !row.close_balance) balInput.style.borderColor = 'var(--clr-danger)';
+      WPToast.warning('Name and balance are required.');
+      return false;
+    }
     try {
       if (existingId) await WPDb.update('liabilities', existingId, row);
       else            await WPDb.insert('liabilities', row);
       WPToast.success(existingId ? 'Debt updated.' : 'Debt added.');
       await _load();
-    } catch (err) { WPToast.error('Could not save: ' + err.message); }
+    } catch (err) {
+      WPToast.error('Could not save: ' + err.message);
+      return false;
+    }
   }
 
   async function _edit(id) { const l = _liabilities.find(x => x.id===id); if (l) _openForm(l); }
