@@ -2,8 +2,8 @@
   "_note": "Update this file manually when NBS/CBN release new data. Sources: nigerianstat.gov.ng and cbn.gov.ng",
   "updatedAt": "2026-07",
   "inflation": {
-    "value": 32.15,
-    "period": "May 2026",
+    "value": 15.91,
+    "period": "June 2026",
     "source": "NBS",
     "sourceUrl": "https://www.nigerianstat.gov.ng/",
     "trend": "down"
@@ -17,26 +17,26 @@
     "description": "Real GDP per capita growth rate"
   },
   "mpr": {
-    "value": 27.25,
+    "value": 26.5,
     "unit": "percent",
-    "period": "Jul 2026",
+    "period": "May 2026",
     "source": "CBN",
     "sourceUrl": "https://www.cbn.gov.ng/",
     "description": "Monetary Policy Rate (policy anchor)"
   },
   "reserves": {
-    "value": 36.89,
+    "value": 51.86,
     "unit": "Billion USD",
-    "period": "Jul 2026",
+    "period": "July 2026",
     "source": "CBN",
     "sourceUrl": "https://www.cbn.gov.ng/",
     "description": "Gross external/foreign reserves"
   },
   "fx": {
-    "usd": 1485,
-    "gbp": 1890,
-    "eur": 1620,
-    "period": "Jul 2026",
+    "usd": 1380,
+    "gbp": 1856,
+    "eur": 1578,
+    "period": "July 2026",
     "source": "NAFEM / CBN",
     "sourceUrl": "https://www.cbn.gov.ng/",
     "description": "Exchange rates: NGN per 1 unit of foreign currency"
