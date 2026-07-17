@@ -86,7 +86,7 @@ const WPDashboard = (() => {
           <div class="card dashboard-full" id="macroeconomic-card">
             <div class="section-header">
               <span class="section-title">🇳🇬 Macroeconomic Indicators (CBN &amp; NBS)</span>
-              <span class="badge badge-neutral">Live &amp; Local Policy Rates</span>
+              <span class="badge badge-neutral" id="macro-update-badge">Offline Reference Policy Rates</span>
             </div>
             <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-top: 1rem; gap: 1rem;">
               <div style="background:var(--clr-bg); padding:1rem; border-radius:8px; border:1px solid var(--clr-border);">
@@ -254,6 +254,10 @@ const WPDashboard = (() => {
   function _updateEconCard(econ) {
     const card = document.getElementById('macroeconomic-card');
     if (!card) return;
+    const updateBadge = card.querySelector('#macro-update-badge');
+    if (updateBadge && econ.updatedAt) {
+      updateBadge.textContent = `Offline Reference · Updated: ${econ.updatedAt}`;
+    }
     const inf = econ.inflation; const mpr = econ.mpr; const gdp = econ.gdpPerCapita; const res = econ.reserves; const fx = econ.fx;
     card.querySelector('[data-econ="inflation-val"]')  && (card.querySelector('[data-econ="inflation-val"]').textContent  = inf  ? inf.value + '%'  : '—');
     card.querySelector('[data-econ="inflation-meta"]') && (card.querySelector('[data-econ="inflation-meta"]').textContent = inf  ? `NBS, ${inf.period}` : '—');
