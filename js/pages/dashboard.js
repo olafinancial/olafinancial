@@ -35,7 +35,7 @@ const WPDashboard = (() => {
       <div class="page-body">
         <!-- Getting started path for naive users (shown until dismissed) -->
         <div class="card dashboard-full" id="dash-getting-started" style="display:none;margin-bottom:1.25rem"></div>
-        <div class="kpi-grid" id="dash-kpis">${_skeletons(5)}</div>
+        <div class="kpi-grid" id="dash-kpis">${_skeletons(6)}</div>
         <!-- Dashboard Insights -->
         <div id="dash-insights" style="display:none"></div>
         <!-- Insights & Alerts — above charts so visible on login -->
@@ -310,6 +310,11 @@ const WPDashboard = (() => {
         <div class="card-title">Emergency Fund</div>
         <div class="card-value ${s.efStatus.status==='on_track'?'accent':s.efStatus.status==='critical'?'danger':'gold'}">${WPUtils.fmt(efBalance,{compact:true, currency: pageCurrency})}</div>
         <div class="card-meta">${s.efStatus.label||'—'} · Target ${WPUtils.fmt(efTarget,{compact:true, currency: pageCurrency})}</div>
+      </div>
+      <div class="card animate-in" onclick="WPRouter.navigate('/cashflow')" style="animation-delay:0.25s; cursor:pointer">
+        <div class="card-title">Financial Independence Score (FIS)</div>
+        <div class="card-value ${s.passiveKPIs.pctOfExpenses>=100?'accent':s.passiveKPIs.pctOfExpenses>=50?'gold':'danger'}">${s.passiveKPIs.pctOfExpenses.toFixed(1)}%</div>
+        <div class="card-meta">passive coverage of outflows</div>
       </div>`;
   }
 
