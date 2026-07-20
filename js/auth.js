@@ -7,12 +7,67 @@ const WPAuth = (() => {
   let _idleTimer = null;
   const IDLE_TIMEOUT = 15 * 60 * 1000; // 15 minutes
 
+  let _countdownInterval = null;
+  const COUNTDOWN_TIME = 30; // 30 seconds
+
+  function showTimeoutWarning() {
+    let modal = document.getElementById('session-timeout-modal');
+    if (modal) modal.remove();
+
+    modal = document.createElement('div');
+    modal.id = 'session-timeout-modal';
+    modal.className = 'modal-backdrop';
+    modal.style.cssText = 'display:flex;align-items:center;justify-content:center;z-index:9999;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6)';
+    
+    modal.innerHTML = `
+      <div class="card card-modal animate-in" style="max-width:400px;text-align:center;padding:2rem;background:var(--clr-surface);border:1px solid var(--clr-border)">
+        <div style="font-size:3rem;margin-bottom:1rem">⏳</div>
+        <h3 style="margin-bottom:0.5rem;font-weight:700;color:var(--clr-text)">Are you still there?</h3>
+        <p class="text-muted text-sm" style="margin-bottom:1.5rem">
+          Your session is about to expire due to inactivity. You will be signed out in <strong id="session-countdown-num" style="color:var(--clr-danger);font-size:1.15rem">${COUNTDOWN_TIME}</strong> seconds.
+        </p>
+        <button class="btn btn-primary" style="width:100%" id="session-stay-btn">Stay Signed In</button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    let secsLeft = COUNTDOWN_TIME;
+    
+    // Temporarily pause resetting triggers
+    ['click','keydown','mousemove','scroll','touchstart'].forEach(evt =>
+      document.removeEventListener(evt, resetIdleTimer)
+    );
+
+    const countdownSpan = document.getElementById('session-countdown-num');
+    
+    clearInterval(_countdownInterval);
+    _countdownInterval = setInterval(() => {
+      secsLeft--;
+      if (countdownSpan) {
+        countdownSpan.textContent = secsLeft;
+      }
+      if (secsLeft <= 0) {
+        clearInterval(_countdownInterval);
+        modal.remove();
+        WPToast.warning('Session expired. Please sign in again.');
+        signOut();
+      }
+    }, 1000);
+
+    document.getElementById('session-stay-btn')?.addEventListener('click', () => {
+      clearInterval(_countdownInterval);
+      modal.remove();
+      startIdleWatcher();
+      WPToast.success('Session extended.');
+    });
+  }
+
   function resetIdleTimer() {
     clearTimeout(_idleTimer);
     _idleTimer = setTimeout(() => {
-      WPToast.warning('Session expired. Please sign in again.');
-      signOut();
-    }, IDLE_TIMEOUT);
+      showTimeoutWarning();
+    }, IDLE_TIMEOUT - (COUNTDOWN_TIME * 1000));
   }
 
   function startIdleWatcher() {
@@ -27,6 +82,8 @@ const WPAuth = (() => {
       document.removeEventListener(evt, resetIdleTimer)
     );
     clearTimeout(_idleTimer);
+    clearInterval(_countdownInterval);
+    document.getElementById('session-timeout-modal')?.remove();
   }
 
   // ── SIGN UP ───────────────────────────────────────────────
