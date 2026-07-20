@@ -403,6 +403,7 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | [#28](https://github.com/olafinancial/olafinancial/issues/28) | Confirm sponsor partners & activate banners | High | 🔲 Blocked (partners) |
 | [#73](https://github.com/olafinancial/olafinancial/issues/73) | Feature: App Store Submission, Paid Downloads & Referral System | High | 🔲 Open — [`monetization_app_store_guide.md`](./monetization_app_store_guide.md) |
 | [#74](https://github.com/olafinancial/olafinancial/issues/74) | Docs: Classroom Training Guide & Classroom Sandbox Features | Medium | 🔲 Open — [`classroom_training_guide.md`](./classroom_training_guide.md) |
+| [#78](https://github.com/olafinancial/olafinancial/issues/78) | Feature: Calculator Share Button & Move Scheduled Digests to Settings | Medium | 🔲 Open |
 
 ### Recently closed (product)
 
