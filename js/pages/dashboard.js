@@ -35,7 +35,9 @@ const WPDashboard = (() => {
       <div class="page-body">
         <!-- Getting started path for naive users (shown until dismissed) -->
         <div class="card dashboard-full" id="dash-getting-started" style="display:none;margin-bottom:1.25rem"></div>
-        <div class="kpi-grid" id="dash-kpis">${_skeletons(6)}</div>
+        <!-- FI Score hero (#80) -->
+        <div class="card fi-score-card dashboard-full" id="dash-fi-hero" style="display:none;margin-bottom:1.25rem;cursor:pointer" onclick="WPRouter.navigate('/cashflow')"></div>
+        <div class="kpi-grid" id="dash-kpis">${_skeletons(5)}</div>
         <!-- Dashboard Insights -->
         <div id="dash-insights" style="display:none"></div>
         <!-- Insights & Alerts — above charts so visible on login -->
@@ -285,6 +287,33 @@ const WPDashboard = (() => {
     const nwColor = netWorth >= 0 ? 'accent' : 'danger';
     const srPct   = s.cf.netCashFlow / Math.max(1, s.cf.netIncome);
 
+    const fis = s.passiveKPIs.pctOfExpenses;
+    const fisTone = fis >= 100 ? 'accent' : fis >= 50 ? 'gold' : 'danger';
+    const fisLabel = fis >= 100 ? 'Financially independent — passive income covers outflows'
+      : fis >= 50 ? 'Halfway there — keep growing passive income'
+      : 'Building — passive income still covers a small share of outflows';
+
+    const fiHero = document.getElementById('dash-fi-hero');
+    if (fiHero) {
+      fiHero.style.display = '';
+      fiHero.innerHTML = `
+        <div class="fi-score-inner">
+          <div class="fi-score-label">
+            <span class="fi-score-badge">Primary KPI</span>
+            <div class="card-title" style="margin:0.5rem 0 0.25rem;font-size:0.85rem;letter-spacing:0.1em">Financial Independence Score (FIS)</div>
+            <p class="text-sm text-muted" style="margin:0;max-width:28rem;line-height:1.45">${fisLabel}</p>
+          </div>
+          <div class="fi-score-value-wrap">
+            <div class="card-value ${fisTone} fi-score-value">${fis.toFixed(1)}%</div>
+            <div class="card-meta">Passive income covers this share of monthly outflows · open Cash Flow</div>
+          </div>
+          <div class="fi-score-bar-wrap" aria-hidden="true">
+            <div class="fi-score-bar"><div class="fi-score-bar-fill fi-score-bar-fill--${fisTone}" style="width:${Math.min(100, Math.max(2, fis))}%"></div></div>
+            <div class="fi-score-bar-meta"><span>0%</span><span>Goal 100%</span></div>
+          </div>
+        </div>`;
+    }
+
     document.getElementById('dash-kpis').innerHTML = `
       <div class="card animate-in">
         <div class="card-title">Net Worth</div>
@@ -310,11 +339,6 @@ const WPDashboard = (() => {
         <div class="card-title">Emergency Fund</div>
         <div class="card-value ${s.efStatus.status==='on_track'?'accent':s.efStatus.status==='critical'?'danger':'gold'}">${WPUtils.fmt(efBalance,{compact:true, currency: pageCurrency})}</div>
         <div class="card-meta">${s.efStatus.label||'—'} · Target ${WPUtils.fmt(efTarget,{compact:true, currency: pageCurrency})}</div>
-      </div>
-      <div class="card animate-in" onclick="WPRouter.navigate('/cashflow')" style="animation-delay:0.25s; cursor:pointer">
-        <div class="card-title">Financial Independence Score (FIS)</div>
-        <div class="card-value ${s.passiveKPIs.pctOfExpenses>=100?'accent':s.passiveKPIs.pctOfExpenses>=50?'gold':'danger'}">${s.passiveKPIs.pctOfExpenses.toFixed(1)}%</div>
-        <div class="card-meta">passive coverage of outflows</div>
       </div>`;
   }
 

@@ -98,6 +98,24 @@ const WPDb = (() => {
     return data;
   }
 
+  /**
+   * Update user_profiles by user_id. Maps quiz "balanced" → schema "moderate".
+   * Upserts if no profile row exists yet.
+   */
+  async function updateProfile(userId, changes = {}) {
+    if (!userId) throw new Error('No user id');
+    const patch = { ...changes };
+    if (patch.risk_tolerance === 'balanced') patch.risk_tolerance = 'moderate';
+    const { data, error } = await fromTable('user_profiles')
+      .update(patch)
+      .eq('user_id', userId)
+      .select()
+      .maybeSingle();
+    if (error) throw error;
+    if (data) return data;
+    return upsert('user_profiles', { user_id: userId, ...patch }, ['user_id']);
+  }
+
   async function getIncomeByPeriod(userId, period) {
     const { data, error } = await fromTable('income_entries').select('*')
       .eq('user_id', userId).eq('period_month', period);
@@ -396,7 +414,7 @@ const WPDb = (() => {
     init, client,
     getSession, getUser, signOut, signUp, signIn, signInWithGoogle, resetPassword,
     fetchAll, fetchOne, insert, upsert, update, remove,
-    getProfile, getIncomeByPeriod, getExpensesByDateRange,
+    getProfile, updateProfile, getIncomeByPeriod, getExpensesByDateRange,
     getAssetsByPeriod, getLiabilitiesByPeriod, getMonthlySnapshots,
     getRefData, saveSnapshot,
     resetUserData, clearUserLocalState, seedDemoData, USER_DATA_TABLES,

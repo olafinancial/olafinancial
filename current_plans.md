@@ -433,6 +433,16 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 * Sharia tools (Takaful pref, Zakat, Qard Hasan, Halal invest tips) — not app-wide filter  
 * **Settings → Testing & account**: Reset data, Load demo data, Delete account (API)
 
+### Session 21 — 2026-07-20 — P0 customer issues (#77, #74, #73, #80, #79, #71)
+
+* **#77 Invest profile persist**: Restore results after re-login when answers are complete; recompute missing `result`; persist via `localStorage` + `WPDb.updateProfile` + `WPDb.client().auth.updateUser` metadata (`wp_invest_quiz`). Fixed broken save that called non-existent `WPDb.updateProfile` and `window.supabase.auth` (factory, not client). Maps quiz `balanced` → schema `moderate`.
+* **#74 Retirement**: MTM stays on Assets only; Retirement shows a pointer card (no ticker MTM UI).
+* **#73 Assets heading**: Renamed **Equities — Mark-to-Market** → **Marked to market**; copy covers equities, bonds, gold, commodities with tickers.
+* **#80 FI score**: Full-width hero card on Dashboard and Reports (`fi-score-card`); ratios row labels FIS.
+* **#79 Landing**: Tagline / feature — *Determine your Financial Independence Score*.
+* **#71 Compliance**: `APP_CONFIG.disclaimer` replaced with customer compliance statement (educational/admin only; not a broker/adviser).
+* **Cache**: `BUILD_ID` `20260720_p0`, SW `pul-planning-v23`.
+
 ### Session 20 — 2026-07-16 — Popstate Duplication, Blank Screen & E2E Test Fixes
 
 * **Fix**: Added current path check `if (path === _current) return;` to `popstate` listener in `js/router.js` to stop duplicate dispatch loops.

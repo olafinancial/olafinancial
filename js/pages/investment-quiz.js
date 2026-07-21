@@ -172,38 +172,123 @@ const WPInvestmentQuiz = (() => {
   let _step = 0; // question index 0–9, then results
 
   function init(container) {
-    const uid = WPApp.state.user?.id;
-    let saved = uid ? localStorage.getItem(STORAGE_KEY(uid)) : null;
-    if (!saved && WPApp.state.user?.user_metadata?.wp_invest_quiz) {
-      saved = JSON.stringify(WPApp.state.user.user_metadata.wp_invest_quiz);
-      if (uid) {
-        try { localStorage.setItem(STORAGE_KEY(uid), saved); } catch (_) {}
-      }
-    }
-    if (saved) {
-      try {
-        const data = JSON.parse(saved);
-        _answers = data.answers || {};
-        _notes = data.notes || '';
-        if (data.result) _view = 'results';
-      } catch (_) {
-        _answers = {};
-      }
-    }
-
-    // Prefill age band from profile when empty
-    if (_answers.q1 == null && WPApp.state.profile?.age) {
-      const age = WPApp.state.profile.age;
-      _answers.q1 = age < 30 ? 0 : age <= 45 ? 1 : age <= 60 ? 2 : 3;
-    }
-    // Prefill risk attitude loosely from profile risk_tolerance
-    if (_answers.q5 == null && WPApp.state.profile?.risk_tolerance) {
-      const r = WPApp.state.profile.risk_tolerance;
-      _answers.q5 = r === 'aggressive' ? 0 : r === 'conservative' ? 2 : 1;
-    }
-
+    _answers = {};
+    _notes = '';
+    _view = 'quiz';
     _step = 0;
+
+    const uid = WPApp.state.user?.id;
+    const data = _loadSaved(uid);
+
+    if (data) {
+      _answers = data.answers || {};
+      _notes = data.notes || '';
+    }
+
+    // Complete questionnaire → always restore results (recompute if payload incomplete)
+    if (_hasCompleteAnswers()) {
+      if (!data?.result) {
+        _persist(uid);
+      }
+      _view = 'results';
+      _step = 0;
+    } else {
+      // Resume at first unanswered question (not always Q1)
+      const firstOpen = QUESTIONS.findIndex(q => _answers[q.id] == null);
+      _step = firstOpen >= 0 ? firstOpen : 0;
+
+      // Prefill only when still mid-quiz
+      if (_answers.q1 == null && WPApp.state.profile?.age) {
+        const age = WPApp.state.profile.age;
+        _answers.q1 = age < 30 ? 0 : age <= 45 ? 1 : age <= 60 ? 2 : 3;
+      }
+      if (_answers.q5 == null && WPApp.state.profile?.risk_tolerance) {
+        const r = WPApp.state.profile.risk_tolerance;
+        _answers.q5 = r === 'aggressive' ? 0 : r === 'conservative' ? 2 : 1;
+      }
+    }
+
     _render(container);
+
+    // Rehydrate from Supabase auth metadata if local cache was empty (new device / cleared storage)
+    if (_view !== 'results' && uid) {
+      _hydrateFromAuth(container, uid);
+    }
+  }
+
+  function _loadSaved(uid) {
+    let raw = uid ? localStorage.getItem(STORAGE_KEY(uid)) : null;
+    if (!raw && WPApp.state.user?.user_metadata?.wp_invest_quiz) {
+      try {
+        raw = JSON.stringify(WPApp.state.user.user_metadata.wp_invest_quiz);
+        if (uid) localStorage.setItem(STORAGE_KEY(uid), raw);
+      } catch (_) { /* ignore */ }
+    }
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function _hydrateFromAuth(container, uid) {
+    try {
+      const user = await WPDb.getUser();
+      const meta = user?.user_metadata?.wp_invest_quiz;
+      if (!meta || !meta.answers) return;
+      if (WPApp.state.user) WPApp.state.user = user;
+      try { localStorage.setItem(STORAGE_KEY(uid), JSON.stringify(meta)); } catch (_) {}
+      _answers = meta.answers || {};
+      _notes = meta.notes || '';
+      if (_hasCompleteAnswers()) {
+        if (!meta.result) _persist(uid);
+        _view = 'results';
+        _render(container);
+      }
+    } catch (err) {
+      console.warn('Invest quiz: could not hydrate from auth metadata', err);
+    }
+  }
+
+  /** Persist answers + result to localStorage, profile risk_tolerance, and auth metadata. */
+  function _persist(uid) {
+    const result = _score();
+    const payload = {
+      answers: _answers,
+      notes: _notes,
+      result,
+      completedAt: new Date().toISOString(),
+    };
+    if (!uid) return payload;
+
+    try { localStorage.setItem(STORAGE_KEY(uid), JSON.stringify(payload)); } catch (_) {}
+
+    // user_profiles.risk_tolerance (schema: conservative | moderate | aggressive)
+    if (typeof WPDb.updateProfile === 'function') {
+      WPDb.updateProfile(uid, { risk_tolerance: result.profile })
+        .then(profile => {
+          if (profile) WPApp.state.profile = { ...(WPApp.state.profile || {}), ...profile };
+        })
+        .catch(err => console.error('Failed to sync investment profile to DB', err));
+    }
+
+    // Auth user_metadata survives re-login across devices (use client, not window.supabase factory)
+    try {
+      const sb = WPDb.client && WPDb.client();
+      if (sb?.auth?.updateUser) {
+        sb.auth.updateUser({ data: { wp_invest_quiz: payload } })
+          .then(({ data, error }) => {
+            if (error) console.error('Failed to sync invest quiz metadata', error);
+            else if (data?.user && WPApp.state.user) WPApp.state.user = data.user;
+          })
+          .catch(err => console.error('Failed to sync invest quiz metadata', err));
+      }
+    } catch (err) {
+      console.error('Failed to sync invest quiz metadata', err);
+    }
+
+    return payload;
   }
 
   function _render(container) {
@@ -375,33 +460,9 @@ const WPInvestmentQuiz = (() => {
   }
 
   function _finish(container) {
-    const result = _score();
     const uid = WPApp.state.user?.id;
-    const payload = {
-      answers: _answers,
-      notes: _notes,
-      result,
-      completedAt: new Date().toISOString(),
-    };
-    if (uid) {
-      try { localStorage.setItem(STORAGE_KEY(uid), JSON.stringify(payload)); } catch (_) {}
-      
-      // Sync to Supabase user_profiles risk_tolerance
-      WPDb.updateProfile(uid, { risk_tolerance: result.profile })
-        .then(profile => {
-          if (profile) WPApp.state.profile = profile;
-        })
-        .catch(err => console.error('Failed to sync investment profile to DB', err));
-        
-      // Sync to auth user_metadata
-      if (window.supabase && typeof window.supabase.auth.updateUser === 'function') {
-        window.supabase.auth.updateUser({
-          data: {
-            wp_invest_quiz: payload
-          }
-        }).catch(err => console.error('Failed to sync auth metadata', err));
-      }
-    }
+    const payload = _persist(uid);
+    const result = payload.result;
     _view = 'results';
     _render(container);
     WPToast.success(`Profile: ${_profileLabel(result.profile)} (${result.total} pts)`);

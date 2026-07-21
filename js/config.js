@@ -239,10 +239,14 @@ const APP_CONFIG = {
     coverageRatioMin:      1.0,   // ≥ 1× (assets / liabilities)
   },
 
-  // ── DISCLAIMER ────────────────────────────────────────────
+  // ── DISCLAIMER / COMPLIANCE (#71) ─────────────────────────
   disclaimer: `
-    <strong>Disclaimer:</strong> Pul Planning provides financial calculations for informational 
-    and educational purposes only. It is not a licensed financial adviser. Always verify 
-    with a qualified Nigerian Chartered Accountant or financial planner before making financial decisions.
+    <strong>Compliance statement:</strong> Pul operates as an educational and administrative
+    platform designed to support account management and financial planning. Pul is not a
+    stockbroker, investment adviser, or securities trading service, and does not provide
+    investment advice or recommend specific securities for purchase. Our role is strictly
+    educational and administrative. We partner with licensed financial service providers to
+    assist clients in achieving their financial objectives. Pul maintains full compliance
+    with all applicable international regulations governing data security and privacy.
   `,
 };

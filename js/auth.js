@@ -184,17 +184,21 @@ const WPAuth = (() => {
           </div>
         </div>
         <div class="auth-brand-tagline">
-          Your financial <span>freedom</span> journey starts here.
+          Determine your <span>Financial Independence</span> Score
         </div>
         <p class="auth-brand-sub">Track your net worth, crush debt, plan for retirement — all built for Nigeria.</p>
         <div class="auth-features">
+          <div class="auth-feature">
+            <div class="auth-feature-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00C896" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <span>Determine your Financial Independence Score</span>
+          </div>
           <div class="auth-feature">
             <div class="auth-feature-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00C896" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
             <span>Nigeria Tax Act 2025 compliant tax calculations</span>
           </div>
           <div class="auth-feature">
             <div class="auth-feature-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00C896" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
-            <span>PENCOM pension planning & RSA tracking</span>
+            <span>PENCOM pension planning &amp; RSA tracking</span>
           </div>
           <div class="auth-feature">
             <div class="auth-feature-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00C896" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
@@ -289,7 +293,7 @@ const WPAuth = (() => {
           <img class="brand-logo" src="pul_logo.jpeg" alt="Pul" width="64" height="56" />
           <div><div class="sidebar-logo-text">Pul Planning</div></div>
         </div>
-        <div class="auth-brand-tagline">Build <span>wealth</span>. Plan your <span>future</span>.</div>
+        <div class="auth-brand-tagline">Determine your <span>Financial Independence</span> Score</div>
         <p class="auth-brand-sub">Nigeria's most comprehensive personal finance platform. Free forever.</p>
         ${typeof APP_CONFIG !== 'undefined' && APP_CONFIG.brandSocialHTML ? APP_CONFIG.brandSocialHTML() : ''}
       </div>

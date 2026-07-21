@@ -68,7 +68,9 @@ const WPReports = (() => {
           </div>
         </div>
 
-        <div id="reports-kpis" style="margin-bottom:1.5rem"></div>
+        <!-- FI Score hero (#80) — outside share card so always visible at top -->
+        <div class="card fi-score-card" id="rpt-fi-hero" style="margin-bottom:1.5rem"></div>
+        <div id="reports-kpis" class="kpi-grid" style="margin-bottom:1.5rem"></div>
         <!-- Shareable snapshot section — captured by html2canvas on Share -->
         <div id="reports-share-card">
           <!-- Strategic plain-language health report (#49) -->
@@ -367,6 +369,34 @@ const WPReports = (() => {
     const nwChangePage = WPUtils.convert(nwChange, baseCur, pageCurrency);
     const avgSavingsPage = WPUtils.convert(avgSavings, baseCur, pageCurrency);
 
+    const cf = WPUtils.calcCashFlow(income, expenses);
+    const passive = WPUtils.passiveIncomeKPI(income, cf.totalExpenses);
+    const fis = passive.pctOfExpenses;
+    const fisTone = fis >= 100 ? 'accent' : fis >= 50 ? 'gold' : 'danger';
+    const fisLabel = fis >= 100
+      ? 'You are at or above full passive coverage of outflows.'
+      : 'Share of monthly outflows covered by passive income (goal: 100%).';
+
+    const fiHero = document.getElementById('rpt-fi-hero');
+    if (fiHero) {
+      fiHero.innerHTML = `
+        <div class="fi-score-inner">
+          <div class="fi-score-label">
+            <span class="fi-score-badge">Headline metric</span>
+            <div class="card-title" style="margin:0.5rem 0 0.25rem;font-size:0.85rem;letter-spacing:0.1em">Financial Independence Score (FIS)</div>
+            <p class="text-sm text-muted" style="margin:0;max-width:28rem;line-height:1.45">${fisLabel}</p>
+          </div>
+          <div class="fi-score-value-wrap">
+            <div class="card-value ${fisTone} fi-score-value">${fis.toFixed(1)}%</div>
+            <div class="card-meta">Passive cover · ${WPUtils.fmt(WPUtils.convert(passive.passiveKobo || 0, baseCur, pageCurrency), { compact: true, currency: pageCurrency })} / mo</div>
+          </div>
+          <div class="fi-score-bar-wrap" aria-hidden="true">
+            <div class="fi-score-bar"><div class="fi-score-bar-fill fi-score-bar-fill--${fisTone}" style="width:${Math.min(100, Math.max(2, fis))}%"></div></div>
+            <div class="fi-score-bar-meta"><span>0%</span><span>Goal 100%</span></div>
+          </div>
+        </div>`;
+    }
+
     document.getElementById('reports-kpis').innerHTML = `
       <div class="card"><div class="card-title">Net Worth (This Month)</div>
         <div class="card-value ${totalAssets-totalLiab>=0?'accent':'danger'}">${WPUtils.fmt(nwPage, {compact:true, currency: pageCurrency})}</div></div>
@@ -485,7 +515,7 @@ const WPReports = (() => {
       { name:'Savings Rate',          value:`${savingsRate.toFixed(1)}%`,           target:'≥ 20%',    ok: savingsRate >= 20 },
       { name:'Debt-to-Asset Ratio',   value:`${dta.toFixed(1)}%`,                  target:'< 50%',    ok: dta < 50 },
       { name:'Coverage Ratio',        value:`${isFinite(coverage)?coverage.toFixed(2)+'x':'∞'}`,target:'≥ 1×', ok: coverage >= 1 || !isFinite(coverage) },
-      { name:'Passive Income Cover',  value:`${passive.pctOfExpenses.toFixed(1)}%`, target:'≥ 100%',  ok: passive.pctOfExpenses >= 100 },
+      { name:'Financial Independence Score (FIS)', value:`${passive.pctOfExpenses.toFixed(1)}%`, target:'≥ 100% passive cover', ok: passive.pctOfExpenses >= 100 },
       { name:'Productive Coverage',   value:`${!isFinite(prodCov) ? (prod.incomeGenTotal > 0 ? '∞' : '—') : prodCov.toFixed(2)+'×'}`, target:'≥ 1× income-gen / interest debt', ok: prodOk && (prod.interestBearingTotal === 0 || prodCov >= 1) },
     ];
 

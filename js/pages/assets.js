@@ -42,19 +42,20 @@ const WPAssets = (() => {
         <div class="kpi-grid" id="assets-kpis" style="margin-bottom:1.5rem"></div>
         <div id="assets-ndic-alert" style="display:none"></div>
 
-        <!-- Mark-to-market equities (#47) -->
+        <!-- Marked to market — any ticker-quoted holding (#47, #73) -->
         <div class="card" style="margin-bottom:1.5rem" id="assets-mtm-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem">
             <div>
-              <div class="section-title" style="margin:0">&#x1F4C8; Equities — Mark-to-Market</div>
-              <p class="text-xs text-muted" style="margin:0.35rem 0 0;max-width:40rem">
-                Add stocks/ETFs/bonds with a <strong>ticker</strong> so holdings can auto-update from market prices.
-                Use <em>Add Asset → Equities → Ticker valuation</em>.
+              <div class="section-title" style="margin:0">&#x1F4C8; Marked to market</div>
+              <p class="text-xs text-muted" style="margin:0.35rem 0 0;max-width:42rem">
+                Track any asset or liability with a <strong>ticker</strong> and exchange quote — equities, ETFs,
+                bonds, gold, commodities, and more. Prices update against cost basis for gain/loss.
+                Use <em>Add Asset</em> and enter a ticker for valuation.
               </p>
             </div>
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
               <button type="button" class="btn btn-secondary btn-sm" id="assets-refresh-mtm-btn" title="Refresh live prices">↻ Refresh prices</button>
-              <button type="button" class="btn btn-secondary btn-sm" id="assets-add-equity-btn">+ Add equity</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="assets-add-equity-btn">+ Add ticker holding</button>
             </div>
           </div>
           <div class="table-wrap">
@@ -72,7 +73,7 @@ const WPAssets = (() => {
                 </tr>
               </thead>
               <tbody id="assets-mtm-list">
-                <tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--clr-text-3)">No ticker holdings yet. Add an equity with a ticker to track mark-to-market.</td></tr>
+                <tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--clr-text-3)">No ticker holdings yet. Add an asset with a ticker to mark it to market.</td></tr>
               </tbody>
             </table>
           </div>

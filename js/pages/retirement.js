@@ -124,15 +124,15 @@ const WPRetirement = (() => {
           <button class="btn btn-primary" id="ret-calc-btn">Calculate Retirement Plan</button>
         </div>
 
-        <!-- Equities MTM lives under Assets (#47) -->
-        <div class="card" style="margin-bottom:1.5rem;padding:1.1rem 1.25rem">
-          <div class="section-title" style="margin:0 0 0.5rem">&#x1F4C8; Stock &amp; equity holdings</div>
+        <!-- Holdings / MTM live only under Assets (#47, #74) — pointer only -->
+        <div class="card" style="margin-bottom:1.5rem;padding:1.1rem 1.25rem;background:var(--clr-surface-2)">
+          <div class="section-title" style="margin:0 0 0.5rem">Investment holdings</div>
           <p class="text-sm text-muted" style="margin:0 0 0.75rem;max-width:40rem">
-            Mark-to-market tracking with tickers lives on the <strong>Assets</strong> page under
-            <em>Equities / Stocks / ETFs → Ticker valuation</em>. Your retirement projection still
-            includes those holdings automatically.
+            Track stocks, bonds, and other ticker-priced holdings on the <strong>Assets</strong> page
+            (<em>Marked to market</em>). This Retirement planner uses your balances for projections only —
+            market pricing is not managed here.
           </p>
-          <a href="#/assets" class="btn btn-secondary btn-sm">Open Assets · manage tickers</a>
+          <a href="#/assets" class="btn btn-secondary btn-sm">Open Assets</a>
         </div>
 
         <!-- Results -->
