@@ -49,15 +49,6 @@ const WPReports = (() => {
             </div>
           </div>
         </div>
-        <!-- Digests live in Settings (#78) -->
-        <div class="card" style="margin-bottom:1.25rem;padding:0.9rem 1.1rem;background:var(--clr-surface-2)">
-          <p class="text-sm text-muted" style="margin:0;line-height:1.5">
-            📬 <strong>Scheduled email digests</strong> are configured under
-            <a href="#/settings" style="color:var(--clr-accent)">Settings → Email Digest</a>
-            (daily / weekly Sundays / monthly).
-          </p>
-        </div>
-
         <!-- FI Score hero (#80) — outside share card so always visible at top -->
         <div class="card fi-score-card" id="rpt-fi-hero" style="margin-bottom:1.5rem"></div>
         <div id="reports-kpis" class="kpi-grid" style="margin-bottom:1.5rem"></div>
