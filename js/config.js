@@ -204,14 +204,19 @@ const APP_CONFIG = {
     { upTo: Infinity,    rate: 0.25, label: '25%' },                    // Above ₦500M: 25%
   ],
 
-  // Annual reliefs (kobo)
+  // Annual reliefs (kobo) — NTA 2025 §30(2) six deductible expenses
+  // 1 Pension · 2 NHF · 3 NHIS · 4 Mortgage interest (owner-occupied) ·
+  // 5 Life insurance / deferred annuity (self + spouse) · 6 Rent relief
   taxReliefs: {
-    personalRelief:    500_000_00,   // ₦500,000 personal income relief
-    pensionRelief:     true,          // Employee pension (8%) is fully deductible
-    nhfRelief:         true,          // NHF contributions are deductible
-    disabilityRelief:  2_000_000_00, // ₦2M if permanently incapacitated
-    maxRentRelief:     500_000_00,   // 20% of rent paid, max ₦500,000
+    pensionRelief:     true,          // Pension Reform Act (8% + approved AVC)
+    nhfRelief:         true,          // NHF 2.5% of basic
+    nhisRelief:        true,          // NHIS contributions
+    mortgageInterest:  true,          // Interest only on owner-occupied home loan
+    lifeInsurance:     true,          // Premiums on life of self or spouse
+    maxRentRelief:     50_000_000,    // 20% of annual rent paid, max ₦500,000
   },
+  rentReliefMax: 50_000_000,          // ₦500,000 kobo alias for calcRentRelief
+
 
   // ── PENCOM CONTRIBUTORY PENSION ───────────────────────────
   pencom: {

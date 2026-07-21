@@ -8,7 +8,9 @@ const WPSalaryCalculator = (() => {
   let _basicPct = 60;
   let _housingPct = 20;
   let _transportPct = 20;
-  let _annualRent = 0;
+  let _annualRent = 0;           // rent paid (for rent relief #6)
+  let _mortgageInterestAnnual = 0; // owner-occupied loan interest #4
+  let _lifeInsuranceAnnual = 0;  // life / deferred annuity self+spouse #5
   let _avc = 0;
   let _pensionEnabled = true;
   let _nhfEnabled = true;
@@ -29,7 +31,7 @@ const WPSalaryCalculator = (() => {
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem">
           <div>
             <h3 style="margin:0;font-weight:700;color:#ffffff">🇳🇬 Salary Calculator (Gross → Net / PAYE)</h3>
-            <p class="text-xs text-muted" style="margin:0.35rem 0 0">Interactive gross-to-net, NHF, rent relief &amp; tax-year ledger (Nigeria Tax Act 2025). Replaces the simple PAYE SME tool.</p>
+            <p class="text-xs text-muted" style="margin:0.35rem 0 0">All six NTA 2025 §30(2) tax-free deductions · gross-to-net · tax-year ledger</p>
           </div>
           <select id="sc-page-currency" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
             <option value="NGN">NGN (₦)</option>
@@ -79,36 +81,67 @@ const WPSalaryCalculator = (() => {
                   <input class="input" type="number" id="sc-transport-pct" value="20" min="0" max="100">
                 </div>
               </div>
-              <div class="form-group">
-                <label for="sc-rent">Annual Rent Paid (for Rent Relief)</label>
-                <div class="input-prefix-group">
-                  <span class="input-prefix">₦</span>
-                  <input class="input" id="sc-rent" value="0">
-                </div>
-              </div>
-              <div class="form-group" style="margin-top:1rem;display:flex;flex-direction:column;gap:0.75rem">
-                <div class="toggle-group">
+              <hr style="border:0;border-top:1px solid var(--clr-border);margin:1.25rem 0">
+              <div class="section-title" style="margin-bottom:0.35rem">Six tax-free deductions (NTA 2025 §30(2))</div>
+              <p class="text-xs text-muted" style="margin:0 0 1rem;line-height:1.45">
+                All six reduce chargeable income before PAYE. Items 1–3 are usually withheld from payroll
+                (and reduce take-home). Items 4–6 are claim-based reliefs — enter annual amounts with
+                documentary evidence. Rent relief is <strong>20% of rent paid, max ₦500,000</strong>.
+              </p>
+
+              <!-- 1 Pension -->
+              <div class="form-group" style="margin-bottom:0.85rem">
+                <div class="toggle-group" style="margin-bottom:0.5rem">
                   <label class="toggle"><input type="checkbox" id="sc-pension-toggle" checked><span class="toggle-slider"></span></label>
-                  <span class="toggle-label">Deduct Pension Contribution (8%)</span>
+                  <span class="toggle-label"><strong>1. Pension</strong> (Pension Reform Act — 8% of emoluments)</span>
                 </div>
-                <div class="toggle-group">
-                  <label class="toggle"><input type="checkbox" id="sc-nhf-toggle" checked><span class="toggle-slider"></span></label>
-                  <span class="toggle-label">Deduct National Housing Fund (NHF 2.5%)</span>
-                </div>
-                <div class="toggle-group">
-                  <label class="toggle"><input type="checkbox" id="sc-nhis-toggle" checked><span class="toggle-slider"></span></label>
-                  <span class="toggle-label">Deduct National Health Insurance (NHIS 1.75%)</span>
-                </div>
-              </div>
-              <hr style="border:0;border-top:1px solid var(--clr-border);margin:1.5rem 0">
-              <div class="section-title" style="margin-bottom:1rem">What-If Tax Optimizer</div>
-              <div class="form-group">
-                <label for="sc-avc">Voluntary Pension Contribution (Monthly)</label>
+                <label for="sc-avc" class="text-xs text-muted">Additional Voluntary Contribution — AVC monthly (tax-exempt if held ≥5 years)</label>
                 <div class="input-prefix-group">
                   <span class="input-prefix">₦</span>
                   <input class="input" id="sc-avc" value="0">
                 </div>
-                <span class="text-xs text-muted" style="margin-top:0.25rem;display:block">Voluntary contributions to pension are tax-exempt, lowering taxable income.</span>
+              </div>
+
+              <!-- 2 NHF -->
+              <div class="toggle-group" style="margin-bottom:0.85rem">
+                <label class="toggle"><input type="checkbox" id="sc-nhf-toggle" checked><span class="toggle-slider"></span></label>
+                <span class="toggle-label"><strong>2. NHF</strong> — National Housing Fund (2.5% of basic)</span>
+              </div>
+
+              <!-- 3 NHIS -->
+              <div class="toggle-group" style="margin-bottom:0.85rem">
+                <label class="toggle"><input type="checkbox" id="sc-nhis-toggle" checked><span class="toggle-slider"></span></label>
+                <span class="toggle-label"><strong>3. NHIS</strong> — National Health Insurance (1.75% of basic estimate)</span>
+              </div>
+
+              <!-- 4 Mortgage interest -->
+              <div class="form-group" style="margin-bottom:0.85rem">
+                <label for="sc-mortgage"><strong>4. Mortgage interest</strong> — owner-occupied home (annual interest only)</label>
+                <div class="input-prefix-group">
+                  <span class="input-prefix">₦</span>
+                  <input class="input" id="sc-mortgage" value="0" placeholder="Interest paid this year, not principal">
+                </div>
+                <span class="text-xs text-muted" style="margin-top:0.25rem;display:block">Interest on a loan to develop / own your residential house. Principal is not deductible.</span>
+              </div>
+
+              <!-- 5 Life insurance -->
+              <div class="form-group" style="margin-bottom:0.85rem">
+                <label for="sc-life"><strong>5. Life insurance / deferred annuity</strong> — self + spouse (annual premiums)</label>
+                <div class="input-prefix-group">
+                  <span class="input-prefix">₦</span>
+                  <input class="input" id="sc-life" value="0" placeholder="Premiums paid for self and/or spouse">
+                </div>
+                <span class="text-xs text-muted" style="margin-top:0.25rem;display:block">Life assurance or deferred annuity premiums for you or your spouse (proof of payment required).</span>
+              </div>
+
+              <!-- 6 Rent relief -->
+              <div class="form-group" style="margin-bottom:0.5rem">
+                <label for="sc-rent"><strong>6. Annual rent paid</strong> → rent relief (20%, max ₦500,000)</label>
+                <div class="input-prefix-group">
+                  <span class="input-prefix">₦</span>
+                  <input class="input" id="sc-rent" value="0" placeholder="Total rent paid in the year">
+                </div>
+                <span class="text-xs text-muted" style="margin-top:0.25rem;display:block" id="sc-rent-relief-hint">Computed rent relief: ₦0</span>
               </div>
             </form>
           </div>
@@ -128,14 +161,20 @@ const WPSalaryCalculator = (() => {
                 <table class="text-sm">
                   <tbody>
                     <tr><td>Gross Salary</td><td class="td-mono text-right" id="row-gross">₦0.00</td></tr>
-                    <tr id="row-pension-tr"><td>Pension Contribution (8% + AVC)</td><td class="td-mono text-right text-gold" id="row-pension">-₦0.00</td></tr>
-                    <tr id="row-nhf-tr"><td>NHF Deduction (2.5% of Basic)</td><td class="td-mono text-right text-gold" id="row-nhf">-₦0.00</td></tr>
-                    <tr id="row-nhis-tr"><td>NHIS Deduction (1.75% of Basic)</td><td class="td-mono text-right text-gold" id="row-nhis">-₦0.00</td></tr>
-                    <tr><td>PAYE Tax (Estimated)</td><td class="td-mono text-right text-danger" id="row-tax">-₦0.00</td></tr>
-                    <tr style="font-weight:700"><td>Net Salary</td><td class="td-mono text-right text-accent" id="row-net">₦0.00</td></tr>
+                    <tr id="row-pension-tr"><td>1. Pension (8% + AVC)</td><td class="td-mono text-right text-gold" id="row-pension">-₦0.00</td></tr>
+                    <tr id="row-nhf-tr"><td>2. NHF (2.5% of basic)</td><td class="td-mono text-right text-gold" id="row-nhf">-₦0.00</td></tr>
+                    <tr id="row-nhis-tr"><td>3. NHIS (1.75% of basic)</td><td class="td-mono text-right text-gold" id="row-nhis">-₦0.00</td></tr>
+                    <tr id="row-mortgage-tr" style="display:none"><td>4. Mortgage interest (tax relief)</td><td class="td-mono text-right text-gold" id="row-mortgage">−₦0.00</td></tr>
+                    <tr id="row-life-tr" style="display:none"><td>5. Life insurance (tax relief)</td><td class="td-mono text-right text-gold" id="row-life">−₦0.00</td></tr>
+                    <tr id="row-rent-tr" style="display:none"><td>6. Rent relief (20% / ₦500k cap)</td><td class="td-mono text-right text-gold" id="row-rent">−₦0.00</td></tr>
+                    <tr><td>PAYE Tax (after all six reliefs)</td><td class="td-mono text-right text-danger" id="row-tax">-₦0.00</td></tr>
+                    <tr style="font-weight:700"><td>Net Salary (payroll take-home)</td><td class="td-mono text-right text-accent" id="row-net">₦0.00</td></tr>
                   </tbody>
                 </table>
               </div>
+              <p class="text-xs text-muted" style="margin:0.75rem 0 0;line-height:1.45" id="sc-relief-note">
+                Items 4–6 lower PAYE only (not withheld from salary). Net take-home = Gross − Pension − NHF − NHIS − PAYE.
+              </p>
             </div>
             <div style="max-height:200px;margin-top:1rem;display:flex;justify-content:center">
               <canvas id="sc-chart" style="max-height:180px"></canvas>
@@ -171,6 +210,16 @@ const WPSalaryCalculator = (() => {
         <!-- Tax Reference -->
         <div class="card">
           <div class="section-title">Tax Reference (Nigeria Tax Act 2025)</div>
+          <p class="text-xs text-muted" style="margin:0.5rem 0 0;line-height:1.5">
+            <strong>§30(2) six deductible expenses:</strong>
+            (1) Pension contributions (incl. approved AVC),
+            (2) NHF contributions,
+            (3) NHIS contributions,
+            (4) Interest on loans for owner-occupied residential housing,
+            (5) Life insurance / deferred annuity premiums (self or spouse),
+            (6) Rent relief — 20% of annual rent paid, max ₦500,000.
+            CRA abolished. Documentary evidence required for claim-based reliefs.
+          </p>
           <div class="table-wrap" style="margin-top:1rem">
             <table class="text-xs">
               <thead>
@@ -201,6 +250,8 @@ const WPSalaryCalculator = (() => {
     const housingEl = document.getElementById('sc-housing-pct');
     const transEl = document.getElementById('sc-transport-pct');
     const rentEl = document.getElementById('sc-rent');
+    const mortgageEl = document.getElementById('sc-mortgage');
+    const lifeEl = document.getElementById('sc-life');
     const avcEl = document.getElementById('sc-avc');
     const pensionToggle = document.getElementById('sc-pension-toggle');
     const nhfToggle = document.getElementById('sc-nhf-toggle');
@@ -213,8 +264,7 @@ const WPSalaryCalculator = (() => {
     }
 
     WPUtils.maskNumberInput(grossEl);
-    if (rentEl) WPUtils.maskNumberInput(rentEl);
-    if (avcEl) WPUtils.maskNumberInput(avcEl);
+    [rentEl, mortgageEl, lifeEl, avcEl].forEach(el => { if (el) WPUtils.maskNumberInput(el); });
 
     // Event listeners
     const triggerRecalc = () => {
@@ -223,6 +273,8 @@ const WPSalaryCalculator = (() => {
       _housingPct = parseFloat(housingEl?.value) || 0;
       _transportPct = parseFloat(transEl?.value) || 0;
       _annualRent = WPUtils.nairaToKobo(WPUtils.cleanNum(rentEl?.value)) || 0;
+      _mortgageInterestAnnual = WPUtils.nairaToKobo(WPUtils.cleanNum(mortgageEl?.value)) || 0;
+      _lifeInsuranceAnnual = WPUtils.nairaToKobo(WPUtils.cleanNum(lifeEl?.value)) || 0;
       _avc = WPUtils.nairaToKobo(WPUtils.cleanNum(avcEl?.value)) || 0;
       _pensionEnabled = pensionToggle ? pensionToggle.checked : true;
       _nhfEnabled = nhfToggle ? nhfToggle.checked : true;
@@ -235,6 +287,8 @@ const WPSalaryCalculator = (() => {
     housingEl?.addEventListener('input', triggerRecalc);
     transEl?.addEventListener('input', triggerRecalc);
     rentEl?.addEventListener('input', triggerRecalc);
+    mortgageEl?.addEventListener('input', triggerRecalc);
+    lifeEl?.addEventListener('input', triggerRecalc);
     avcEl?.addEventListener('input', triggerRecalc);
     pensionToggle?.addEventListener('change', triggerRecalc);
     nhfToggle?.addEventListener('change', triggerRecalc);
@@ -267,76 +321,102 @@ const WPSalaryCalculator = (() => {
     triggerRecalc();
   }
 
+  function _toNGN(koboPage, pageCurrency) {
+    return pageCurrency === 'USD' ? WPUtils.convert(koboPage, 'USD', 'NGN') : koboPage;
+  }
+
+  function _fromNGN(koboNGN, pageCurrency) {
+    return pageCurrency === 'USD' ? WPUtils.convert(koboNGN, 'NGN', pageCurrency) : koboNGN;
+  }
+
   function _recalculate() {
     const pageCurrency = localStorage.getItem('wp_page_currency_salary_calc') || 'NGN';
-    const sym = pageCurrency === 'USD' ? '$' : '₦';
 
-    // Conversions internally to NGN for Tax Act calculations (Nigerian brackets are NGN based)
-    const monthlyGrossNGN = pageCurrency === 'USD' ? WPUtils.convert(_monthlyGross, 'USD', 'NGN') : _monthlyGross;
+    // Work in NGN kobo for Tax Act 2025 brackets
+    const monthlyGrossNGN = _toNGN(_monthlyGross, pageCurrency);
     const basicNGN = monthlyGrossNGN * (_basicPct / 100);
     const housingNGN = monthlyGrossNGN * (_housingPct / 100);
     const transportNGN = monthlyGrossNGN * (_transportPct / 100);
-    
-    // Pension Employee 8%
-    const pensionBaseNGN = basicNGN + housingNGN + transportNGN;
-    const pensionEmployeeNGN = _pensionEnabled ? (Math.round(pensionBaseNGN * 0.08) + (pageCurrency === 'USD' ? WPUtils.convert(_avc, 'USD', 'NGN') : _avc)) : (pageCurrency === 'USD' ? WPUtils.convert(_avc, 'USD', 'NGN') : _avc);
-    
-    // NHF 2.5% of basic
-    const nhfNGN = _nhfEnabled ? Math.round(basicNGN * 0.025) : 0;
+    const avcMonthlyNGN = _toNGN(_avc, pageCurrency);
 
-    // NHIS 1.75% of basic
-    const nhisNGN = _nhisEnabled ? Math.round(basicNGN * 0.0175) : 0;
-    
-    // Rent Relief & PAYE
-    const rentNGN = pageCurrency === 'USD' ? WPUtils.convert(_annualRent, 'USD', 'NGN') : _annualRent;
+    // 1. Pension (8% of emoluments + AVC) — payroll withholding
+    const pensionStatutory = _pensionEnabled
+      ? WPUtils.calcPensionEmployee(basicNGN, housingNGN, transportNGN)
+      : 0;
+    const pensionMonthlyNGN = pensionStatutory + avcMonthlyNGN;
+
+    // 2. NHF — 2.5% of basic
+    const nhfMonthlyNGN = _nhfEnabled ? WPUtils.calcNHF(basicNGN) : 0;
+
+    // 3. NHIS — 1.75% of basic (estimate; override via income form if needed)
+    const nhisMonthlyNGN = _nhisEnabled
+      ? (WPUtils.calcNHIS ? WPUtils.calcNHIS(basicNGN) : Math.round(basicNGN * 0.0175))
+      : 0;
+
+    // 4–6 annual claim-based reliefs (entered as annual amounts)
+    const annualRentNGN = _toNGN(_annualRent, pageCurrency);
+    const mortgageAnnualNGN = _toNGN(_mortgageInterestAnnual, pageCurrency);
+    const lifeAnnualNGN = _toNGN(_lifeInsuranceAnnual, pageCurrency);
+    const rentReliefAnnualNGN = WPUtils.calcRentRelief(annualRentNGN);
+
     const annualGrossNGN = monthlyGrossNGN * 12;
-    const annualPensionNGN = pensionEmployeeNGN * 12;
-    const annualRentNGN = rentNGN;
+    const pit = WPUtils.summarizePIT(annualGrossNGN, {
+      pension: pensionMonthlyNGN * 12,
+      nhf: nhfMonthlyNGN * 12,
+      nhis: nhisMonthlyNGN * 12,
+      annualRent: annualRentNGN,
+      mortgageInterest: mortgageAnnualNGN,
+      lifeInsurance: lifeAnnualNGN,
+    });
+    const monthlyPayeNGN = Math.round(pit.taxKobo / 12);
 
-    // NHF and NHIS are also tax-exempt, so they reduce taxable income in PAYE
-    const totalTaxExemptDeductionsNGN = pensionEmployeeNGN + nhfNGN + nhisNGN;
+    // Payroll take-home: gross − (1)(2)(3) − PAYE. Reliefs 4–6 do not leave the paycheck.
+    const netMonthlyNGN = monthlyGrossNGN - pensionMonthlyNGN - nhfMonthlyNGN - nhisMonthlyNGN - monthlyPayeNGN;
 
-    const annualPayeNGN = WPUtils.calcPIT(annualGrossNGN, totalTaxExemptDeductionsNGN * 12, annualRentNGN);
-    const monthlyPayeNGN = Math.round(annualPayeNGN / 12);
-
-    // Total deductions
-    const totalDeductionsNGN = pensionEmployeeNGN + nhfNGN + monthlyPayeNGN;
-    const netPayNGN = monthlyGrossNGN - totalDeductionsNGN;
-
-    // Convert back to page currency for display
-    const grossDisplay = pageCurrency === 'USD' ? WPUtils.convert(_monthlyGross, 'USD', pageCurrency) : _monthlyGross;
-    const pensionDisplay = pageCurrency === 'USD' ? WPUtils.convert(pensionEmployeeNGN, 'NGN', pageCurrency) : pensionEmployeeNGN;
-    const nhfDisplay = pageCurrency === 'USD' ? WPUtils.convert(nhfNGN, 'NGN', pageCurrency) : nhfNGN;
-    const nhisDisplay = pageCurrency === 'USD' ? WPUtils.convert(nhisNGN, 'NGN', pageCurrency) : nhisNGN;
-    const payeDisplay = pageCurrency === 'USD' ? WPUtils.convert(monthlyPayeNGN, 'NGN', pageCurrency) : monthlyPayeNGN;
-    const netDisplay = grossDisplay - pensionDisplay - nhfDisplay - nhisDisplay - payeDisplay;
+    const grossDisplay = _fromNGN(monthlyGrossNGN, pageCurrency);
+    const pensionDisplay = _fromNGN(pensionMonthlyNGN, pageCurrency);
+    const nhfDisplay = _fromNGN(nhfMonthlyNGN, pageCurrency);
+    const nhisDisplay = _fromNGN(nhisMonthlyNGN, pageCurrency);
+    const mortgageMoDisplay = _fromNGN(Math.round(mortgageAnnualNGN / 12), pageCurrency);
+    const lifeMoDisplay = _fromNGN(Math.round(lifeAnnualNGN / 12), pageCurrency);
+    const rentReliefMoDisplay = _fromNGN(Math.round(rentReliefAnnualNGN / 12), pageCurrency);
+    const payeDisplay = _fromNGN(monthlyPayeNGN, pageCurrency);
+    const netDisplay = _fromNGN(netMonthlyNGN, pageCurrency);
 
     const effectiveRate = monthlyGrossNGN > 0 ? (monthlyPayeNGN / monthlyGrossNGN) * 100 : 0;
 
-    // Update UI Elements
     document.getElementById('sc-net-pay').textContent = WPUtils.fmt(netDisplay, { currency: pageCurrency });
-    document.getElementById('sc-effective-rate').textContent = `Effective Tax Rate: ${effectiveRate.toFixed(1)}%`;
+    document.getElementById('sc-effective-rate').textContent =
+      `Effective Tax Rate: ${effectiveRate.toFixed(1)}% · Chargeable (annual) ${WPUtils.fmt(_fromNGN(pit.taxableKobo, pageCurrency), { currency: pageCurrency, compact: true })}`;
 
     document.getElementById('row-gross').textContent = WPUtils.fmt(grossDisplay, { currency: pageCurrency });
-    document.getElementById('row-pension').textContent = `-${WPUtils.fmt(pensionDisplay, { currency: pageCurrency })}`;
-    document.getElementById('row-nhf').textContent = `-${WPUtils.fmt(nhfDisplay, { currency: pageCurrency })}`;
-    document.getElementById('row-nhis').textContent = `-${WPUtils.fmt(nhisDisplay, { currency: pageCurrency })}`;
-    document.getElementById('row-tax').textContent = `-${WPUtils.fmt(payeDisplay, { currency: pageCurrency })}`;
+    document.getElementById('row-pension').textContent = `−${WPUtils.fmt(pensionDisplay, { currency: pageCurrency })}`;
+    document.getElementById('row-nhf').textContent = `−${WPUtils.fmt(nhfDisplay, { currency: pageCurrency })}`;
+    document.getElementById('row-nhis').textContent = `−${WPUtils.fmt(nhisDisplay, { currency: pageCurrency })}`;
+    document.getElementById('row-mortgage').textContent = `−${WPUtils.fmt(mortgageMoDisplay, { currency: pageCurrency })}/mo relief`;
+    document.getElementById('row-life').textContent = `−${WPUtils.fmt(lifeMoDisplay, { currency: pageCurrency })}/mo relief`;
+    document.getElementById('row-rent').textContent = `−${WPUtils.fmt(rentReliefMoDisplay, { currency: pageCurrency })}/mo relief`;
+    document.getElementById('row-tax').textContent = `−${WPUtils.fmt(payeDisplay, { currency: pageCurrency })}`;
     document.getElementById('row-net').textContent = WPUtils.fmt(netDisplay, { currency: pageCurrency });
 
-    document.getElementById('row-pension-tr').style.display = _pensionEnabled || _avc > 0 ? '' : 'none';
+    document.getElementById('row-pension-tr').style.display = (_pensionEnabled || _avc > 0) ? '' : 'none';
     document.getElementById('row-nhf-tr').style.display = _nhfEnabled ? '' : 'none';
     document.getElementById('row-nhis-tr').style.display = _nhisEnabled ? '' : 'none';
+    document.getElementById('row-mortgage-tr').style.display = mortgageAnnualNGN > 0 ? '' : 'none';
+    document.getElementById('row-life-tr').style.display = lifeAnnualNGN > 0 ? '' : 'none';
+    document.getElementById('row-rent-tr').style.display = rentReliefAnnualNGN > 0 ? '' : 'none';
 
-    // Highlight current tax bracket row
-    const annualTaxableNGN = Math.max(0, annualGrossNGN - annualPensionNGN - Math.min(annualRentNGN * 0.2, 50000000));
-    _highlightTaxBracket(annualTaxableNGN);
+    const rentHint = document.getElementById('sc-rent-relief-hint');
+    if (rentHint) {
+      const annualReliefDisp = _fromNGN(rentReliefAnnualNGN, pageCurrency);
+      rentHint.textContent = annualRentNGN > 0
+        ? `Computed rent relief: ${WPUtils.fmt(annualReliefDisp, { currency: pageCurrency })} / year (20% of rent, max ₦500,000)`
+        : 'Computed rent relief: ₦0 — enter annual rent paid to claim relief #6';
+    }
 
-    // Chart.js render
+    _highlightTaxBracket(pit.taxableKobo);
     _renderChart(netDisplay, pensionDisplay, nhfDisplay, nhisDisplay, payeDisplay);
-
-    // Render YTD Ledger
-    _recreateLedger(monthlyGrossNGN, pensionEmployeeNGN, nhfNGN, nhisNGN, monthlyPayeNGN, pageCurrency);
+    _recreateLedger(monthlyGrossNGN, pensionMonthlyNGN, nhfMonthlyNGN, nhisMonthlyNGN, monthlyPayeNGN, pageCurrency);
   }
 
   function _highlightTaxBracket(taxableKobo) {

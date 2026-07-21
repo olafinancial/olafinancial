@@ -55,10 +55,28 @@ function emergencyFundStatus(currentKobo, targetKobo) {
   return           { status: 'critical',  pct: p, label: 'Critical (< 1 month)' };
 }
 
-function calcPIT(grossKobo, pensionKobo = 0, annualRentKobo = 0) {
-  const rentReliefMax = 50_000_000;
-  const rentRelief = Math.min(annualRentKobo * 0.20, rentReliefMax);
-  const taxableKobo = Math.max(0, grossKobo - pensionKobo - rentRelief);
+/** Mirrors js/utils.js NTA 2025 §30(2) — six deductible expenses */
+function calcRentRelief(annualRentKobo = 0) {
+  return Math.round(Math.min(Math.max(0, annualRentKobo) * 0.20, 50_000_000));
+}
+
+function calcPIT(grossKobo, opts = 0, legacyRentKobo = 0) {
+  let r;
+  if (opts != null && typeof opts === 'object') {
+    r = {
+      pension: opts.pension || 0,
+      nhf: opts.nhf || 0,
+      nhis: opts.nhis || 0,
+      annualRent: opts.annualRent || opts.rent || 0,
+      mortgageInterest: opts.mortgageInterest || 0,
+      lifeInsurance: opts.lifeInsurance || 0,
+    };
+  } else {
+    r = { pension: opts || 0, nhf: 0, nhis: 0, annualRent: legacyRentKobo || 0, mortgageInterest: 0, lifeInsurance: 0 };
+  }
+  const rentRelief = calcRentRelief(r.annualRent);
+  const taxableKobo = Math.max(0, grossKobo - r.pension - r.nhf - r.nhis
+    - r.mortgageInterest - r.lifeInsurance - rentRelief);
   const brackets = [
     { limit:  80_000_000, rate: 0.00 },
     { limit: 220_000_000, rate: 0.15 },
@@ -200,13 +218,11 @@ describe('emergencyFundStatus', () => {
   });
 });
 
-describe('calcPIT (Nigerian Tax Act 2025)', () => {
+describe('calcPIT (Nigerian Tax Act 2025 §30(2) six deductibles)', () => {
   test('income below ₦800K per year is tax-free', () => {
-    // ₦800,000/yr → grossKobo = 80_000_000 kobo
     expect(calcPIT(80_000_000)).toBe(0);
   });
   test('income in 15% bracket', () => {
-    // ₦1M/yr = 100_000_000 kobo; taxable = 100M - 80M = 20M, tax = 20M * 0.15 = 3M
     const tax = calcPIT(100_000_000);
     expect(tax).toBe(3_000_000);
   });
@@ -214,6 +230,23 @@ describe('calcPIT (Nigerian Tax Act 2025)', () => {
     const taxWithout = calcPIT(200_000_000);
     const taxWith    = calcPIT(200_000_000, 10_000_000);
     expect(taxWith).toBeLessThan(taxWithout);
+  });
+  test('rent relief is 20% capped at ₦500k', () => {
+    expect(calcRentRelief(100_000_000)).toBe(20_000_000); // 20% of ₦1M
+    expect(calcRentRelief(10_000_000_000)).toBe(50_000_000); // cap ₦500k
+  });
+  test('all six reliefs reduce tax vs pension-only', () => {
+    const gross = 12_000_000_00; // ₦12M
+    const pensionOnly = calcPIT(gross, { pension: 960_000_00 });
+    const allSix = calcPIT(gross, {
+      pension: 960_000_00,
+      nhf: 180_000_00,
+      nhis: 126_000_00,
+      annualRent: 2_000_000_00,       // → ₦400k relief
+      mortgageInterest: 500_000_00,
+      lifeInsurance: 100_000_00,
+    });
+    expect(allSix).toBeLessThan(pensionOnly);
   });
   test('zero income pays no tax', () => {
     expect(calcPIT(0)).toBe(0);

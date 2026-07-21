@@ -97,33 +97,124 @@ const WPUtils = (() => {
     return new Date(dateStr).toLocaleDateString('en-NG', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
-  // ── NIGERIAN PIT — NIGERIA TAX ACT 2025 ─────────────────
-  // All amounts in KOBO
-  function calcPIT(grossKobo, pensionKobo = 0, annualRentKobo = 0) {
-    // Rent relief: 20% of annual rent, max ₦500,000 (50,000,000 kobo)
-    const rentReliefMax = APP_CONFIG.rentReliefMax || (APP_CONFIG.taxReliefs && APP_CONFIG.taxReliefs.maxRentRelief) || 50000000;
-    const rentRelief = Math.min(annualRentKobo * 0.20, rentReliefMax);
-    const taxableKobo = Math.max(0, grossKobo - pensionKobo - rentRelief);
+  // ── NIGERIAN PIT — NIGERIA TAX ACT 2025 §30(2) ───────────
+  // Six deductible expenses (all annual amounts in KOBO unless noted):
+  //  1. Pension (Pension Reform Act — employee 8% + approved AVC)
+  //  2. NHF (National Housing Fund — typically 2.5% of basic)
+  //  3. NHIS (National Health Insurance Scheme)
+  //  4. Mortgage interest on owner-occupied residential housing (interest only)
+  //  5. Life insurance / deferred annuity premiums (self + spouse)
+  //  6. Rent relief — 20% of annual rent paid, capped at ₦500,000
+  // CRA abolished. Chargeable income → progressive brackets.
 
-    // Progressive brackets (in kobo)
-    const brackets = [
-      { limit:  80_000_000, rate: 0.00 },  // First ₦800K
-      { limit: 220_000_000, rate: 0.15 },  // Next  ₦2.2M
-      { limit: 900_000_000, rate: 0.18 },  // Next  ₦9M
-      { limit:1_300_000_000,rate: 0.21 },  // Next  ₦13M
-      { limit:2_500_000_000,rate: 0.23 },  // Next  ₦25M
-      { limit: Infinity,    rate: 0.25 },  // Above ₦50M
-    ];
+  const PIT_BRACKETS = [
+    { limit:  80_000_000, rate: 0.00 },  // First ₦800K
+    { limit: 220_000_000, rate: 0.15 },  // Next  ₦2.2M
+    { limit: 900_000_000, rate: 0.18 },  // Next  ₦9M
+    { limit:1_300_000_000,rate: 0.21 },  // Next  ₦13M
+    { limit:2_500_000_000,rate: 0.23 },  // Next  ₦25M
+    { limit: Infinity,    rate: 0.25 },  // Above ₦50M
+  ];
 
+  function rentReliefMaxKobo() {
+    return APP_CONFIG.rentReliefMax
+      || (APP_CONFIG.taxReliefs && APP_CONFIG.taxReliefs.maxRentRelief)
+      || 50_000_000; // ₦500,000
+  }
+
+  /** Rent relief: min(20% of annual rent, ₦500,000). Input/output kobo. */
+  function calcRentRelief(annualRentKobo = 0) {
+    const rent = Math.max(0, Number(annualRentKobo) || 0);
+    return Math.round(Math.min(rent * 0.20, rentReliefMaxKobo()));
+  }
+
+  /**
+   * Normalize relief inputs. Supports legacy call shape:
+   *   calcPIT(gross, pensionKobo, annualRentKobo)
+   * and object form:
+   *   calcPIT(gross, { pension, nhf, nhis, annualRent, mortgageInterest, lifeInsurance })
+   * All annual kobo.
+   */
+  function normalizePITReliefs(opts = 0, legacyRentKobo = 0) {
+    if (opts != null && typeof opts === 'object' && !Array.isArray(opts)) {
+      return {
+        pension: Math.max(0, Number(opts.pension) || 0),
+        nhf: Math.max(0, Number(opts.nhf) || 0),
+        nhis: Math.max(0, Number(opts.nhis) || 0),
+        annualRent: Math.max(0, Number(opts.annualRent != null ? opts.annualRent : opts.rent) || 0),
+        mortgageInterest: Math.max(0, Number(opts.mortgageInterest) || 0),
+        lifeInsurance: Math.max(0, Number(opts.lifeInsurance) || 0),
+      };
+    }
+    return {
+      pension: Math.max(0, Number(opts) || 0),
+      nhf: 0,
+      nhis: 0,
+      annualRent: Math.max(0, Number(legacyRentKobo) || 0),
+      mortgageInterest: 0,
+      lifeInsurance: 0,
+    };
+  }
+
+  /**
+   * Full breakdown of the six §30(2) deductions + chargeable income + tax.
+   * @param {number} annualGrossKobo
+   * @param {object|number} opts reliefs (or legacy pension kobo)
+   * @param {number} [legacyRentKobo]
+   */
+  function summarizePIT(annualGrossKobo, opts = 0, legacyRentKobo = 0) {
+    const gross = Math.max(0, Number(annualGrossKobo) || 0);
+    const r = normalizePITReliefs(opts, legacyRentKobo);
+    const rentRelief = calcRentRelief(r.annualRent);
+
+    // The six deductible items (annual kobo)
+    const six = {
+      pension: r.pension,                 // 1
+      nhf: r.nhf,                         // 2
+      nhis: r.nhis,                       // 3
+      mortgageInterest: r.mortgageInterest, // 4
+      lifeInsurance: r.lifeInsurance,     // 5
+      rentRelief,                         // 6 (computed from annual rent)
+    };
+
+    const totalReliefs = six.pension + six.nhf + six.nhis
+      + six.mortgageInterest + six.lifeInsurance + six.rentRelief;
+    const taxableKobo = Math.max(0, gross - totalReliefs);
+    const taxKobo = _applyPITBrackets(taxableKobo);
+
+    return {
+      annualGrossKobo: gross,
+      reliefs: six,
+      annualRentPaid: r.annualRent,
+      totalReliefsKobo: totalReliefs,
+      taxableKobo,
+      taxKobo,
+      effectiveRate: gross > 0 ? taxKobo / gross : 0,
+    };
+  }
+
+  function _applyPITBrackets(taxableKobo) {
     let taxKobo = 0;
-    let remaining = taxableKobo;
-    for (const b of brackets) {
+    let remaining = Math.max(0, taxableKobo);
+    for (const b of PIT_BRACKETS) {
       if (remaining <= 0) break;
-      const taxable = Math.min(remaining, b.limit);
-      taxKobo += taxable * b.rate;
-      remaining -= taxable;
+      const band = Math.min(remaining, b.limit);
+      taxKobo += band * b.rate;
+      remaining -= band;
     }
     return Math.round(taxKobo);
+  }
+
+  /**
+   * Annual PAYE (kobo). Backward-compatible:
+   *   calcPIT(gross, pension, rent)  OR  calcPIT(gross, { pension, nhf, nhis, ... })
+   */
+  function calcPIT(grossKobo, opts = 0, legacyRentKobo = 0) {
+    return summarizePIT(grossKobo, opts, legacyRentKobo).taxKobo;
+  }
+
+  function calcTaxableIncome(grossKobo, opts = 0, legacyRentKobo = 0) {
+    return summarizePIT(grossKobo, opts, legacyRentKobo).taxableKobo;
   }
 
   function effectiveTaxRate(grossKobo, taxKobo) {
@@ -154,6 +245,9 @@ const WPUtils = (() => {
 
   // NHF contribution (2.5% of basic salary)
   function calcNHF(basicKobo) { return Math.round(basicKobo * 0.025); }
+
+  // NHIS contribution (1.75% of basic — common payroll estimate; amount override allowed)
+  function calcNHIS(basicKobo) { return Math.round(basicKobo * 0.0175); }
 
   // ── TIME VALUE OF MONEY ──────────────────────────────────
   // Future Value: FV = PV*(1+r)^n + PMT*((1+r)^n - 1)/r
@@ -690,6 +784,10 @@ const WPUtils = (() => {
       .replace(/\[unit_cost:[^\]]+\]/gi, '')
       .replace(/\[ticker:[^\]]+\]/gi, '')
       .replace(/\[sharia:yes\]/gi, '')
+      .replace(/\[nhis:\d+\]/gi, '')
+      .replace(/\[mortgage_int:\d+\]/gi, '')
+      .replace(/\[life_ins:\d+\]/gi, '')
+      .replace(/\[annual_rent:\d+\]/gi, '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -1161,8 +1259,9 @@ const WPUtils = (() => {
 
   return {
     fmt, cleanNum, maskNumberInput, nairaToKobo, koboToNaira, pct, fmtPct, fmtDate,
-    calcPIT, effectiveTaxRate, taxBracket,
-    calcPensionEmployee, calcNHF,
+    calcPIT, summarizePIT, calcTaxableIncome, calcRentRelief, normalizePITReliefs,
+    effectiveTaxRate, taxBracket,
+    calcPensionEmployee, calcNHF, calcNHIS,
     calcFV, calcPMT, calcAnnuity,
     calcDebtStrategy,
     calcDebtAvalanche: function(debts, extra) { return calcDebtStrategy(debts, extra, 'avalanche'); },

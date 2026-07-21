@@ -433,6 +433,22 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 * Sharia tools (Takaful pref, Zakat, Qard Hasan, Halal invest tips) — not app-wide filter  
 * **Settings → Testing & account**: Reset data, Load demo data, Delete account (API)
 
+### Session 22 — 2026-07-20 — Six PAYE deductibles (#75)
+
+* **Source**: NTA 2025 §30(2) (BusinessDay / PwC) + customer: six tax-free items, not three toggles
+* **The six**:
+  1. Pension (Pension Reform Act — 8% + approved AVC)
+  2. NHF (2.5% of basic)
+  3. NHIS
+  4. Mortgage interest on owner-occupied residential housing (interest only)
+  5. Life insurance / deferred annuity premiums (self + spouse)
+  6. Rent relief — 20% of annual rent paid, max ₦500,000
+* **Engine**: `WPUtils.summarizePIT` / `calcPIT` / `calcRentRelief` / `calcNHIS` — all six reduce chargeable income; legacy `calcPIT(gross, pension, rent)` kept
+* **Salary calculator**: numbered UI for all six; breakdown shows payroll withholdings (1–3) + tax reliefs (4–6) + PAYE; net = Gross − 1 − 2 − 3 − PAYE
+* **Income form**: same six fields; auto-calc uses full stack; relief detail stored in notes tags
+* **Tests**: unit suite covers rent relief cap + all-six vs pension-only
+* **Cache**: `BUILD_ID` `20260720_paye6`, SW `pul-planning-v24`
+
 ### Session 21 — 2026-07-20 — P0 customer issues (#77, #74, #73, #80, #79, #71)
 
 * **#77 Invest profile persist**: Restore results after re-login when answers are complete; recompute missing `result`; persist via `localStorage` + `WPDb.updateProfile` + `WPDb.client().auth.updateUser` metadata (`wp_invest_quiz`). Fixed broken save that called non-existent `WPDb.updateProfile` and `window.supabase.auth` (factory, not client). Maps quiz `balanced` → schema `moderate`.
