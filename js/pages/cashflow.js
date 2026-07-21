@@ -103,7 +103,7 @@ const WPCashflow = (() => {
       <div class="card"><div class="card-title">Total Outflows</div><div class="card-value danger">${WPUtils.fmt(totalOut, {currency: pageCurrency})}</div><div class="card-meta">All spending categories</div></div>
       <div class="card"><div class="card-title">Net Cash Flow</div><div class="card-value ${cf.netCashFlow>=0?'accent':'danger'}">${WPUtils.fmt(netCF,{signed:true, currency: pageCurrency})}</div></div>
       <div class="card"><div class="card-title">Savings Rate</div><div class="card-value ${cf.netCashFlow/Math.max(1,cf.netIncome)>=0.2?'accent':'gold'}">${WPUtils.fmtPct(cf.netCashFlow/Math.max(1,cf.netIncome))}</div><div class="card-meta">Target: &ge; 20%</div></div>
-      <div class="card"><div class="card-title">Financial Independence Score (FIS)</div><div class="card-value ${coverage>=100?'accent':coverage>=50?'gold':'danger'}">${coverage.toFixed(1)}%</div><div class="card-meta">passive coverage of outflows</div></div>`;
+      <a href="#/fi" class="card card-link" title="Open FI Calculator"><div class="card-title">Financial Independence Score (FIS)</div><div class="card-value ${coverage>=100?'accent':coverage>=50?'gold':'danger'}">${coverage.toFixed(1)}%</div><div class="card-meta">passive coverage of outflows</div><div class="card-link-hint">FI Calculator →</div></a>`;
   }
 
   function _renderStatement(cf, income, expenses, baseCur, pageCurrency) {

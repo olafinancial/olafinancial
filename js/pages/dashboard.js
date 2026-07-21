@@ -36,7 +36,7 @@ const WPDashboard = (() => {
         <!-- Getting started path for naive users (shown until dismissed) -->
         <div class="card dashboard-full" id="dash-getting-started" style="display:none;margin-bottom:1.25rem"></div>
         <!-- FI Score hero (#80) -->
-        <div class="card fi-score-card dashboard-full" id="dash-fi-hero" style="display:none;margin-bottom:1.25rem;cursor:pointer" onclick="WPRouter.navigate('/cashflow')"></div>
+        <div class="card fi-score-card dashboard-full" id="dash-fi-hero" style="display:none;margin-bottom:1.25rem;cursor:pointer" onclick="WPRouter.navigate('/fi')" title="Open FI Calculator"></div>
         <div class="kpi-grid" id="dash-kpis">${_skeletons(5)}</div>
         <!-- Dashboard Insights -->
         <div id="dash-insights" style="display:none"></div>
@@ -52,7 +52,7 @@ const WPDashboard = (() => {
             </div>
             <div class="chart-container" style="height:240px"><canvas id="chart-net-worth"></canvas></div>
           </div>
-          <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+          <a href="#/reports" class="card card-link" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;text-decoration:none;color:inherit" title="Open Reports">
             <div class="card-title">Financial Health Score</div>
             <div style="position:relative;margin:1rem auto">
               <canvas id="chart-health" width="160" height="160" style="max-width:160px"></canvas>
@@ -61,7 +61,8 @@ const WPDashboard = (() => {
                 <div class="card-meta" id="dash-score-label">—</div>
               </div>
             </div>
-          </div>
+            <div class="card-link-hint">Reports →</div>
+          </a>
           <div class="card dashboard-wide">
             <div class="section-header">
               <span class="section-title">Income vs Expenses</span>
@@ -305,7 +306,7 @@ const WPDashboard = (() => {
           </div>
           <div class="fi-score-value-wrap">
             <div class="card-value ${fisTone} fi-score-value">${fis.toFixed(1)}%</div>
-            <div class="card-meta">Passive income covers this share of monthly outflows · open Cash Flow</div>
+            <div class="card-meta">Passive income covers this share of monthly outflows · open FI Calculator</div>
           </div>
           <div class="fi-score-bar-wrap" aria-hidden="true">
             <div class="fi-score-bar"><div class="fi-score-bar-fill fi-score-bar-fill--${fisTone}" style="width:${Math.min(100, Math.max(2, fis))}%"></div></div>
@@ -315,31 +316,36 @@ const WPDashboard = (() => {
     }
 
     document.getElementById('dash-kpis').innerHTML = `
-      <div class="card animate-in">
+      <a href="#/balance-sheet" class="card animate-in card-link" title="Open Balance Sheet">
         <div class="card-title">Net Worth</div>
         <div class="card-value ${nwColor}">${WPUtils.fmt(netWorth, {compact:true, currency: pageCurrency})}</div>
         <div class="card-meta">Assets ${WPUtils.fmt(totalAssets,{compact:true, currency: pageCurrency})} &minus; Liabilities ${WPUtils.fmt(totalLiabilities,{compact:true, currency: pageCurrency})}</div>
-      </div>
-      <div class="card animate-in" style="animation-delay:0.05s">
+        <div class="card-link-hint">Balance Sheet →</div>
+      </a>
+      <a href="#/cashflow" class="card animate-in card-link" style="animation-delay:0.05s" title="Open Cash Flow">
         <div class="card-title">Net Cash Flow</div>
         <div class="card-value ${netCashFlow>=0?'income':'expense'}">${WPUtils.fmt(netCashFlow,{compact:true,signed:true, currency: pageCurrency})}</div>
         <div class="card-meta">Net income <span class="amount-income">${WPUtils.fmt(netIncome,{compact:true, currency: pageCurrency})}</span></div>
-      </div>
-      <div class="card animate-in" style="animation-delay:0.1s">
+        <div class="card-link-hint">Cash Flow →</div>
+      </a>
+      <a href="#/budget" class="card animate-in card-link" style="animation-delay:0.1s" title="Open Budget Planner">
         <div class="card-title">Savings Rate</div>
         <div class="card-value ${srPct>=0.2?'accent':'gold'}">${WPUtils.fmtPct(srPct)}</div>
         <div class="card-meta">Target: &ge; 20% of net income</div>
-      </div>
-      <div class="card animate-in" style="animation-delay:0.15s">
+        <div class="card-link-hint">Budget Planner →</div>
+      </a>
+      <a href="#/income" class="card animate-in card-link" style="animation-delay:0.15s" title="Open Income">
         <div class="card-title">Passive Income</div>
         <div class="card-value income">${WPUtils.fmt(passiveKobo,{compact:true, currency: pageCurrency})}</div>
         <div class="card-meta">${WPUtils.fmtPct(s.passiveKPIs.pctOfExpenses/100)} of expenses covered</div>
-      </div>
-      <div class="card animate-in" style="animation-delay:0.2s">
+        <div class="card-link-hint">Income →</div>
+      </a>
+      <a href="#/emergency-fund" class="card animate-in card-link" style="animation-delay:0.2s" title="Open Emergency Fund">
         <div class="card-title">Emergency Fund</div>
         <div class="card-value ${s.efStatus.status==='on_track'?'accent':s.efStatus.status==='critical'?'danger':'gold'}">${WPUtils.fmt(efBalance,{compact:true, currency: pageCurrency})}</div>
         <div class="card-meta">${s.efStatus.label||'—'} · Target ${WPUtils.fmt(efTarget,{compact:true, currency: pageCurrency})}</div>
-      </div>`;
+        <div class="card-link-hint">Emergency Fund →</div>
+      </a>`;
   }
 
   function _renderCharts(s) {

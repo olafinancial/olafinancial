@@ -50,7 +50,7 @@ const WPReports = (() => {
           </div>
         </div>
         <!-- FI Score hero (#80) — outside share card so always visible at top -->
-        <div class="card fi-score-card" id="rpt-fi-hero" style="margin-bottom:1.5rem"></div>
+        <div class="card fi-score-card" id="rpt-fi-hero" style="margin-bottom:1.5rem;cursor:pointer" onclick="WPRouter.navigate('/fi')" title="Open FI Calculator"></div>
         <div id="reports-kpis" class="kpi-grid" style="margin-bottom:1.5rem"></div>
         <!-- Shareable snapshot section — captured by html2canvas on Share -->
         <div id="reports-share-card">
@@ -353,7 +353,7 @@ const WPReports = (() => {
           </div>
           <div class="fi-score-value-wrap">
             <div class="card-value ${fisTone} fi-score-value">${fis.toFixed(1)}%</div>
-            <div class="card-meta">Passive cover · ${WPUtils.fmt(WPUtils.convert(passive.passiveKobo || 0, baseCur, pageCurrency), { compact: true, currency: pageCurrency })} / mo</div>
+            <div class="card-meta">Passive cover · ${WPUtils.fmt(WPUtils.convert(passive.passiveKobo || 0, baseCur, pageCurrency), { compact: true, currency: pageCurrency })} / mo · open FI Calculator</div>
           </div>
           <div class="fi-score-bar-wrap" aria-hidden="true">
             <div class="fi-score-bar"><div class="fi-score-bar-fill fi-score-bar-fill--${fisTone}" style="width:${Math.min(100, Math.max(2, fis))}%"></div></div>

@@ -433,6 +433,14 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 * Sharia tools (Takaful pref, Zakat, Qard Hasan, Halal invest tips) — not app-wide filter  
 * **Settings → Testing & account**: Reset data, Load demo data, Delete account (API)
 
+### Session 24 — 2026-07-20 — FI Calculator page + clickable dashboard KPIs
+
+* **FI Calculator** (`#/fi`, `js/pages/fi-calculator.js`): full FI tool from customer mockup — expenses, passive breakdown, portfolio, return, savings → coverage %, gap/surplus, 25× FI number, years-to-FI projection. Prefills from app data; share + reset.
+* **FIS clicks** → `/fi` (Dashboard hero, Reports hero, Cash Flow FIS card)
+* **Dashboard KPIs all linked**: Net Worth→Balance Sheet, Cash Flow→Cash Flow, Savings Rate→Budget, Passive Income→Income, Emergency Fund→EF, Health Score→Reports
+* **Nav**: Tools → FI Calculator
+* **Cache**: `BUILD_ID` `20260720_fi`, SW `pul-planning-v27`
+
 ### Session 23 — 2026-07-20 — Calculator share + digests in Settings (#76, #78)
 
 * **#76 Share**: Calculators page **Share result** (header + footer) captures active tab via `WPUtils.shareBrandedCapture` (html2canvas + pul.llc watermark + Web Share / PNG download + invite copy with `https://pul.llc`)
