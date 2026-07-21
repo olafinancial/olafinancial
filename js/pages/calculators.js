@@ -19,10 +19,13 @@ const WPCalculators = (() => {
           <h1 class="page-title">Financial Calculators</h1>
           <p class="page-subtitle">Verify investment yields, simulate loans, project savings, and estimate Zakat</p>
         </div>
+        <div class="flex gap-2" style="align-items:center;flex-wrap:wrap">
+          <button type="button" class="btn btn-secondary" id="calc-share-btn" title="Share this calculator result">&#x1F4E4; Share result</button>
+        </div>
       </div>
       <div class="page-body">
         <!-- Calculators Tab Bar -->
-        <div class="tab-container" style="display:flex;gap:0.5rem;overflow-x:auto;padding-bottom:0.75rem;margin-bottom:1.5rem;border-bottom:1px solid var(--clr-border)">
+        <div class="tab-container no-share" style="display:flex;gap:0.5rem;overflow-x:auto;padding-bottom:0.75rem;margin-bottom:1.5rem;border-bottom:1px solid var(--clr-border)">
           <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="savings-goal">🎯 Savings Goal</button>
           <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="savings-compound">📈 Savings (Compound)</button>
           <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="roi">📊 Investment ROI</button>
@@ -36,8 +39,17 @@ const WPCalculators = (() => {
           <button class="btn btn-ghost btn-sm calc-tab-btn" data-tab="zakat">🕌 Zakat</button>
         </div>
         
-        <!-- Calculator Content Area -->
-        <div id="calc-content-wrap"></div>
+        <!-- Calculator Content Area (share capture target) -->
+        <div id="calc-share-card">
+          <div id="calc-content-wrap"></div>
+          <div style="margin-top:1rem;padding:0.75rem 1rem;border-radius:10px;border:1px solid rgba(0,200,150,0.35);background:linear-gradient(135deg,rgba(0,200,150,0.1),var(--clr-surface-2));display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem">
+            <div>
+              <div style="font-weight:700;color:var(--clr-accent);font-size:0.9rem">Pul Planning · pul.llc</div>
+              <div class="text-xs text-muted">Determine your Financial Independence Score — free to start</div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm no-share" id="calc-share-btn-inline">&#x1F4E4; Share</button>
+          </div>
+        </div>
       </div>`;
 
     // Map legacy hints from old PAYE tab / salary-calc route
@@ -52,7 +64,59 @@ const WPCalculators = (() => {
       });
     });
 
+    document.getElementById('calc-share-btn')?.addEventListener('click', () => _shareActive());
+    document.getElementById('calc-share-btn-inline')?.addEventListener('click', () => _shareActive());
+
     _renderActiveTab();
+  }
+
+  const TAB_LABELS = {
+    'savings-goal': 'Savings Goal',
+    'savings-compound': 'Compound Savings',
+    roi: 'Investment ROI',
+    'loan-simple': 'Simple Loan',
+    'loan-detailed': 'Detailed Loan',
+    'car-loan': 'Car Loan',
+    mortgage: 'Mortgage',
+    'fixed-deposit': 'Fixed Deposit',
+    salary: 'Salary / PAYE',
+    inflation: 'Inflation Impact',
+    zakat: 'Zakat',
+  };
+
+  async function _shareActive() {
+    const btn = document.getElementById('calc-share-btn');
+    const btn2 = document.getElementById('calc-share-btn-inline');
+    const original = btn?.textContent;
+    const original2 = btn2?.textContent;
+    [btn, btn2].forEach(b => {
+      if (b) { b.disabled = true; b.textContent = '⏳ Capturing…'; }
+    });
+    try {
+      const target = document.getElementById('calc-share-card') || document.getElementById('calc-content-wrap');
+      if (!target) throw new Error('Calculator panel not found');
+      const label = TAB_LABELS[_activeTab] || 'Calculator';
+      // Prefer a visible KPI / result line for social copy
+      const resultEl = target.querySelector('.card-value, #sc-net-pay, [id$="-result"], [id*="res-total"]');
+      const summary = resultEl ? `${label}: ${resultEl.textContent.trim()}` : '';
+      const text = WPUtils.calcShareCopy(label, summary);
+      const result = await WPUtils.shareBrandedCapture(target, {
+        title: `${label} · Pul Planning`,
+        text,
+        url: 'https://pul.llc',
+        filename: `pul-llc-${_activeTab || 'calc'}.png`,
+      });
+      if (result.mode === 'files') WPToast.success('Result shared!');
+      else if (result.mode === 'link+download') WPToast.success('Image saved + link ready to share!');
+      else WPToast.success('Image saved + invite text copied — paste to X, WhatsApp, or Instagram.');
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      console.error('Calculator share failed:', err);
+      WPToast.error(err.message || 'Could not share this result.');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = original; }
+      if (btn2) { btn2.disabled = false; btn2.textContent = original2; }
+    }
   }
 
   function _renderActiveTab() {

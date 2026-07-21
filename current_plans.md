@@ -433,6 +433,13 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 * Sharia tools (Takaful pref, Zakat, Qard Hasan, Halal invest tips) — not app-wide filter  
 * **Settings → Testing & account**: Reset data, Load demo data, Delete account (API)
 
+### Session 23 — 2026-07-20 — Calculator share + digests in Settings (#76, #78)
+
+* **#76 Share**: Calculators page **Share result** (header + footer) captures active tab via `WPUtils.shareBrandedCapture` (html2canvas + pul.llc watermark + Web Share / PNG download + invite copy with `https://pul.llc`)
+* **#78 Digests**: Removed Scheduled & Email Reports card from Reports; single home is **Settings → Email Digest & Scheduled Reports**; Reports shows a pointer link
+* **Shared helper**: `shareBrandedCapture` / `calcShareCopy` in `js/utils.js` (Reports share refactored to use it)
+* **Cache**: `BUILD_ID` `20260720_share`, SW `pul-planning-v25`
+
 ### Session 22 — 2026-07-20 — Six PAYE deductibles (#75)
 
 * **Source**: NTA 2025 §30(2) (BusinessDay / PwC) + customer: six tax-free items, not three toggles

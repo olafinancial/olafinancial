@@ -1257,6 +1257,87 @@ const WPUtils = (() => {
     };
   }
 
+  /**
+   * Capture a DOM node as a branded PNG and share (Web Share API) or download.
+   * Used by Reports and Calculators (#76/#78). Always promotes https://pul.llc.
+   */
+  async function shareBrandedCapture(element, opts = {}) {
+    if (!element) throw new Error('Nothing to share');
+    if (typeof html2canvas === 'undefined') {
+      throw new Error('Share library not loaded — hard-refresh the app');
+    }
+    const title = opts.title || 'My result on Pul Planning';
+    const text = opts.text || 'Tracked with Pul Planning — https://pul.llc';
+    const url = opts.url || 'https://pul.llc';
+    const filename = opts.filename || 'pul-llc-share.png';
+    const bg = opts.backgroundColor || '#0D1117';
+
+    const canvas = await html2canvas(element, {
+      backgroundColor: bg,
+      scale: opts.scale || 2,
+      useCORS: true,
+      logging: false,
+      ignoreElements: el => el.classList?.contains('no-share') || el.id === 'print-header',
+    });
+
+    // Watermark
+    const ctx = canvas.getContext('2d');
+    const pad = 16;
+    const fsize = Math.max(14, Math.round(canvas.width * 0.018));
+    ctx.save();
+    ctx.font = `600 ${fsize}px Inter, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('pul.llc', canvas.width - pad, canvas.height - pad);
+    ctx.globalAlpha = 0.05;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `700 ${Math.round(canvas.width * 0.05)}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(-Math.PI / 8);
+    ctx.fillText('pul.llc', 0, 0);
+    ctx.restore();
+
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    if (!blob) throw new Error('Could not create image');
+    const file = new File([blob], filename, { type: 'image/png' });
+
+    const download = () => {
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = filename;
+      a.click();
+    };
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ title, text, url, files: [file] });
+      return { mode: 'files' };
+    }
+    if (navigator.share) {
+      download();
+      await navigator.share({ title, text, url });
+      return { mode: 'link+download' };
+    }
+    download();
+    // Desktop: also copy share text with link for easy paste to socials
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(`${text}\n${url}`);
+      }
+    } catch { /* ignore */ }
+    return { mode: 'download' };
+  }
+
+  /** Short share text for calculator tabs + app invite link. */
+  function calcShareCopy(tabLabel, summaryLine = '') {
+    const base = summaryLine
+      ? `${summaryLine} — calculated on Pul Planning`
+      : `My ${tabLabel} result on Pul Planning`;
+    return `${base}\nPlan yours free → https://pul.llc`;
+  }
+
   return {
     fmt, cleanNum, maskNumberInput, nairaToKobo, koboToNaira, pct, fmtPct, fmtDate,
     calcPIT, summarizePIT, calcTaxableIncome, calcRentRelief, normalizePITReliefs,
@@ -1279,6 +1360,7 @@ const WPUtils = (() => {
     isInterestBearingLiability, isIncomeGeneratingAsset, productiveBalanceSheet,
     buildStrategicHealthReport,
     calcZakat,
+    shareBrandedCapture, calcShareCopy,
   };
 })();
 

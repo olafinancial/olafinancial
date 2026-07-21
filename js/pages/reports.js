@@ -49,23 +49,13 @@ const WPReports = (() => {
             </div>
           </div>
         </div>
-        <!-- Scheduled Reports Preference Settings -->
-        <div class="card" style="margin-bottom:1.5rem;background:linear-gradient(135deg,var(--clr-surface-2),var(--clr-surface-3))">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
-            <div>
-              <div class="section-title" style="margin:0;font-size:1.1rem">📬 Scheduled &amp; Email Reports</div>
-              <p style="font-size:0.85rem;color:var(--clr-text-2);margin:0.25rem 0 0">Receive automated reports on demand or set up weekly Sunday digests by default.</p>
-            </div>
-            <div style="display:flex;gap:0.75rem;align-items:center">
-              <select id="rpt-frequency" class="select select-sm" style="width:180px">
-                <option value="weekly_sunday">Weekly (Sundays, default)</option>
-                <option value="daily">Daily digest</option>
-                <option value="monthly">Monthly summary</option>
-                <option value="off">Turn off notifications</option>
-              </select>
-              <button class="btn btn-secondary btn-sm" id="rpt-freq-save">Save Setup</button>
-            </div>
-          </div>
+        <!-- Digests live in Settings (#78) -->
+        <div class="card" style="margin-bottom:1.25rem;padding:0.9rem 1.1rem;background:var(--clr-surface-2)">
+          <p class="text-sm text-muted" style="margin:0;line-height:1.5">
+            📬 <strong>Scheduled email digests</strong> are configured under
+            <a href="#/settings" style="color:var(--clr-accent)">Settings → Email Digest</a>
+            (daily / weekly Sundays / monthly).
+          </p>
         </div>
 
         <!-- FI Score hero (#80) — outside share card so always visible at top -->
@@ -155,22 +145,6 @@ const WPReports = (() => {
         _load();
       });
     }
-
-    const freqSelect = document.getElementById('rpt-frequency');
-    const freqSaveBtn = document.getElementById('rpt-freq-save');
-    const savedFreq = localStorage.getItem('wp_report_frequency_' + WPApp.state.user.id) || 'weekly_sunday';
-    if (freqSelect) {
-      freqSelect.value = savedFreq;
-    }
-    freqSaveBtn?.addEventListener('click', () => {
-      const selected = freqSelect.value;
-      localStorage.setItem('wp_report_frequency_' + WPApp.state.user.id, selected);
-      if (selected === 'off') {
-        WPToast.success('Notifications and scheduled email digests disabled.');
-      } else {
-        WPToast.success(`Preferences updated! Reports scheduled: ${selected.replace('_', ' ')}.`);
-      }
-    });
     
     await _load();
   }
@@ -533,94 +507,34 @@ const WPReports = (() => {
   // ── SHARE REPORT ──────────────────────────────────────────────
   async function _shareReport() {
     const btn = document.getElementById('share-btn');
-    const original = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = '⏳ Capturing…';
+    const original = btn?.textContent;
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Capturing…'; }
 
     try {
       const target = document.getElementById('reports-share-card');
       if (!target) throw new Error('Share card not found');
 
-      // html2canvas — capture visible section
-      const canvas = await html2canvas(target, {
-        backgroundColor: '#0D1117',  // match app dark bg
-        scale: 2,                    // retina quality
-        useCORS: true,
-        logging: false,
-        ignoreElements: el => el.id === 'print-header',
+      const name  = WPApp.state.profile?.full_name || '';
+      const month = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+      const title = `My ${month} Financial Report`;
+      const text  = `${name ? name + "'s " : ''}financial snapshot — tracked with Pul Planning\nhttps://pul.llc`;
+
+      const result = await WPUtils.shareBrandedCapture(target, {
+        title,
+        text,
+        url: 'https://pul.llc',
+        filename: 'pul-llc-report.png',
       });
-
-      // Watermark stamp
-      const ctx    = canvas.getContext('2d');
-      const wm     = 'pul.llc';
-      const pad    = 16;
-      const fsize  = Math.max(14, Math.round(canvas.width * 0.018));
-      ctx.save();
-      ctx.font         = `600 ${fsize}px Inter, sans-serif`;
-      ctx.fillStyle    = 'rgba(255,255,255,0.18)';
-      ctx.textAlign    = 'right';
-      ctx.textBaseline = 'bottom';
-      // bottom-right corner
-      ctx.fillText(wm, canvas.width - pad, canvas.height - pad);
-      // subtle diagonal repeat
-      ctx.globalAlpha  = 0.055;
-      ctx.fillStyle    = '#ffffff';
-      ctx.font         = `700 ${Math.round(canvas.width * 0.055)}px Inter, sans-serif`;
-      ctx.textAlign    = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      ctx.rotate(-Math.PI / 8);
-      ctx.fillText('pul.llc', 0, 0);
-      ctx.restore();
-
-      // Get user's name for share text
-      const name   = WPApp.state.profile?.full_name || '';
-      const month  = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-      const title  = `My ${month} Financial Report`;
-      const text   = `${name ? name + "'s " : ''}financial snapshot — tracked with pul.llc`;
-      const url    = 'https://pul.llc';
-
-      // ── Path 1: Web Share API with image (mobile / modern browsers)
-      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-      const file = new File([blob], 'pul-llc-report.png', { type: 'image/png' });
-
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ title, text, url, files: [file] });
-        WPToast.success('Report shared!');
-        return;
-      }
-
-      // ── Path 2: Web Share API without file (some mobile)
-      if (navigator.share) {
-        // Download the image first so user has it
-        _triggerDownload(canvas, 'pul-llc-report.png');
-        await navigator.share({ title, text, url });
-        WPToast.success('Image downloaded + link shared!');
-        return;
-      }
-
-      // ── Path 3: Desktop fallback — download PNG
-      _triggerDownload(canvas, 'pul-llc-report.png');
-      WPToast.success('Report image saved! You can now post it to X or Instagram.');
-
+      if (result.mode === 'files') WPToast.success('Report shared!');
+      else if (result.mode === 'link+download') WPToast.success('Image downloaded + link shared!');
+      else WPToast.success('Report image saved! Post it to X or Instagram with pul.llc.');
     } catch (err) {
-      if (err.name === 'AbortError') {
-        // User cancelled native share sheet — that's fine
-        return;
-      }
+      if (err.name === 'AbortError') return;
       console.error('Share failed:', err);
       WPToast.error('Could not capture report. Try Export PDF instead.');
     } finally {
-      btn.disabled    = false;
-      btn.textContent = original;
+      if (btn) { btn.disabled = false; btn.textContent = original; }
     }
-  }
-
-  function _triggerDownload(canvas, filename) {
-    const a    = document.createElement('a');
-    a.href     = canvas.toDataURL('image/png');
-    a.download = filename;
-    a.click();
   }
 
   // ── EXPORT PDF ────────────────────────────────────────────────

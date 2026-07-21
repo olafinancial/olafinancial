@@ -112,10 +112,14 @@ const WPSettings = (() => {
           <div class="input-hint" style="margin-top:0.75rem">Replay opens the onboarding steps again (pre-filled). Exit anytime without saving if you only wanted a tour.</div>
         </div>
 
-        <!-- Email Digest Settings -->
-        <div class="card" style="max-width:600px;padding:2rem;">
-          <h3 style="margin-bottom:0.5rem;font-weight:700;color:#ffffff">📬 Email Digest</h3>
-          <p style="color:var(--clr-text-2);font-size:0.85rem;margin:0 0 1.5rem">Receive a branded financial summary email with your key metrics — net worth, cash flow, savings rate — delivered on your schedule.</p>
+        <!-- Email Digest / Scheduled reports (#78 — moved off Reports) -->
+        <div class="card" style="max-width:600px;padding:2rem;" id="settings-digest-card">
+          <h3 style="margin-bottom:0.5rem;font-weight:700;color:#ffffff">📬 Email Digest &amp; Scheduled Reports</h3>
+          <p style="color:var(--clr-text-2);font-size:0.85rem;margin:0 0 1.5rem;line-height:1.55">
+            Receive a branded financial summary — net worth, cash flow, savings rate, FI score —
+            on your schedule. This is the single place to manage digests (removed from Reports).
+            Production delivery needs the digest API + Resend (see EMAIL_SETUP.md / issue #38).
+          </p>
 
           <!-- Toggle -->
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
@@ -142,9 +146,9 @@ const WPSettings = (() => {
           <div class="form-group" id="digest-options" style="display:${digestEnabled ? 'block' : 'none'}">
             <label for="set-digest-freq">Delivery Frequency</label>
             <select class="select" id="set-digest-freq">
-              <option value="daily"   ${digestFrequency==='daily'   ? 'selected':''}>Daily</option>
-              <option value="weekly"  ${digestFrequency==='weekly'  ? 'selected':''}>Weekly (Sundays)</option>
-              <option value="monthly" ${digestFrequency==='monthly' ? 'selected':''}>Monthly</option>
+              <option value="daily"   ${digestFrequency==='daily'   ? 'selected':''}>Daily digest</option>
+              <option value="weekly"  ${digestFrequency==='weekly'  ? 'selected':''}>Weekly (Sundays, default)</option>
+              <option value="monthly" ${digestFrequency==='monthly' ? 'selected':''}>Monthly summary</option>
             </select>
           </div>
 
@@ -422,6 +426,14 @@ const WPSettings = (() => {
           digest_frequency: freq,
           digest_email:     email,
         }, ['user_id']);
+
+        // Keep legacy local key in sync (older Reports UI / cron hints)
+        try {
+          const lsKey = 'wp_report_frequency_' + uid;
+          if (!enabled) localStorage.setItem(lsKey, 'off');
+          else if (freq === 'weekly') localStorage.setItem(lsKey, 'weekly_sunday');
+          else localStorage.setItem(lsKey, freq);
+        } catch { /* ignore */ }
 
         WPToast.success(enabled
           ? `Email digest enabled — ${freq} delivery confirmed.`
