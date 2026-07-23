@@ -236,6 +236,7 @@ const WPAuth = (() => {
             </button>
           </form>
           <div class="auth-switch">Don't have an account? <a id="goto-signup">Create one free</a></div>
+          ${typeof APP_CONFIG !== 'undefined' && APP_CONFIG.legalLinksHTML ? APP_CONFIG.legalLinksHTML() : '<p class="legal-links legal-links--auth"><a href="terms.html" target="_blank" rel="noopener noreferrer">Terms</a> · <a href="privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a></p>'}
         </div>
       </div>
     </div>`;
@@ -319,9 +320,21 @@ const WPAuth = (() => {
               </div>
               <div id="pw-strength" class="input-hint"></div>
             </div>
-            <p style="font-size:0.72rem;color:var(--clr-text-3);margin-bottom:1.25rem">By signing up you agree to our Terms of Service and Privacy Policy. Your data is encrypted and never shared.</p>
+            <div class="form-group" style="margin-bottom:1rem">
+              <label class="legal-consent" style="display:flex;align-items:flex-start;gap:0.55rem;font-size:0.78rem;color:var(--clr-text-2);line-height:1.45;cursor:pointer;font-weight:400">
+                <input type="checkbox" id="signup-consent" required style="margin-top:0.2rem;flex-shrink:0" aria-describedby="signup-consent-hint">
+                <span id="signup-consent-hint">I have read and agree to the
+                  <a href="terms.html" target="_blank" rel="noopener noreferrer" style="color:var(--clr-accent)">Terms of Service</a>
+                  and
+                  <a href="privacy.html" target="_blank" rel="noopener noreferrer" style="color:var(--clr-accent)">Privacy Policy</a>
+                  (NDPA 2023). I understand this is an educational planning tool, not licensed investment advice.
+                </span>
+              </label>
+            </div>
+            <p style="font-size:0.72rem;color:var(--clr-text-3);margin-bottom:1.25rem">Financial data is protected with encryption in transit and at rest (via Supabase). We do not sell your data.</p>
             <button class="btn btn-primary" style="width:100%" type="submit" id="signup-btn">Create Account</button>
           </form>
+          ${typeof APP_CONFIG !== 'undefined' && APP_CONFIG.legalLinksHTML ? APP_CONFIG.legalLinksHTML() : '<p class="legal-links legal-links--auth"><a href="terms.html" target="_blank" rel="noopener noreferrer">Terms</a> · <a href="privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a></p>'}
           <div class="auth-switch">Already have an account? <a id="goto-login">Sign in</a></div>
         </div>
       </div>
@@ -347,8 +360,16 @@ const WPAuth = (() => {
       e.preventDefault();
       const btn = document.getElementById('signup-btn');
       const errEl = document.getElementById('auth-error');
-      btn.textContent = 'Creating account…'; btn.disabled = true;
+      const consent = document.getElementById('signup-consent');
       errEl.style.display = 'none';
+
+      if (!consent || !consent.checked) {
+        errEl.textContent = 'Please accept the Terms of Service and Privacy Policy to create an account.';
+        errEl.style.display = 'flex';
+        return;
+      }
+
+      btn.textContent = 'Creating account…'; btn.disabled = true;
 
       try {
         const { error } = await WPAuth.signUp(

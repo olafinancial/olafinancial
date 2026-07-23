@@ -1,8 +1,11 @@
 # Pul Planning — Next Steps & Live Issue Check
 
-**Status Date:** July 15, 2026
+**Status Date:** July 22, 2026
 
-Following the successful implementation of the core features in the last session (**Budget Planner #32**, **Salary Calculator #34**, and the **Balance Sheet Split #36**), we have checked the repository status. 
+**Launch gate:** Use **[LAUNCH_CHECKLIST.md](./LAUNCH_CHECKLIST.md)** for Product / Engineering / Ops / Legal sign-off.  
+Soft beta may proceed after password-reset smoke + RLS verify; public launch needs legal Blockers closed.
+
+Following the successful implementation of the core features (**Budget Planner #32**, **Salary Calculator #34**, and the **Balance Sheet Split #36**), remaining work is primarily ops and compliance.
 
 Here are the remaining active GitHub issues and the recommended path forward:
 

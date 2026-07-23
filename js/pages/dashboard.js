@@ -12,10 +12,10 @@ const WPDashboard = (() => {
           <p class="page-subtitle" id="dash-period"></p>
         </div>
         <div class="flex gap-4" style="align-items:center">
-          <button class="btn btn-secondary btn-sm" id="dash-invite-header-btn" data-action="invite-member" onclick="window.openHouseholdInviteModal && window.openHouseholdInviteModal()">🔗 Invite Member</button>
-          <select id="dash-account-mode" class="select select-sm" style="width:165px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
+          <button class="btn btn-secondary btn-sm" id="dash-invite-header-btn" data-action="invite-member" onclick="window.openHouseholdInviteModal && window.openHouseholdInviteModal()" title="Share app invite (preview)">🔗 Invite to Pul</button>
+          <select id="dash-account-mode" class="select select-sm" style="width:175px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)" title="Household combined balances are not yet linked across accounts">
             <option value="personal">👤 Personal View</option>
-            <option value="household">👨‍👩‍👧 Household Combined</option>
+            <option value="household">👨‍👩‍👧 Household (preview)</option>
           </select>
           <select id="dash-page-currency" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
             <option value="NGN">NGN (₦)</option>
@@ -38,15 +38,18 @@ const WPDashboard = (() => {
         </div>
       </div>
       <div class="page-body">
-        <!-- Household Family View Banner -->
-        <div id="dash-household-banner" style="display:none;margin-bottom:1.25rem;padding:1.2rem;background:linear-gradient(135deg, rgba(0,200,150,0.1), rgba(56,189,248,0.1));border:1px solid var(--clr-accent);border-radius:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+        <!-- Household preview banner — combined multi-account data is NOT implemented yet -->
+        <div id="dash-household-banner" style="display:none;margin-bottom:1.25rem;padding:1.2rem;background:linear-gradient(135deg, rgba(245,158,11,0.12), rgba(56,189,248,0.08));border:1px solid var(--clr-gold);border-radius:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
           <div>
             <div style="font-weight:700;font-size:1.05rem;color:var(--clr-text);display:flex;align-items:center;gap:0.5rem">
-              👨‍👩‍👧 Combined Household Financial View
+              👨‍👩‍👧 Household view (preview)
             </div>
-            <p class="text-xs text-muted" style="margin:0.25rem 0 0">Aggregating income, budgets, assets, and liabilities across all registered family members.</p>
+            <p class="text-xs text-muted" style="margin:0.25rem 0 0;max-width:42rem;line-height:1.45">
+              Numbers on this dashboard are still <strong>your personal account only</strong>.
+              Multi-member linking and combined balances are not live yet. You can share an app invite so family can create their own accounts.
+            </p>
           </div>
-          <button class="btn btn-secondary btn-sm" id="dash-invite-btn" data-action="invite-member" onclick="window.openHouseholdInviteModal && window.openHouseholdInviteModal()">🔗 Pair Account / Invite Member</button>
+          <button class="btn btn-secondary btn-sm" id="dash-invite-btn" data-action="invite-member" onclick="window.openHouseholdInviteModal && window.openHouseholdInviteModal()">🔗 Share invite link</button>
         </div>
         <!-- Getting started path for naive users (shown until dismissed) -->
         <div class="card dashboard-full" id="dash-getting-started" style="display:none;margin-bottom:1.25rem"></div>
@@ -163,7 +166,11 @@ const WPDashboard = (() => {
       modeSelect.addEventListener('change', (e) => {
         localStorage.setItem('wp_account_mode', e.target.value);
         if (bannerEl) bannerEl.style.display = e.target.value === 'household' ? 'flex' : 'none';
-        WPToast.success(e.target.value === 'household' ? 'Switched to Household Combined View' : 'Switched to Personal View');
+        if (e.target.value === 'household') {
+          WPToast.info('Household preview — still showing your personal data only. Combined accounts coming later.');
+        } else {
+          WPToast.success('Personal view');
+        }
         _load();
       });
     }
@@ -207,13 +214,17 @@ const WPDashboard = (() => {
     modal.innerHTML = `
       <div class="card card-modal animate-in" style="max-width:480px;width:90%;padding:2rem;background:var(--clr-surface);border:1px solid var(--clr-border)">
         <div style="font-size:2.5rem;margin-bottom:0.75rem;text-align:center">👨‍👩‍👧</div>
-        <h3 style="margin-bottom:0.5rem;font-weight:700;color:var(--clr-text);text-align:center">Family &amp; Household Invite</h3>
-        <p class="text-muted text-sm" style="margin-bottom:1.25rem;text-align:center">
-          Share this invite link with your partner or family member. When they sign up or log in, your financial entries can be linked into a combined household view.
+        <h3 style="margin-bottom:0.5rem;font-weight:700;color:var(--clr-text);text-align:center">Invite family to Pul Planning</h3>
+        <p class="text-muted text-sm" style="margin-bottom:1rem;text-align:center;line-height:1.5">
+          Share this link so a partner or family member can create their <strong>own</strong> account.
+          Combined household balances and shared data are <strong>not available yet</strong> — each person keeps a private account until multi-member linking ships.
+        </p>
+        <p class="text-xs text-muted" style="margin-bottom:1.25rem;text-align:center;padding:0.65rem 0.75rem;background:var(--clr-gold-dim);border-radius:8px;border:1px solid rgba(245,158,11,0.35)">
+          Preview only — invite tracks a reference ID for a future household feature; it does not grant access to your data.
         </p>
 
         <div class="form-group" style="margin-bottom:1.5rem">
-          <label style="font-size:0.8rem;color:var(--clr-text-2)">Household Invite Link</label>
+          <label style="font-size:0.8rem;color:var(--clr-text-2)">App invite link</label>
           <div class="input-suffix-group" style="margin-top:0.35rem">
             <input class="input" type="text" id="household-link-input" readonly value="${inviteUrl}" style="font-size:0.85rem">
             <button type="button" class="btn btn-secondary input-suffix-btn" id="copy-modal-link-btn" style="white-space:nowrap;padding:0 1rem">

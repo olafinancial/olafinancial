@@ -18,3 +18,7 @@ services:
         sync: false
       - key: RESEND_FROM
         value: Pul Planning <digest@pul.llc>
+      - key: ADMIN_SECRET
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false

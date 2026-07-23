@@ -1087,6 +1087,17 @@ tbody td {
 .alert-info    { background: var(--clr-info-dim);   border: 1px solid var(--clr-info);   color: var(--clr-info); }
 .disclaimer    { background: var(--clr-surface-2); border: 1px solid var(--clr-border); color: var(--clr-text-3); border-radius: var(--radius); padding: var(--sp-3) var(--sp-4); font-size: var(--text-xs); line-height: 1.6; }
 
+/* Legal links (auth + sidebar) */
+.legal-links { font-size: var(--text-xs); color: var(--clr-text-3); margin: 0.75rem 0 0; text-align: center; }
+.legal-links a { color: var(--clr-text-2); text-decoration: none; }
+.legal-links a:hover { color: var(--clr-accent); text-decoration: underline; }
+.legal-links--sidebar {
+  display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+  margin: 0.5rem 0 0.65rem; padding: 0 0.5rem;
+}
+.legal-links--auth { margin-top: 1rem; }
+.legal-consent a { text-decoration: underline; }
+
 /* ── TABS ────────────────────────────────────────────────── */
 .tabs { display: flex; gap: 2px; background: var(--clr-surface-2); border-radius: var(--radius); padding: 3px; margin-bottom: var(--sp-6); width: fit-content; }
 .tab-btn {
