@@ -122,11 +122,15 @@ function buildEmailHTML(name, summary, month, appUrl) {
           <td style="background:linear-gradient(135deg,#161B22,#1C2331);border-radius:16px 16px 0 0;padding:32px 36px;border-bottom:1px solid #30363D;">
             <table width="100%"><tr>
               <td>
-                <div style="display:inline-flex;align-items:center;gap:12px;">
-                  <div style="width:44px;height:44px;background:#00C896;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;line-height:44px;text-align:center;">⚡</div>
-                  <span style="font-size:1.5rem;font-weight:800;color:#ffffff;letter-spacing:-0.02em;margin-left:12px;">pul.llc</span>
-                </div>
-                <div style="color:#8B949E;font-size:0.8rem;margin-top:8px;letter-spacing:0.06em;text-transform:uppercase;">Financial Digest</div>
+                <table cellpadding="0" cellspacing="0" border="0"><tr>
+                  <td valign="middle">
+                    <img src="${appUrl}/pul_logo.jpeg" alt="Pul Planning" width="44" height="44" style="border-radius:10px;display:block;border:0;outline:none;" />
+                  </td>
+                  <td valign="middle" style="padding-left:12px;">
+                    <span style="font-size:1.5rem;font-weight:800;color:#ffffff;letter-spacing:-0.02em;line-height:1;">Pul Planning</span>
+                  </td>
+                </tr></table>
+                <div style="color:#8B949E;font-size:0.8rem;margin-top:8px;letter-spacing:0.06em;text-transform:uppercase;">Financial Digest · pul.llc</div>
               </td>
               <td align="right" style="color:#8B949E;font-size:0.8rem;">${month}</td>
             </tr></table>
