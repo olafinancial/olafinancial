@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: pul-planning-backend
+    env: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_URL
+        value: https://pul.llc
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        value: Pul Planning <digest@pul.llc>
