@@ -67,13 +67,14 @@ const WPAssets = (() => {
                   <th>Avg cost</th>
                   <th>Market price</th>
                   <th>Cost basis</th>
+                  <th>Div Paid</th>
                   <th>Market value</th>
                   <th>Gain / Loss</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody id="assets-mtm-list">
-                <tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--clr-text-3)">No ticker holdings yet. Add an asset with a ticker to mark it to market.</td></tr>
+                <tr><td colspan="9" style="text-align:center;padding:1.5rem;color:var(--clr-text-3)">No ticker holdings yet. Add an asset with a ticker to mark it to market.</td></tr>
               </tbody>
             </table>
           </div>
@@ -338,6 +339,7 @@ const WPAssets = (() => {
     if (!el) return;
 
     let totalCostPage = 0;
+    let totalDivPaidPage = 0;
     let totalValuePage = 0;
     let liveCount = 0;
 
@@ -350,11 +352,14 @@ const WPAssets = (() => {
       const currentPrice = _priceFor(sym, buyMajor);
       const costKobo = Math.round(tags.qty * tags.unitCostKobo);
       const valueKobo = Math.round(tags.qty * WPUtils.nairaToKobo(currentPrice));
+      const divPaidKobo = asset.annual_income || 0;
       const costPage = WPUtils.convert(costKobo, cur, pageCurrency);
+      const divPaidPage = WPUtils.convert(divPaidKobo, cur, pageCurrency);
       const valuePage = WPUtils.convert(valueKobo, cur, pageCurrency);
       const buyPage = WPUtils.convert(tags.unitCostKobo, cur, pageCurrency);
       const pxPage = WPUtils.convert(WPUtils.nairaToKobo(currentPrice), cur, pageCurrency);
       totalCostPage += costPage;
+      totalDivPaidPage += divPaidPage;
       totalValuePage += valuePage;
       const gain = valuePage - costPage;
       const rowPct = (gain / Math.max(1, costPage)) * 100;
@@ -370,6 +375,7 @@ const WPAssets = (() => {
         <td class="td-mono">${WPUtils.fmt(buyPage, { currency: pageCurrency })}</td>
         <td class="td-mono text-accent">${WPUtils.fmt(pxPage, { currency: pageCurrency })}</td>
         <td class="td-mono">${WPUtils.fmt(costPage, { currency: pageCurrency })}</td>
+        <td class="td-mono text-accent">${WPUtils.fmt(divPaidPage, { currency: pageCurrency })}</td>
         <td class="td-mono fw-600">${WPUtils.fmt(valuePage, { currency: pageCurrency })}</td>
         <td class="td-mono fw-600 ${rowGain ? 'text-accent' : 'text-danger'}">
           ${WPUtils.fmt(gain, { signed: true, currency: pageCurrency })} (${rowGain ? '+' : ''}${rowPct.toFixed(2)}%)
@@ -383,6 +389,7 @@ const WPAssets = (() => {
       <tr style="border-top:2px solid var(--clr-border-2);background:var(--clr-surface-2)">
         <td colspan="4" class="fw-700">Portfolio total (${list.length} position${list.length === 1 ? '' : 's'})</td>
         <td class="td-mono fw-700">${WPUtils.fmt(totalCostPage, { currency: pageCurrency })}</td>
+        <td class="td-mono fw-700 text-accent">${WPUtils.fmt(totalDivPaidPage, { currency: pageCurrency })}</td>
         <td class="td-mono fw-700 text-accent">${WPUtils.fmt(totalValuePage, { currency: pageCurrency })}</td>
         <td class="td-mono fw-700 ${(totalValuePage - totalCostPage) >= 0 ? 'text-accent' : 'text-danger'}">
           ${WPUtils.fmt(totalValuePage - totalCostPage, { signed: true, currency: pageCurrency })}

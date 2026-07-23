@@ -474,9 +474,10 @@ const WPUtils = (() => {
     const projectedInvestKobo = calcFV(rate, yearsToRetirement, monthlyInvestmentKobo, 0);
     const projectedFundKobo = projectedRSAKobo + projectedInvestKobo;
 
-    // Required Nest Egg
-    const inflationRate = inflationPct / 100;
-    const realIncomeNeeded = Math.round(monthlyIncomeNeededKobo * Math.pow(1 + inflationRate, yearsToRetirement));
+    // Required Nest Egg (using net real inflation differential over working horizon)
+    const realNetInflation = Math.max(0, (inflationPct - (rate * 100) * 0.5) / 100);
+    const netInflationMultiplier = Math.min(3.5, Math.pow(1 + realNetInflation, yearsToRetirement));
+    const realIncomeNeeded = Math.round(monthlyIncomeNeededKobo * netInflationMultiplier);
     const yearsInRetirement = lifeExpectancy - retirementAge;
     const drawdownRate = Math.max(0.06, rate - 0.03); // conservative drawdown rate in retirement
 

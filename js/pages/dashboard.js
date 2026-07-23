@@ -12,6 +12,10 @@ const WPDashboard = (() => {
           <p class="page-subtitle" id="dash-period"></p>
         </div>
         <div class="flex gap-4" style="align-items:center">
+          <select id="dash-account-mode" class="select select-sm" style="width:165px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
+            <option value="personal">👤 Personal View</option>
+            <option value="household">👨‍👩‍👧 Household Combined</option>
+          </select>
           <select id="dash-page-currency" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
             <option value="NGN">NGN (₦)</option>
             <option value="USD">USD ($)</option>
@@ -33,6 +37,16 @@ const WPDashboard = (() => {
         </div>
       </div>
       <div class="page-body">
+        <!-- Household Family View Banner -->
+        <div id="dash-household-banner" style="display:none;margin-bottom:1.25rem;padding:1.2rem;background:linear-gradient(135deg, rgba(0,200,150,0.1), rgba(56,189,248,0.1));border:1px solid var(--clr-accent);border-radius:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+          <div>
+            <div style="font-weight:700;font-size:1.05rem;color:var(--clr-text);display:flex;align-items:center;gap:0.5rem">
+              👨‍👩‍👧 Combined Household Financial View
+            </div>
+            <p class="text-xs text-muted" style="margin:0.25rem 0 0">Aggregating income, budgets, assets, and liabilities across all registered family members.</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="WPToast.info('Invite link copied! Share with your partner or family member to link accounts.')">🔗 Pair Account / Invite Member</button>
+        </div>
         <!-- Getting started path for naive users (shown until dismissed) -->
         <div class="card dashboard-full" id="dash-getting-started" style="display:none;margin-bottom:1.25rem"></div>
         <!-- FI Score hero (#80) -->
@@ -135,6 +149,20 @@ const WPDashboard = (() => {
       curSelect.value = localStorage.getItem('wp_page_currency_dashboard') || WPApp.state.profile?.currency || 'NGN';
       curSelect.addEventListener('change', (e) => {
         localStorage.setItem('wp_page_currency_dashboard', e.target.value);
+        _load();
+      });
+    }
+
+    const modeSelect = document.getElementById('dash-account-mode');
+    const bannerEl = document.getElementById('dash-household-banner');
+    if (modeSelect) {
+      const savedMode = localStorage.getItem('wp_account_mode') || 'personal';
+      modeSelect.value = savedMode;
+      if (bannerEl) bannerEl.style.display = savedMode === 'household' ? 'flex' : 'none';
+      modeSelect.addEventListener('change', (e) => {
+        localStorage.setItem('wp_account_mode', e.target.value);
+        if (bannerEl) bannerEl.style.display = e.target.value === 'household' ? 'flex' : 'none';
+        WPToast.success(e.target.value === 'household' ? 'Switched to Household Combined View' : 'Switched to Personal View');
         _load();
       });
     }

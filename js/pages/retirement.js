@@ -103,6 +103,11 @@ const WPRetirement = (() => {
               </div>
             </div>
             <div class="form-group">
+              <label for="ret-replace-ratio">Desired Replacement Ratio (%)</label>
+              <input class="input" type="number" id="ret-replace-ratio" min="40" max="100" step="5" value="70">
+              <span class="text-xs text-muted" style="margin-top:0.2rem;display:block">% of current salary needed in retirement</span>
+            </div>
+            <div class="form-group">
               <label for="ret-monthly-need">Monthly Income Needed (${symbol})</label>
               <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
                 <input class="input" type="text" inputmode="decimal" id="ret-monthly-need" placeholder="e.g. 500,000">
@@ -180,8 +185,26 @@ const WPRetirement = (() => {
         return s + WPUtils.convert(e.gross_amount||0, cur, pageCurrency);
       }, 0);
       if (monthlyGross > 0) {
-        document.getElementById('ret-salary').value = WPUtils.koboToNaira(monthlyGross).toFixed(0);
+        const salNaira = Math.round(WPUtils.koboToNaira(monthlyGross));
+        document.getElementById('ret-salary').value = salNaira.toString();
+        const ratio = parseFloat(document.getElementById('ret-replace-ratio')?.value) || 70;
+        const needInput = document.getElementById('ret-monthly-need');
+        if (needInput && !needInput.value) {
+          needInput.value = Math.round(salNaira * (ratio / 100)).toString();
+        }
       }
+
+      const syncNeed = () => {
+        const sal = WPUtils.cleanNum(document.getElementById('ret-salary').value);
+        const ratio = parseFloat(document.getElementById('ret-replace-ratio')?.value) || 70;
+        const needInput = document.getElementById('ret-monthly-need');
+        if (sal > 0 && needInput) {
+          needInput.value = Math.round(sal * (ratio / 100)).toString();
+        }
+      };
+
+      document.getElementById('ret-salary')?.addEventListener('input', syncNeed);
+      document.getElementById('ret-replace-ratio')?.addEventListener('input', syncNeed);
 
       // 1. RSA
       const rsaAssets = assets.filter(a => {
