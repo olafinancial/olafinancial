@@ -45,7 +45,7 @@ const WPDashboard = (() => {
             </div>
             <p class="text-xs text-muted" style="margin:0.25rem 0 0">Aggregating income, budgets, assets, and liabilities across all registered family members.</p>
           </div>
-          <button class="btn btn-secondary btn-sm" onclick="WPToast.info('Invite link copied! Share with your partner or family member to link accounts.')">🔗 Pair Account / Invite Member</button>
+          <button class="btn btn-secondary btn-sm" id="dash-invite-btn">🔗 Pair Account / Invite Member</button>
         </div>
         <!-- Getting started path for naive users (shown until dismissed) -->
         <div class="card dashboard-full" id="dash-getting-started" style="display:none;margin-bottom:1.25rem"></div>
@@ -167,8 +167,78 @@ const WPDashboard = (() => {
       });
     }
 
+    document.getElementById('dash-invite-btn')?.addEventListener('click', _handleHouseholdInvite);
+
     _renderGettingStarted();
     await _load();
+  }
+
+  async function _handleHouseholdInvite() {
+    const userId = WPApp.state.user?.id || 'family';
+    const origin = window.location.origin;
+    const pathname = window.location.pathname.replace(/\/$/, '');
+    const inviteUrl = `${origin}${pathname}/#/signup?invite=${encodeURIComponent(userId)}&mode=household`;
+
+    const copied = await WPUtils.copyToClipboard(inviteUrl);
+
+    let modal = document.getElementById('household-invite-modal');
+    if (modal) modal.remove();
+
+    modal = document.createElement('div');
+    modal.id = 'household-invite-modal';
+    modal.className = 'modal-backdrop';
+    modal.style.cssText = 'display:flex;align-items:center;justify-content:center;z-index:9999;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6)';
+
+    modal.innerHTML = `
+      <div class="card card-modal animate-in" style="max-width:480px;width:90%;padding:2rem;background:var(--clr-surface);border:1px solid var(--clr-border)">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem;text-align:center">👨‍👩‍👧</div>
+        <h3 style="margin-bottom:0.5rem;font-weight:700;color:var(--clr-text);text-align:center">Family &amp; Household Invite</h3>
+        <p class="text-muted text-sm" style="margin-bottom:1.25rem;text-align:center">
+          Share this invite link with your partner or family member. When they sign up or log in, your financial entries can be linked into a combined household view.
+        </p>
+
+        <div class="form-group" style="margin-bottom:1.5rem">
+          <label style="font-size:0.8rem;color:var(--clr-text-2)">Household Invite Link</label>
+          <div class="input-suffix-group" style="margin-top:0.35rem">
+            <input class="input" type="text" id="household-link-input" readonly value="${inviteUrl}" style="font-size:0.85rem">
+            <button type="button" class="btn btn-secondary input-suffix-btn" id="copy-modal-link-btn" style="white-space:nowrap;padding:0 1rem">
+              ${copied ? '✓ Copied' : 'Copy Link'}
+            </button>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:0.75rem;justify-content:flex-end">
+          <button class="btn btn-primary" style="width:100%" id="close-modal-link-btn">Done</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const inputEl = document.getElementById('household-link-input');
+    const copyBtn = document.getElementById('copy-modal-link-btn');
+
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async () => {
+        if (inputEl) inputEl.select();
+        const res = await WPUtils.copyToClipboard(inviteUrl);
+        if (res) {
+          copyBtn.textContent = '✓ Copied!';
+          WPToast.success('Invite link copied to clipboard!');
+          setTimeout(() => { if (copyBtn) copyBtn.textContent = 'Copy Link'; }, 2500);
+        } else {
+          WPToast.info('Select and copy the URL above.');
+        }
+      });
+    }
+
+    document.getElementById('close-modal-link-btn')?.addEventListener('click', () => {
+      modal.remove();
+    });
+
+    if (copied) {
+      WPToast.success('Household invite link copied to clipboard!');
+    }
   }
 
   function _renderGettingStarted() {
