@@ -353,7 +353,8 @@ const WPOnboarding = (() => {
       WPToast.success(_isReplay
         ? 'Profile updated. Follow the path on your dashboard when you are ready.'
         : 'Profile saved! Welcome to Pul Planning — start with Income.');
-      // Reload the full app shell
+      // Reload the full app shell and navigate to dashboard
+      history.replaceState(null, '', '#/dashboard');
       document.getElementById('root').innerHTML = '';
       await WPApp.boot();
     } catch (err) {
