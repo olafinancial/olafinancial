@@ -195,13 +195,17 @@ const APP_CONFIG = {
   },
 
   // ── NIGERIA TAX ACT 2025 — PERSONAL INCOME TAX ────────────
-  // Source: Nigeria Tax Act 2025 (signed May 2025)
-  // Brackets apply to Chargeable Income after reliefs
+  // Source: Nigeria Tax Act 2025 (effective Jan 1, 2026)
+  // Values are annual chargeable income in kobo (₦ × 100).
+  // Runtime tax uses progressive band WIDTHS in js/utils.js PIT_BRACKETS;
+  // this table is for display / education (cumulative ceilings).
   taxBrackets: [
-    { upTo:  80_000_000, rate: 0.00, label: '0% (≤ ₦800k/month)' },   // First ₦80M annual: 0%
-    { upTo: 280_000_000, rate: 0.15, label: '15%' },                    // Next ₦200M: 15%
-    { upTo: 500_000_000, rate: 0.20, label: '20%' },                    // Next ₦220M: 20%
-    { upTo: Infinity,    rate: 0.25, label: '25%' },                    // Above ₦500M: 25%
+    { upTo:   80_000_000, rate: 0.00, label: '0% (first ₦800,000 / year)' },
+    { upTo:  300_000_000, rate: 0.15, label: '15% (next ₦2.2M)' },
+    { upTo: 1_200_000_000, rate: 0.18, label: '18% (next ₦9M)' },
+    { upTo: 2_500_000_000, rate: 0.21, label: '21% (next ₦13M)' },
+    { upTo: 5_000_000_000, rate: 0.23, label: '23% (next ₦25M)' },
+    { upTo: Infinity,      rate: 0.25, label: '25% (above ₦50M / year)' },
   ],
 
   // Annual reliefs (kobo) — NTA 2025 §30(2) six deductible expenses
@@ -227,13 +231,41 @@ const APP_CONFIG = {
     description:   'PENCOM Contributory Pension Scheme — Pension Reform Act 2014 (as amended)',
   },
 
-  // ── NDIC DEPOSIT INSURANCE LIMITS ────────────────────────
+  // ── NDIC DEPOSIT INSURANCE LIMITS (kobo) ─────────────────
   // Source: NDIC (Nigeria Deposit Insurance Corporation)
   ndic: {
     dmb:  500_000_000,    // ₦5,000,000 for Deposit Money Banks (commercial banks)
     mfb:  200_000_000,    // ₦2,000,000 for Microfinance Banks
     pmb:  200_000_000,    // ₦2,000,000 for Primary Mortgage Banks
     mmo:  150_000_000,    // ₦1,500,000 for Mobile Money Operators (PSBs)
+  },
+  // Legacy flat aliases (prefer ndic.*)
+  get ndicLimitsDMB() { return this.ndic.dmb; },
+  get ndicLimitsMFB() { return this.ndic.mfb; },
+
+  /** Legal docs (static HTML on GitHub Pages — not hash routes). */
+  legal: {
+    privacyUrl: 'privacy.html',
+    termsUrl: 'terms.html',
+  },
+
+  /** Compact legal links for auth / footer. */
+  legalLinksHTML(opts = {}) {
+    const { style = 'auth' } = opts;
+    const p = this.legal.privacyUrl;
+    const t = this.legal.termsUrl;
+    if (style === 'sidebar') {
+      return `<div class="legal-links legal-links--sidebar">
+        <a href="${p}" target="_blank" rel="noopener noreferrer">Privacy</a>
+        <span aria-hidden="true">·</span>
+        <a href="${t}" target="_blank" rel="noopener noreferrer">Terms</a>
+      </div>`;
+    }
+    return `<p class="legal-links legal-links--auth">
+      <a href="${t}" target="_blank" rel="noopener noreferrer">Terms of Service</a>
+      <span aria-hidden="true">·</span>
+      <a href="${p}" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+    </p>`;
   },
 
   // ── FINANCIAL RATIOS (benchmarks) ─────────────────────────

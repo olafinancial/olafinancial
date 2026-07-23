@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy | Pul Planning</title>
+  <meta name="description" content="Privacy Policy for Pul Planning (pul.llc) — how we collect, use, and protect your personal and financial data under the Nigeria Data Protection Act 2023.">
+  <link rel="canonical" href="https://pul.llc/privacy.html">
+  <meta name="theme-color" content="#0A1628">
+  <link rel="icon" type="image/jpeg" href="pul_logo.jpeg">
+  <link rel="stylesheet" href="css/styles.css?v=20260722_launch">
+  <style>
+    .legal-page { max-width: 720px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    .legal-page h1 { font-size: 1.75rem; font-weight: 800; margin: 0 0 0.5rem; color: var(--clr-text); }
+    .legal-page .legal-meta { color: var(--clr-text-3); font-size: 0.85rem; margin-bottom: 2rem; }
+    .legal-page h2 { font-size: 1.1rem; font-weight: 700; margin: 1.75rem 0 0.65rem; color: var(--clr-text); }
+    .legal-page p, .legal-page li { color: var(--clr-text-2); font-size: 0.92rem; line-height: 1.65; }
+    .legal-page ul { padding-left: 1.25rem; margin: 0.5rem 0 1rem; }
+    .legal-page a { color: var(--clr-accent); }
+    .legal-banner {
+      background: var(--clr-gold-dim); border: 1px solid rgba(245,158,11,0.4);
+      border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1.5rem;
+      font-size: 0.82rem; color: var(--clr-text-2); line-height: 1.5;
+    }
+    .legal-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  </style>
+</head>
+<body style="background:var(--clr-bg);min-height:100vh">
+  <div class="legal-page">
+    <div class="legal-top">
+      <a href="index.html" style="display:flex;align-items:center;gap:0.65rem;text-decoration:none;color:inherit">
+        <img class="brand-logo" src="pul_logo.jpeg" alt="Pul" width="44" height="38" />
+        <span style="font-weight:800;color:var(--clr-text)">Pul Planning</span>
+      </a>
+      <div style="display:flex;gap:1rem;font-size:0.85rem">
+        <a href="terms.html">Terms of Service</a>
+        <a href="index.html">Back to app</a>
+      </div>
+    </div>
+
+    <h1>Privacy Policy</h1>
+    <p class="legal-meta">Effective: 22 July 2026 · Controller: Pul Planning (pul.llc) · Contact: <a href="mailto:privacy@pul.llc">privacy@pul.llc</a></p>
+
+    <div class="legal-banner">
+      <strong>Plain language:</strong> We collect the financial information you enter so the app can show dashboards, tax estimates, and reports.
+      We do not sell your data. You can reset or delete your account from Settings. This policy is intended to align with the
+      <strong>Nigeria Data Protection Act (NDPA) 2023</strong> and GAID 2025. Have your counsel review before treating this as final legal advice.
+    </div>
+
+    <h2>1. Who we are</h2>
+    <p>
+      Pul Planning (“Pul”, “we”, “us”) operates the personal finance web application at
+      <a href="https://pul.llc">https://pul.llc</a>. We process personal data as a data controller for accounts we operate.
+    </p>
+
+    <h2>2. Data we collect</h2>
+    <ul>
+      <li><strong>Account data:</strong> name, email, authentication credentials (handled by Supabase Auth), optional profile fields (age, retirement age, currency preference, employment status).</li>
+      <li><strong>Financial data you enter:</strong> income, expenses, assets, liabilities, goals, insurance, emergency fund, snapshots, calculators inputs, and related notes.</li>
+      <li><strong>Technical data:</strong> device/browser type, IP address (via hosting/auth providers), session tokens, basic usage needed to secure the service.</li>
+      <li><strong>Preferences:</strong> email digest settings, currency, Takaful preference, and similar app settings.</li>
+    </ul>
+    <p>We do not require you to link live bank accounts or process payments through Pul for the core planning tools.</p>
+
+    <h2>3. Lawful basis &amp; purposes (NDPA)</h2>
+    <ul>
+      <li><strong>Contract / requested service:</strong> create your account, store and display your financial entries, generate reports and projections.</li>
+      <li><strong>Consent:</strong> optional product emails (digests) where you opt in; marketing only if you explicitly opt in later.</li>
+      <li><strong>Legitimate interests:</strong> security, fraud prevention, service reliability, product improvement using aggregated or de-identified signals where appropriate.</li>
+      <li><strong>Legal obligation:</strong> respond to lawful requests and maintain records where required.</li>
+    </ul>
+
+    <h2>4. How we use your data</h2>
+    <ul>
+      <li>Authenticate you and keep your session secure (including idle timeout).</li>
+      <li>Power dashboards, tax estimators (NTA 2025), debt tools, retirement and FI calculators.</li>
+      <li>Send password-reset and (if enabled) digest emails.</li>
+      <li>Provide account tools: reset data, load demo data, delete account.</li>
+    </ul>
+    <p>We do <strong>not</strong> sell personal data. We do not use your financial entries to trade securities on your behalf.</p>
+
+    <h2>5. Processors &amp; transfers</h2>
+    <p>We use third-party infrastructure to run the product, including:</p>
+    <ul>
+      <li><strong>Supabase</strong> — authentication and PostgreSQL database (with row-level security so users only access their own rows).</li>
+      <li><strong>GitHub Pages / CDN</strong> — static web hosting for the front end.</li>
+      <li><strong>Email providers</strong> (e.g. Supabase Auth email / Resend) — transactional and digest mail when configured.</li>
+      <li><strong>Optional application server</strong> (e.g. Render) — digests, account deletion, macro data APIs.</li>
+    </ul>
+    <p>
+      Some providers may process data outside Nigeria. Where cross-border transfer rules under NDPA apply, we will use appropriate safeguards
+      (e.g. contractual protections) and update this policy as our hosting footprint changes. CBN data-localisation rules for payment data
+      (from 2027) will be considered if we ever process regulated payment transactions.
+    </p>
+
+    <h2>6. Security</h2>
+    <ul>
+      <li>Encryption in transit (TLS) and at rest via our backend provider.</li>
+      <li>Row-level security on financial tables.</li>
+      <li>Service-role keys kept only on servers, never in the browser.</li>
+      <li>Session idle timeout and strong password requirements at sign-up.</li>
+    </ul>
+    <p>No method of transmission or storage is 100% secure. Report suspected breaches to <a href="mailto:privacy@pul.llc">privacy@pul.llc</a>.</p>
+
+    <h2>7. Retention</h2>
+    <p>
+      We keep your data while your account is active. If you delete your account (Settings → Delete account) or request erasure,
+      we remove or anonymise personal data within a reasonable period, except where we must retain records for legal, security, or dispute purposes.
+    </p>
+
+    <h2>8. Your rights</h2>
+    <p>Subject to NDPA and applicable law, you may have rights to:</p>
+    <ul>
+      <li>Access and receive a copy of your personal data</li>
+      <li>Correct inaccurate data</li>
+      <li>Delete data / close your account</li>
+      <li>Withdraw consent where processing is consent-based (e.g. digests)</li>
+      <li>Object or restrict certain processing</li>
+      <li>Lodge a complaint with the <strong>Nigeria Data Protection Commission (NDPC)</strong></li>
+    </ul>
+    <p>In-product: use <strong>Settings → Testing &amp; account</strong> for data reset and account deletion. Or email <a href="mailto:privacy@pul.llc">privacy@pul.llc</a>.</p>
+
+    <h2>9. Children</h2>
+    <p>Pul is intended for adults managing personal finances. We do not knowingly create accounts for children under 18.</p>
+
+    <h2>10. Cookies &amp; local storage</h2>
+    <p>
+      We use essential session storage and local preferences (currency, UI flags, service worker cache).
+      These are required for the app to function; we do not run third-party advertising trackers in the core product.
+    </p>
+
+    <h2>11. Breach notification</h2>
+    <p>
+      Where required by NDPA, we will notify the NDPC within applicable timelines (including the 72-hour standard where it applies)
+      and inform affected users without undue delay when a breach is likely to result in a high risk to their rights.
+    </p>
+
+    <h2>12. Changes</h2>
+    <p>We may update this policy. Material changes will be posted on this page with a new effective date. Continued use after the effective date constitutes acceptance where permitted by law.</p>
+
+    <h2>13. Contact</h2>
+    <p>
+      Privacy enquiries: <a href="mailto:privacy@pul.llc">privacy@pul.llc</a><br>
+      Web: <a href="https://pul.llc">https://pul.llc</a>
+    </p>
+
+    <p class="legal-meta" style="margin-top:2.5rem">
+      Related: <a href="terms.html">Terms of Service</a> ·
+      This document is a product template for launch readiness; obtain counsel review for NDPC registration, DPO appointment, and DPIA.
+    </p>
+  </div>
+</body>
+</html>

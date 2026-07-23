@@ -384,13 +384,26 @@ const WPUtils = (() => {
     return (totalLiabilitiesKobo / totalAssetsKobo) * 100;
   }
 
-  // NDIC alert check
+  // NDIC alert check — limits live on APP_CONFIG.ndic (kobo)
+  function ndicLimitKobo(institutionType = 'dmb') {
+    const ndic = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.ndic) || {};
+    const key = String(institutionType || 'dmb').toLowerCase();
+    // Prefer nested config; keep legacy flat keys as fallback
+    if (ndic[key] != null) return Number(ndic[key]) || 0;
+    if (key === 'dmb' && APP_CONFIG.ndicLimitsDMB != null) return Number(APP_CONFIG.ndicLimitsDMB) || 0;
+    if (key === 'mfb' && APP_CONFIG.ndicLimitsMFB != null) return Number(APP_CONFIG.ndicLimitsMFB) || 0;
+    // Defaults (kobo): DMB ₦5M, MFB/PMB ₦2M, MMO ₦1.5M
+    const defaults = { dmb: 500_000_000, mfb: 200_000_000, pmb: 200_000_000, mmo: 150_000_000 };
+    return defaults[key] || defaults.dmb;
+  }
+
   function checkNDIC(balanceKobo, institutionType = 'dmb') {
-    const limit = institutionType === 'dmb' ? APP_CONFIG.ndicLimitsDMB : APP_CONFIG.ndicLimitsMFB;
-    if (balanceKobo > limit) {
-      return { alert: true, excess: balanceKobo - limit, limit, institutionType };
+    const bal = Math.max(0, Number(balanceKobo) || 0);
+    const limit = ndicLimitKobo(institutionType);
+    if (limit > 0 && bal > limit) {
+      return { alert: true, excess: bal - limit, limit, institutionType };
     }
-    return { alert: false };
+    return { alert: false, limit, institutionType };
   }
 
   // ── EMERGENCY FUND ────────────────────────────────────────
@@ -1347,7 +1360,7 @@ const WPUtils = (() => {
     calcFV, calcPMT, calcAnnuity,
     calcDebtStrategy,
     calcDebtAvalanche: function(debts, extra) { return calcDebtStrategy(debts, extra, 'avalanche'); },
-    calcNetWorth, coverageRatio, debtToAssetRatio, checkNDIC,
+    calcNetWorth, coverageRatio, debtToAssetRatio, ndicLimitKobo, checkNDIC,
     emergencyFundTarget, emergencyFundStatus,
     calcRetirement,
     calcCashFlow,

@@ -218,6 +218,53 @@ describe('emergencyFundStatus', () => {
   });
 });
 
+// NDIC — mirrors fixed js/utils.js (APP_CONFIG.ndic.* in kobo)
+const NDIC = {
+  dmb: 500_000_000, // ₦5,000,000
+  mfb: 200_000_000, // ₦2,000,000
+  pmb: 200_000_000,
+  mmo: 150_000_000,
+};
+
+function ndicLimitKobo(institutionType = 'dmb', config = NDIC) {
+  const key = String(institutionType || 'dmb').toLowerCase();
+  return config[key] != null ? Number(config[key]) || 0 : config.dmb;
+}
+
+function checkNDIC(balanceKobo, institutionType = 'dmb', config = NDIC) {
+  const bal = Math.max(0, Number(balanceKobo) || 0);
+  const limit = ndicLimitKobo(institutionType, config);
+  if (limit > 0 && bal > limit) {
+    return { alert: true, excess: bal - limit, limit, institutionType };
+  }
+  return { alert: false, limit, institutionType };
+}
+
+describe('checkNDIC (deposit insurance thresholds)', () => {
+  test('no alert when balance is within DMB ₦5M limit', () => {
+    // ₦4,999,999.00 in kobo
+    const r = checkNDIC(499_999_900, 'dmb');
+    expect(r.alert).toBe(false);
+    expect(r.limit).toBe(500_000_000);
+  });
+  test('alerts when DMB balance exceeds ₦5M', () => {
+    const r = checkNDIC(600_000_000, 'dmb'); // ₦6M
+    expect(r.alert).toBe(true);
+    expect(r.excess).toBe(100_000_000);
+    expect(r.limit).toBe(500_000_000);
+  });
+  test('uses lower MFB limit (₦2M)', () => {
+    const r = checkNDIC(300_000_000, 'mfb'); // ₦3M
+    expect(r.alert).toBe(true);
+    expect(r.limit).toBe(200_000_000);
+  });
+  test('defaults unknown institution type to DMB limit path via config', () => {
+    const r = checkNDIC(100, 'unknown_type', { dmb: 500_000_000 });
+    expect(r.alert).toBe(false);
+    expect(r.limit).toBe(500_000_000);
+  });
+});
+
 describe('calcPIT (Nigerian Tax Act 2025 §30(2) six deductibles)', () => {
   test('income below ₦800K per year is tax-free', () => {
     expect(calcPIT(80_000_000)).toBe(0);

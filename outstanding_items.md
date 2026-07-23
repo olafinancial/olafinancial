@@ -1,8 +1,15 @@
 # Pul Planning — Outstanding Items
 
-**As of:** July 13, 2026  
+**As of:** July 22, 2026  
 **Completed features:** 40+ requirements shipped across 9 sessions  
-**Active modules:** 16 pages + 2 libraries all live
+**Active modules:** 16 pages + 2 libraries all live  
+**Launch gate:** See **[LAUNCH_CHECKLIST.md](./LAUNCH_CHECKLIST.md)** (owners: Product / Engineering / Ops / Legal).
+
+### Shipped 2026-07-22 (go-live prep)
+- NDIC alert config mapping fixed (`APP_CONFIG.ndic`)
+- Privacy Policy + Terms pages + signup consent checkbox
+- Household combined view copy honesty (preview only)
+- Tax bracket display labels aligned with NTA 2025 progressive bands
 
 ---
 

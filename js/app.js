@@ -181,6 +181,7 @@ const WPApp = (() => {
           <nav class="sidebar-nav" id="sidebar-nav"></nav>
           <div class="sidebar-footer">
             ${typeof APP_CONFIG !== 'undefined' && APP_CONFIG.brandSocialHTML ? APP_CONFIG.brandSocialHTML('compact') : ''}
+            ${typeof APP_CONFIG !== 'undefined' && APP_CONFIG.legalLinksHTML ? APP_CONFIG.legalLinksHTML({ style: 'sidebar' }) : '<div class="legal-links legal-links--sidebar"><a href="privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a><span aria-hidden="true">·</span><a href="terms.html" target="_blank" rel="noopener noreferrer">Terms</a></div>'}
             <div class="sidebar-user" id="sidebar-user">
               <div class="sidebar-avatar" id="sidebar-avatar">?</div>
               <div class="sidebar-user-info">
