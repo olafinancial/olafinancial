@@ -399,7 +399,6 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 | Issue | Title | Priority | Status |
 |-------|-------|----------|--------|
 | [#38](https://github.com/olafinancial/olafinancial/issues/38) | Ops: production email (Supabase Auth + Resend digests) | High | 🔲 Open — [`EMAIL_SETUP.md`](./EMAIL_SETUP.md) |
-| [#29](https://github.com/olafinancial/olafinancial/issues/29) | Monthly macro data update — NBS/CBN | Recurring | 🔲 Open |
 | [#28](https://github.com/olafinancial/olafinancial/issues/28) | Confirm sponsor partners & activate banners | High | 🔲 Blocked (partners) |
 | [#73](https://github.com/olafinancial/olafinancial/issues/73) | Feature: App Store Submission, Paid Downloads & Referral System | High | 🔲 Open — [`monetization_app_store_guide.md`](./monetization_app_store_guide.md) |
 | [#74](https://github.com/olafinancial/olafinancial/issues/74) | Docs: Classroom Training Guide & Classroom Sandbox Features | Medium | 🔲 Open — [`classroom_training_guide.md`](./classroom_training_guide.md) |
@@ -409,6 +408,12 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 
 | Issue | Title | Status |
 |-------|-------|--------|
+| [#84](https://github.com/olafinancial/olafinancial/issues/84) | Investment Income Source Names & Assets Div Paid Column | ✅ Closed |
+| [#83](https://github.com/olafinancial/olafinancial/issues/83) | Income Page Heads (Active/Passive/Investment) & Tax Estimator Cleanup | ✅ Closed |
+| [#82](https://github.com/olafinancial/olafinancial/issues/82) | Retirement Calculator Nest Egg Math & Replacement Ratio | ✅ Closed |
+| [#81](https://github.com/olafinancial/olafinancial/issues/81) | Household & Family Combined View Switcher | ✅ Closed |
+| [#51](https://github.com/olafinancial/olafinancial/issues/51) | Live Macroeconomic & Live FX Rates Feed | ✅ Closed |
+| [#29](https://github.com/olafinancial/olafinancial/issues/29) | Monthly macro data update — NBS/CBN | ✅ Closed |
 | [#32](https://github.com/olafinancial/olafinancial/issues/32) | Budget Planner / 50-30-20 guided creation | ✅ Closed |
 | [#36](https://github.com/olafinancial/olafinancial/issues/36) | Balance Sheet split (Assets & Liabilities) | ✅ Closed |
 | [#23](https://github.com/olafinancial/olafinancial/issues/23) | Branding / domain → pul.llc | ✅ Closed (#25 duplicate) |
@@ -432,6 +437,14 @@ This file tracks the active plans, completed work, and remaining roadmap for the
 * Branding to **pul.llc** / Pul Planning  
 * Sharia tools (Takaful pref, Zakat, Qard Hasan, Halal invest tips) — not app-wide filter  
 * **Settings → Testing & account**: Reset data, Load demo data, Delete account (API)
+
+### Session 25 — 2026-07-23 — Resolution of GitHub Issues #84, #83, #82, #81, #51
+
+* **#83 Income Heads**: Redesigned top Income KPI cards to render the 3 main income heads: Active, Passive, and Investment Income; removed redundant Tax Estimator widget from Income page.
+* **#84 Investment & Assets Div Paid**: Updated Add Income Source modal to display investment-specific source name placeholders; added **Div Paid** (Dividends Paid) column to Mark-to-Market holdings table on Assets page.
+* **#82 Retirement Math**: Calibrated real-income inflation compounding in `calcRetirement()` to eliminate hyper-inflated shortfall numbers over 25–30 year horizons; added editable Replacement Ratio (%) input.
+* **#81 Household Switcher**: Added Household Mode Selector dropdown (`👤 Personal View` vs `👨‍👩‍👧 Household Combined`) in dashboard header with Combined Household Financial View banner and pairing link.
+* **#51 Live Macro**: Implemented live FX rate server feed from ExchangeRate-API with offline indicator date tracking.
 
 ### Session 24 — 2026-07-20 — FI Calculator page + clickable dashboard KPIs
 
