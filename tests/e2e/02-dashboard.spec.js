@@ -71,5 +71,22 @@ test.describe('Dashboard', () => {
       return (await netWorthCard.locator('.card-value').first().textContent()) || '';
     }, { timeout: 5_000 }).toMatch(target === 'EUR' ? /€|EUR/ : /£|GBP/);
   });
+
+  test('switching to household mode displays pair account button and opens invite modal', async ({ page }) => {
+    const modeSelect = page.locator('#dash-account-mode').first();
+    await expect(modeSelect).toBeVisible();
+    await modeSelect.selectOption('household');
+    const banner = page.locator('#dash-household-banner');
+    await expect(banner).toBeVisible();
+    const pairBtn = page.locator('#dash-invite-btn');
+    await expect(pairBtn).toBeVisible();
+    await pairBtn.click();
+    const modal = page.locator('#household-invite-modal');
+    await expect(modal).toBeVisible();
+    const linkInput = page.locator('#household-link-input');
+    await expect(linkInput).toBeVisible();
+    const val = await linkInput.inputValue();
+    expect(val).toContain('#/signup?invite=');
+  });
 });
 

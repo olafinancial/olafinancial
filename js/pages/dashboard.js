@@ -12,6 +12,7 @@ const WPDashboard = (() => {
           <p class="page-subtitle" id="dash-period"></p>
         </div>
         <div class="flex gap-4" style="align-items:center">
+          <button class="btn btn-secondary btn-sm" id="dash-invite-header-btn" data-action="invite-member" onclick="window.openHouseholdInviteModal && window.openHouseholdInviteModal()">🔗 Invite Member</button>
           <select id="dash-account-mode" class="select select-sm" style="width:165px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
             <option value="personal">👤 Personal View</option>
             <option value="household">👨‍👩‍👧 Household Combined</option>
@@ -45,7 +46,7 @@ const WPDashboard = (() => {
             </div>
             <p class="text-xs text-muted" style="margin:0.25rem 0 0">Aggregating income, budgets, assets, and liabilities across all registered family members.</p>
           </div>
-          <button class="btn btn-secondary btn-sm" id="dash-invite-btn">🔗 Pair Account / Invite Member</button>
+          <button class="btn btn-secondary btn-sm" id="dash-invite-btn" data-action="invite-member" onclick="window.openHouseholdInviteModal && window.openHouseholdInviteModal()">🔗 Pair Account / Invite Member</button>
         </div>
         <!-- Getting started path for naive users (shown until dismissed) -->
         <div class="card dashboard-full" id="dash-getting-started" style="display:none;margin-bottom:1.25rem"></div>
@@ -167,7 +168,14 @@ const WPDashboard = (() => {
       });
     }
 
-    document.getElementById('dash-invite-btn')?.addEventListener('click', _handleHouseholdInvite);
+    container.addEventListener('click', (e) => {
+      const inviteBtn = e.target.closest('#dash-invite-btn');
+      if (inviteBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        _handleHouseholdInvite();
+      }
+    });
 
     _renderGettingStarted();
     await _load();
@@ -179,7 +187,14 @@ const WPDashboard = (() => {
     const pathname = window.location.pathname.replace(/\/$/, '');
     const inviteUrl = `${origin}${pathname}/#/signup?invite=${encodeURIComponent(userId)}&mode=household`;
 
-    const copied = await WPUtils.copyToClipboard(inviteUrl);
+    let copied = false;
+    try {
+      if (typeof WPUtils !== 'undefined' && WPUtils.copyToClipboard) {
+        copied = await WPUtils.copyToClipboard(inviteUrl);
+      }
+    } catch (e) {
+      console.warn('Clipboard write warning:', e?.message || e);
+    }
 
     let modal = document.getElementById('household-invite-modal');
     if (modal) modal.remove();
@@ -236,10 +251,19 @@ const WPDashboard = (() => {
       modal.remove();
     });
 
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+
+    if (inputEl) {
+      setTimeout(() => { try { inputEl.select(); } catch (_) {} }, 100);
+    }
+
     if (copied) {
       WPToast.success('Household invite link copied to clipboard!');
     }
   }
+  window.openHouseholdInviteModal = _handleHouseholdInvite;
 
   function _renderGettingStarted() {
     const el = document.getElementById('dash-getting-started');
@@ -662,5 +686,6 @@ const WPDashboard = (() => {
   }
 
   function destroy() {}
-  return { init, destroy };
+  window.WPDashboard = { init, destroy, openInviteModal: _handleHouseholdInvite };
+  return window.WPDashboard;
 })();
