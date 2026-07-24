@@ -265,6 +265,118 @@ describe('checkNDIC (deposit insurance thresholds)', () => {
   });
 });
 
+function toMonthlyKobo(amountKobo, frequency = 'monthly') {
+  const a = Math.max(0, Number(amountKobo) || 0);
+  const f = String(frequency || 'monthly').toLowerCase();
+  const map = {
+    weekly: a * 52 / 12,
+    biweekly: a * 26 / 12,
+    monthly: a,
+    quarterly: a / 3,
+    semiannual: a / 6,
+    annual: a / 12,
+    yearly: a / 12,
+    one_time: 0,
+  };
+  return Math.round(map[f] != null ? map[f] : a);
+}
+
+function calcFV(annualRate, years, monthlyPaymentKobo = 0, presentValueKobo = 0) {
+  const r = annualRate / 12;
+  const n = Math.round(years * 12);
+  if (n <= 0) return presentValueKobo;
+  if (Math.abs(r) < 1e-10) return presentValueKobo + monthlyPaymentKobo * n;
+  const growth = Math.pow(1 + r, n);
+  return Math.round(presentValueKobo * growth + monthlyPaymentKobo * (growth - 1) / r);
+}
+
+function calcAnnuity(balanceKobo, annualRate, years) {
+  const r = annualRate / 12;
+  const n = years * 12;
+  if (n <= 0) return 0;
+  if (Math.abs(r) < 1e-10) return Math.round(balanceKobo / n);
+  return Math.round(balanceKobo * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1));
+}
+
+/** Mirrors fixed Stanbic-style calcRetirement core for NG */
+function calcRetirementCore({
+  currentAge, retirementAge, lifeExpectancy = 85,
+  currentRSAKobo = 0, avcKobo = 0, monthlyGrossKobo = 0,
+  monthlyContributionKobo = null, expectedReturnPct = 10,
+  goalType = 'programmed_withdrawal', desiredMonthlyPensionKobo = 0,
+  desiredLumpSumKobo = 0, withdrawalReturnPct = 6,
+}) {
+  const years = retirementAge - currentAge;
+  const yearsIn = lifeExpectancy - retirementAge;
+  const rate = expectedReturnPct / 100;
+  const draw = withdrawalReturnPct / 100;
+  const contrib = monthlyContributionKobo != null
+    ? monthlyContributionKobo
+    : Math.round(monthlyGrossKobo * 0.18);
+  const initial = currentRSAKobo + avcKobo;
+  const projected = calcFV(rate, years, contrib, initial);
+  const pw = yearsIn > 0 ? calcAnnuity(projected, draw, yearsIn) : 0;
+  let goalMet = true;
+  if (goalType === 'programmed_withdrawal' && desiredMonthlyPensionKobo > 0) {
+    goalMet = pw >= desiredMonthlyPensionKobo;
+  } else if (goalType === 'lump_sum' && desiredLumpSumKobo > 0) {
+    goalMet = projected >= desiredLumpSumKobo;
+  }
+  return { projectedRSAKobo: projected, programmedWithdrawalKobo: pw, monthlyPensionTotalKobo: contrib, goalMet };
+}
+
+describe('toMonthlyKobo (income frequency → monthly)', () => {
+  test('monthly is identity', () => {
+    expect(toMonthlyKobo(500_000_00, 'monthly')).toBe(500_000_00);
+  });
+  test('annual divides by 12', () => {
+    expect(toMonthlyKobo(6_000_000_00, 'annual')).toBe(500_000_00);
+  });
+  test('quarterly divides by 3', () => {
+    expect(toMonthlyKobo(1_500_000_00, 'quarterly')).toBe(500_000_00);
+  });
+});
+
+describe('calcRetirement (PFA / Stanbic-style RSA)', () => {
+  test('projects RSA from balance + 18% of gross without ₦200m inflation blow-up', () => {
+    // 35→60, RSA 2m, salary 500k/mo → contrib 90k, 10% return
+    const r = calcRetirementCore({
+      currentAge: 35, retirementAge: 60, lifeExpectancy: 85,
+      currentRSAKobo: 2_000_000_00,
+      monthlyGrossKobo: 500_000_00,
+      expectedReturnPct: 10,
+      desiredMonthlyPensionKobo: 350_000_00,
+    });
+    // Projected should be order of ₦100–150m at 10%, not multi-billion
+    const naira = r.projectedRSAKobo / 100;
+    expect(naira).toBeGreaterThan(50_000_000);
+    expect(naira).toBeLessThan(200_000_000);
+    expect(r.monthlyPensionTotalKobo).toBe(90_000_00);
+    expect(r.programmedWithdrawalKobo).toBeGreaterThan(0);
+  });
+  test('explicit monthly contribution overrides 18%', () => {
+    const r = calcRetirementCore({
+      currentAge: 40, retirementAge: 60,
+      currentRSAKobo: 1_000_000_00,
+      monthlyGrossKobo: 1_000_000_00,
+      monthlyContributionKobo: 50_000_00,
+      expectedReturnPct: 10,
+    });
+    expect(r.monthlyPensionTotalKobo).toBe(50_000_00);
+  });
+  test('lump sum goal met when projected exceeds target', () => {
+    const r = calcRetirementCore({
+      currentAge: 50, retirementAge: 55,
+      currentRSAKobo: 20_000_000_00,
+      monthlyContributionKobo: 200_000_00,
+      expectedReturnPct: 10,
+      goalType: 'lump_sum',
+      desiredLumpSumKobo: 10_000_000_00,
+    });
+    expect(r.goalMet).toBe(true);
+  });
+});
+
 describe('calcPIT (Nigerian Tax Act 2025 §30(2) six deductibles)', () => {
   test('income below ₦800K per year is tax-free', () => {
     expect(calcPIT(80_000_000)).toBe(0);
