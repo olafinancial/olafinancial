@@ -420,120 +420,232 @@ const WPUtils = (() => {
     return           { status: 'critical',  pct: p, label: 'Critical (< 1 month)' };
   }
 
-  // ── RETIREMENT ────────────────────────────────────────────
+  /**
+   * Convert a stored amount (kobo) + frequency to approximate monthly kobo.
+   * Used when prefilling retirement salary from income entries.
+   */
+  function toMonthlyKobo(amountKobo, frequency = 'monthly') {
+    const a = Math.max(0, Number(amountKobo) || 0);
+    const f = String(frequency || 'monthly').toLowerCase();
+    const map = {
+      weekly: a * 52 / 12,
+      biweekly: a * 26 / 12,
+      'bi-weekly': a * 26 / 12,
+      monthly: a,
+      quarterly: a / 3,
+      semiannual: a / 6,
+      'semi-annual': a / 6,
+      annual: a / 12,
+      yearly: a / 12,
+      one_time: 0,
+      'one-time': 0,
+    };
+    return Math.round(map[f] != null ? map[f] : a);
+  }
+
+  // ── RETIREMENT (Stanbic / PFA-style RSA projection) ────────
+  // Accumulation: RSA + VC, monthly contribution, expected return → RSA at retirement
+  // Goals: lump_sum | programmed_withdrawal (no multi-decade inflation nest-egg multiplier)
   function calcRetirement({
     currentAge,
     retirementAge,
-    lifeExpectancy,
-    currentRSAKobo,
-    monthlyGrossKobo,
-    monthlyInvestmentKobo,
-    monthlyIncomeNeededKobo,
-    inflationPct,
+    lifeExpectancy = 85,
+    currentRSAKobo = 0,
+    monthlyGrossKobo = 0,
+    monthlyInvestmentKobo = 0,
+    monthlyIncomeNeededKobo = 0,
+    inflationPct = 0,
     riskTolerance = 'moderate',
     jurisdiction = 'NG',
     avcKobo = 0,
     gratuityKobo = 0,
     employerMatchPct = 3,
+    monthlyContributionKobo = null,
+    expectedReturnPct = null,
+    goalType = 'programmed_withdrawal',
+    desiredLumpSumKobo = 0,
+    desiredMonthlyPensionKobo = null,
+    withdrawalReturnPct = null,
   }) {
-    const yearsToRetirement = retirementAge - currentAge;
-    if (yearsToRetirement <= 0) {
-      return {
-        yearsToRetirement: 0,
-        projectedRSAKobo: currentRSAKobo,
-        projectedInvestKobo: 0,
-        projectedFundKobo: currentRSAKobo,
-        requiredNestEggKobo: monthlyIncomeNeededKobo * 12 * (lifeExpectancy - retirementAge),
-        rsaMonthlyDrawdownKobo: 0,
-        monthlyPensionTotalKobo: 0,
-        additionalMonthlyKobo: 0,
-        recommendations: ["Current age is already at or past retirement age."]
-      };
-    }
+    const yearsToRetirement = Math.max(0, (Number(retirementAge) || 0) - (Number(currentAge) || 0));
+    const yearsInRetirement = Math.max(0, (Number(lifeExpectancy) || 85) - (Number(retirementAge) || 60));
 
-    // Expected return based on risk tolerance
-    const rates = { conservative: 0.09, moderate: 0.12, aggressive: 0.16 };
-    const rate = rates[riskTolerance] || 0.12;
+    // PFA-style RSA returns (~8–12%), not aggressive equity curves
+    const riskRates = { conservative: 0.08, moderate: 0.10, aggressive: 0.12 };
+    const rate = expectedReturnPct != null
+      ? Math.max(0, Number(expectedReturnPct) / 100)
+      : (riskRates[riskTolerance] || 0.10);
+    const drawdownRate = withdrawalReturnPct != null
+      ? Math.max(0, Number(withdrawalReturnPct) / 100)
+      : 0.06;
 
-    // Monthly Pension total (employer + employee combined) depending on jurisdiction
-    let monthlyPensionTotalKobo = 0;
-    let initialRSA = currentRSAKobo;
+    const gross = Math.max(0, Number(monthlyGrossKobo) || 0);
+    let monthlyPensionTotalKobo = monthlyContributionKobo != null
+      ? Math.max(0, Math.round(Number(monthlyContributionKobo) || 0))
+      : 0;
+    let initialRSA = Math.max(0, Number(currentRSAKobo) || 0);
 
-    if (jurisdiction === 'NG') {
-      // PENCOM CPS: 8% employee + 10% employer = 18% of gross
-      monthlyPensionTotalKobo = Math.round(monthlyGrossKobo * 0.18);
-      // Incorporate initial AVC and Gratuity balances into initial fund value
-      initialRSA = currentRSAKobo + avcKobo + gratuityKobo;
-    } else if (jurisdiction === 'US') {
-      // US 401k rules: assume 6% employee contribution, plus employer match up to match rate
-      const matchFrac = Math.min(6, employerMatchPct) / 100;
-      monthlyPensionTotalKobo = Math.round(monthlyGrossKobo * (0.06 + matchFrac));
-      // Cap at US 2025 limit $23,000 / 12 months (~ $1,916/month)
-      const usCapKobo = 1916_00;
-      if (monthlyPensionTotalKobo > usCapKobo) monthlyPensionTotalKobo = usCapKobo;
-    } else if (jurisdiction === 'UK') {
-      // UK auto-enrolment rules: combined 8% minimum pension contributions
-      monthlyPensionTotalKobo = Math.round(monthlyGrossKobo * 0.08);
-    } else if (jurisdiction === 'CA') {
-      // CA RRSP rules: 18% of earned income limits
-      monthlyPensionTotalKobo = Math.min(Math.round(monthlyGrossKobo * 0.18), 2600_00);
-    } else {
-      // Generic savings
-      monthlyPensionTotalKobo = Math.round(monthlyGrossKobo * 0.10);
-    }
-
-    // Projected RSA & Investment
-    const projectedRSAKobo = calcFV(rate, yearsToRetirement, monthlyPensionTotalKobo, initialRSA);
-    const projectedInvestKobo = calcFV(rate, yearsToRetirement, monthlyInvestmentKobo, 0);
-    const projectedFundKobo = projectedRSAKobo + projectedInvestKobo;
-
-    // Required Nest Egg (using net real inflation differential over working horizon)
-    const realNetInflation = Math.max(0, (inflationPct - (rate * 100) * 0.5) / 100);
-    const netInflationMultiplier = Math.min(3.5, Math.pow(1 + realNetInflation, yearsToRetirement));
-    const realIncomeNeeded = Math.round(monthlyIncomeNeededKobo * netInflationMultiplier);
-    const yearsInRetirement = lifeExpectancy - retirementAge;
-    const drawdownRate = Math.max(0.06, rate - 0.03); // conservative drawdown rate in retirement
-
-    const r = drawdownRate / 12;
-    const n = yearsInRetirement * 12;
-    let requiredNestEggKobo = 0;
-    if (n > 0) {
-      if (Math.abs(r) < 1e-10) requiredNestEggKobo = realIncomeNeeded * n;
-      else requiredNestEggKobo = Math.round(realIncomeNeeded * ((Math.pow(1 + r, n) - 1) / (r * Math.pow(1 + r, n))));
-    }
-
-    // RSA Monthly Drawdown
-    const rsaMonthlyDrawdownKobo = calcAnnuity(projectedRSAKobo, drawdownRate, yearsInRetirement);
-
-    // Shortfall & Additional Savings
-    const surplus = projectedFundKobo - requiredNestEggKobo;
-    const additionalMonthlyKobo = surplus < 0 ? calcPMT(rate, yearsToRetirement, 0, Math.abs(surplus)) : 0;
-
-    // Recommendations
-    const recommendations = [];
-    if (surplus >= 0) {
-      recommendations.push("Your retirement plan is fully funded! Keep maintaining your current savings rate.");
-    } else {
-      recommendations.push(`Save an extra ${WPUtils.fmt(additionalMonthlyKobo)} monthly to close your gap.`);
-    }
-    recommendations.push("As you approach retirement, consider shifting a portion of your funds to more conservative, fixed-income assets to protect capital.");
-    if (surplus < 0) {
-      recommendations.push("Review your monthly expenses to identify discretionary areas where you can save and invest more.");
+    if (monthlyContributionKobo == null) {
       if (jurisdiction === 'NG') {
-        recommendations.push("Verify that your PFA is generating competitive returns (e.g. above inflation/industry benchmark) to boost RSA growth.");
+        monthlyPensionTotalKobo = Math.round(gross * 0.18); // PENCOM 8% + 10%
+      } else if (jurisdiction === 'US') {
+        const matchFrac = Math.min(6, Number(employerMatchPct) || 0) / 100;
+        monthlyPensionTotalKobo = Math.round(gross * (0.06 + matchFrac));
+      } else if (jurisdiction === 'UK') {
+        monthlyPensionTotalKobo = Math.round(gross * 0.08);
+      } else if (jurisdiction === 'CA') {
+        monthlyPensionTotalKobo = Math.round(gross * 0.18);
+      } else {
+        monthlyPensionTotalKobo = Math.round(gross * 0.10);
       }
     }
 
+    if (jurisdiction === 'NG') {
+      initialRSA = Math.max(0, Number(currentRSAKobo) || 0)
+        + Math.max(0, Number(avcKobo) || 0)
+        + Math.max(0, Number(gratuityKobo) || 0);
+    }
+
+    if (yearsToRetirement <= 0) {
+      const rsaNow = initialRSA;
+      const pwNow = yearsInRetirement > 0 ? calcAnnuity(rsaNow, drawdownRate, yearsInRetirement) : 0;
+      return {
+        yearsToRetirement: 0,
+        yearsInRetirement,
+        projectedRSAKobo: rsaNow,
+        projectedInvestKobo: 0,
+        projectedFundKobo: rsaNow,
+        requiredNestEggKobo: rsaNow,
+        rsaMonthlyDrawdownKobo: pwNow,
+        programmedWithdrawalKobo: pwNow,
+        fundMonthlyDrawdownKobo: pwNow,
+        lumpSumAtRetirementKobo: rsaNow,
+        monthlyPensionTotalKobo,
+        additionalMonthlyKobo: 0,
+        goalType,
+        goalMet: true,
+        goalGapKobo: 0,
+        desiredMonthlyPensionKobo: Math.max(0, Number(desiredMonthlyPensionKobo != null ? desiredMonthlyPensionKobo : monthlyIncomeNeededKobo) || 0),
+        desiredLumpSumKobo: Math.max(0, Number(desiredLumpSumKobo) || 0),
+        expectedReturnPct: rate * 100,
+        drawdownReturnPct: drawdownRate * 100,
+        recommendations: ['Current age is already at or past retirement age. Review programmed withdrawal options with your PFA.'],
+      };
+    }
+
+    const projectedRSAKobo = calcFV(rate, yearsToRetirement, monthlyPensionTotalKobo, initialRSA);
+    const investRate = riskRates[riskTolerance] || 0.10;
+    const projectedInvestKobo = calcFV(
+      investRate,
+      yearsToRetirement,
+      Math.max(0, Number(monthlyInvestmentKobo) || 0),
+      0
+    );
+    const projectedFundKobo = projectedRSAKobo + projectedInvestKobo;
+
+    const rsaMonthlyDrawdownKobo = yearsInRetirement > 0
+      ? calcAnnuity(projectedRSAKobo, drawdownRate, yearsInRetirement)
+      : 0;
+    const fundMonthlyDrawdownKobo = yearsInRetirement > 0
+      ? calcAnnuity(projectedFundKobo, drawdownRate, yearsInRetirement)
+      : 0;
+
+    const desiredPW = desiredMonthlyPensionKobo != null
+      ? Math.max(0, Number(desiredMonthlyPensionKobo) || 0)
+      : Math.max(0, Number(monthlyIncomeNeededKobo) || 0);
+    const desiredLS = Math.max(0, Number(desiredLumpSumKobo) || 0);
+
+    // Nest egg = PV of desired PW at drawdown rate (no 3.5× inflation blow-up)
+    let requiredNestEggKobo = 0;
+    if (goalType === 'lump_sum') {
+      requiredNestEggKobo = desiredLS > 0 ? desiredLS : projectedRSAKobo;
+    } else if (desiredPW > 0 && yearsInRetirement > 0) {
+      const r = drawdownRate / 12;
+      const n = yearsInRetirement * 12;
+      if (Math.abs(r) < 1e-10) requiredNestEggKobo = desiredPW * n;
+      else requiredNestEggKobo = Math.round(desiredPW * ((Math.pow(1 + r, n) - 1) / (r * Math.pow(1 + r, n))));
+    } else {
+      requiredNestEggKobo = projectedRSAKobo;
+    }
+
+    let goalMet = true;
+    let goalGapKobo = 0;
+    let additionalMonthlyKobo = 0;
+    const compareAgainst = jurisdiction === 'NG' ? projectedRSAKobo : projectedFundKobo;
+
+    if (goalType === 'lump_sum' && desiredLS > 0) {
+      goalGapKobo = desiredLS - compareAgainst;
+      goalMet = goalGapKobo <= 0;
+      if (!goalMet) {
+        const totalNeeded = calcPMT(rate, yearsToRetirement, initialRSA, desiredLS);
+        additionalMonthlyKobo = Math.max(0, totalNeeded - monthlyPensionTotalKobo);
+      }
+    } else if (goalType === 'programmed_withdrawal' && desiredPW > 0) {
+      const pw = jurisdiction === 'NG' ? rsaMonthlyDrawdownKobo : fundMonthlyDrawdownKobo;
+      goalGapKobo = desiredPW - pw;
+      goalMet = goalGapKobo <= 0;
+      if (!goalMet && requiredNestEggKobo > compareAgainst) {
+        const totalNeeded = calcPMT(rate, yearsToRetirement, initialRSA, requiredNestEggKobo);
+        additionalMonthlyKobo = Math.max(0, totalNeeded - monthlyPensionTotalKobo);
+      }
+    }
+
+    const recommendations = [];
+    if (goalType === 'programmed_withdrawal') {
+      if (desiredPW <= 0) {
+        recommendations.push('Set a desired monthly pension (programmed withdrawal) to measure your goal gap.');
+      } else if (goalMet) {
+        recommendations.push('Projected programmed withdrawal meets or exceeds your desired monthly pension at the assumed rates.');
+      } else {
+        recommendations.push(
+          `Increase total monthly RSA contributions by about ${fmt(additionalMonthlyKobo)} to fund your desired monthly pension.`
+        );
+      }
+    } else if (desiredLS <= 0) {
+      recommendations.push('Set a desired lump sum at retirement to measure your goal gap.');
+    } else if (goalMet) {
+      recommendations.push('Projected RSA balance meets or exceeds your desired lump sum at retirement.');
+    } else {
+      recommendations.push(
+        `Increase total monthly RSA contributions by about ${fmt(additionalMonthlyKobo)} to reach your lump-sum goal.`
+      );
+    }
+
+    if (jurisdiction === 'NG') {
+      recommendations.push(
+        'Under PENCOM rules, retirees commonly take a partial lump sum and put the rest on programmed withdrawal or an annuity. Confirm options with your PFA.'
+      );
+      recommendations.push(
+        'Default contribution assumes 18% of monthly gross (8% employee + 10% employer). Edit “Monthly RSA contribution” if your actual remittance differs (e.g. AVC top-ups).'
+      );
+    }
+    recommendations.push(
+      'Estimates use constant contribution and return assumptions; actual PFA returns and salary growth will differ. Educational only — not financial advice.'
+    );
+
+    void inflationPct;
+
     return {
       yearsToRetirement,
+      yearsInRetirement,
       projectedRSAKobo,
       projectedInvestKobo,
       projectedFundKobo,
       requiredNestEggKobo,
       rsaMonthlyDrawdownKobo,
+      programmedWithdrawalKobo: rsaMonthlyDrawdownKobo,
+      fundMonthlyDrawdownKobo,
+      lumpSumAtRetirementKobo: projectedRSAKobo,
       monthlyPensionTotalKobo,
       additionalMonthlyKobo,
-      recommendations
+      goalType,
+      goalMet,
+      goalGapKobo,
+      desiredMonthlyPensionKobo: desiredPW,
+      desiredLumpSumKobo: desiredLS,
+      expectedReturnPct: rate * 100,
+      drawdownReturnPct: drawdownRate * 100,
+      recommendations,
     };
   }
 
@@ -1357,6 +1469,7 @@ const WPUtils = (() => {
     calcPIT, summarizePIT, calcTaxableIncome, calcRentRelief, normalizePITReliefs,
     effectiveTaxRate, taxBracket,
     calcPensionEmployee, calcNHF, calcNHIS,
+    toMonthlyKobo,
     calcFV, calcPMT, calcAnnuity,
     calcDebtStrategy,
     calcDebtAvalanche: function(debts, extra) { return calcDebtStrategy(debts, extra, 'avalanche'); },
