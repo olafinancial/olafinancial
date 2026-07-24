@@ -2,7 +2,7 @@
 
 **Product:** Pul Planning (`pul.llc`) · **Repo:** [olafinancial/olafinancial](https://github.com/olafinancial/olafinancial)  
 **Purpose:** Gate public go-live. Soft/beta launch may proceed with open items marked **Beta OK**.  
-**Last updated:** 2026-07-22
+**Last updated:** 2026-07-24
 
 ---
 
@@ -35,7 +35,7 @@
 | A5 | Breach runbook (72h NDPC notice path) | Legal + Ops | [ ] **Blocker** | Contact tree + evidence checklist |
 | A6 | Confirm advisory scope stays “tool not adviser” | Legal + Product | [ ] | SEC/CBN posture; in-app disclaimer present |
 | A7 | Privacy + Terms linked at signup + in-app | Engineering | [x] | Consent checkbox + `privacy.html` / `terms.html` |
-| A8 | Support / privacy mailboxes live (`privacy@`, `hello@`) | Ops | [ ] **Blocker** | DNS + inbox |
+| A8 | Support / privacy mailboxes live (`privacy@`, `hello@`) | Ops | [x] | **Live 2026-07-24:** `privacy@pul.llc`, `hello@pul.llc` |
 
 ---
 
@@ -112,7 +112,7 @@
 |---|------|-------|--------|-------|
 | G1 | `pul.llc` HTTPS + Pages custom domain | Ops | [x]/[ ] | Site 200; reconfirm DNS/HTTPS enforce |
 | G2 | Old domain 301 strategy (if any) | Ops | [ ] **Beta OK** | |
-| G3 | Support channel + SLA for beta | Support | [ ] | Email or WhatsApp |
+| G3 | Support channel + SLA for beta | Support | [~] | Inboxes live (`hello@`, `privacy@`); define beta SLA |
 | G4 | Launch audience list (invite-only?) | Product | [ ] | Recommend closed beta first |
 | G5 | Public messaging avoids “guaranteed returns / advice” | Product | [ ] | |
 | G6 | Sponsors / monetisation (#28, app store) | Product | [ ] **Beta OK** | After soft launch |
@@ -125,14 +125,14 @@
 
 - [x] Privacy & Terms published and linked with signup consent  
 - [x] NDIC + household honesty fixes  
+- [x] Support / privacy mailboxes live (`hello@pul.llc`, `privacy@pul.llc`)  
 - [ ] Password reset works on production domain  
 - [ ] RLS verified on production Supabase  
-- [ ] Named support contact  
 - [ ] Legal **aware** of NDPC path (even if registration in progress)  
 
 ### Public launch — all Blockers closed
 
-- [ ] A1–A6, A8 legal/compliance  
+- [ ] A1–A6 legal/compliance (A8 mailboxes done)  
 - [ ] C1–C2 auth email  
 - [ ] D1–D5 if digests/delete are promised in marketing  
 - [ ] E1, E4 security checks  
