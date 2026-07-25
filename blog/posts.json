@@ -1,0 +1,18 @@
+[
+  {
+    "slug": "welcome-to-pul",
+    "title": "Welcome to Pul Planning",
+    "date": "2026-07-24",
+    "author": "Pul Team",
+    "excerpt": "What Pul is, who it’s for, and how we help Nigerians see their path to financial independence.",
+    "tags": ["product", "getting-started"]
+  },
+  {
+    "slug": "what-is-fis",
+    "title": "What is the Financial Independence Score (FIS)?",
+    "date": "2026-07-24",
+    "author": "Pul Team",
+    "excerpt": "FIS is Pul’s primary KPI: how much of your monthly outflows are covered by passive income. Here’s how to read it.",
+    "tags": ["FIS", "financial-independence"]
+  }
+]

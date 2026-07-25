@@ -249,22 +249,32 @@ const APP_CONFIG = {
     termsUrl: 'terms.html',
   },
 
-  /** Compact legal links for auth / footer. */
+  /** Compact legal + marketing links for auth / footer. */
   legalLinksHTML(opts = {}) {
     const { style = 'auth' } = opts;
     const p = this.legal.privacyUrl;
     const t = this.legal.termsUrl;
     if (style === 'sidebar') {
       return `<div class="legal-links legal-links--sidebar">
+        <a href="how-it-works.html" target="_blank" rel="noopener noreferrer">How it works</a>
+        <span aria-hidden="true">·</span>
+        <a href="blog.html" target="_blank" rel="noopener noreferrer">Blog</a>
+        <span aria-hidden="true">·</span>
         <a href="${p}" target="_blank" rel="noopener noreferrer">Privacy</a>
         <span aria-hidden="true">·</span>
         <a href="${t}" target="_blank" rel="noopener noreferrer">Terms</a>
       </div>`;
     }
     return `<p class="legal-links legal-links--auth">
-      <a href="${t}" target="_blank" rel="noopener noreferrer">Terms of Service</a>
+      <a href="how-it-works.html" target="_blank" rel="noopener noreferrer">How it works</a>
       <span aria-hidden="true">·</span>
-      <a href="${p}" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+      <a href="about.html" target="_blank" rel="noopener noreferrer">About</a>
+      <span aria-hidden="true">·</span>
+      <a href="blog.html" target="_blank" rel="noopener noreferrer">Blog</a>
+      <span aria-hidden="true">·</span>
+      <a href="${t}" target="_blank" rel="noopener noreferrer">Terms</a>
+      <span aria-hidden="true">·</span>
+      <a href="${p}" target="_blank" rel="noopener noreferrer">Privacy</a>
     </p>`;
   },
 
