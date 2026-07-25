@@ -1,0 +1,109 @@
+# ============================================================
+# Blog path guard — self-publish blog without app code access
+# ============================================================
+# Collaborators with Write (e.g. kaluaja) may push to main for
+# blog posts. GitHub has no "Write only to blog/" role on this
+# plan, so this workflow:
+#   1) Allows pushes that only touch blog/** (and blog guide files)
+#   2) Auto-reverts any other files changed by non-admins
+#
+# Admins (olafinancial) are skipped entirely.
+# ============================================================
+name: Blog path guard
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  guard:
+    name: Blog path guard
+    runs-on: ubuntu-latest
+    # Only enforce for non-admin publishers
+    if: github.actor != 'olafinancial' && github.actor != 'dependabot[bot]'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Detect non-blog changes and revert if needed
+        env:
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+
+          # Files / folders blog publishers are allowed to change
+          allowed() {
+            case "$1" in
+              blog/*|blog) return 0 ;;
+              BLOG_OWNER_GUIDE.md|BLOG_GUIDE.md) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+
+          # First push / force edge case
+          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "Initial commit range — skipping path guard."
+            exit 0
+          fi
+
+          mapfile -t CHANGED < <(git diff --name-only "$BEFORE" "$AFTER" || true)
+          if [ "${#CHANGED[@]}" -eq 0 ]; then
+            echo "No file changes detected."
+            exit 0
+          fi
+
+          echo "Actor: $ACTOR"
+          echo "Changed files:"
+          printf '  - %s\n' "${CHANGED[@]}"
+
+          BAD=()
+          for f in "${CHANGED[@]}"; do
+            if ! allowed "$f"; then
+              BAD+=("$f")
+            fi
+          done
+
+          if [ "${#BAD[@]}" -eq 0 ]; then
+            echo "OK: only allowed blog paths changed. Self-publish allowed."
+            exit 0
+          fi
+
+          echo "::warning::Non-blog paths were changed by @$ACTOR — reverting them."
+          printf '  blocked: %s\n' "${BAD[@]}"
+
+          git config user.name "blog-path-guard[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Restore blocked files from the parent of this push
+          for f in "${BAD[@]}"; do
+            if git cat-file -e "$BEFORE:$f" 2>/dev/null; then
+              git checkout "$BEFORE" -- "$f"
+            else
+              # File was newly added outside blog — remove it
+              git rm -f --ignore-unmatch "$f" || rm -f "$f" || true
+            fi
+          done
+
+          if git diff --cached --quiet && git diff --quiet; then
+            echo "Nothing to revert after checkout."
+            exit 0
+          fi
+
+          git add -A
+          git commit -m "chore(guard): revert non-blog changes by @${ACTOR}
+
+          Self-publish is limited to blog/** (and blog guides).
+          Blocked paths were restored automatically."
+
+          git push origin HEAD:main
+          echo "Reverted non-blog changes and pushed fix commit."
