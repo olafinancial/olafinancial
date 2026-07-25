@@ -5,6 +5,8 @@
 **Launch gate:** Use **[LAUNCH_CHECKLIST.md](./LAUNCH_CHECKLIST.md)** for Product / Engineering / Ops / Legal sign-off.  
 Soft beta may proceed after password-reset smoke + RLS verify; public launch needs legal Blockers closed.
 
+**Public content:** [About](./about.html) · [How it works (FIS)](./how-it-works.html) · [Blog](./blog.html) · Owner post guide: **[BLOG_GUIDE.md](./BLOG_GUIDE.md)**
+
 Following the successful implementation of the core features (**Budget Planner #32**, **Salary Calculator #34**, and the **Balance Sheet Split #36**), remaining work is primarily ops and compliance.
 
 Here are the remaining active GitHub issues and the recommended path forward:

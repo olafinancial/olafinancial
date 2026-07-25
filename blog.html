@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog | Pul Planning</title>
+  <meta name="description" content="Tips on financial independence, FIS, budgeting, and using Pul Planning — educational articles from the Pul team.">
+  <link rel="canonical" href="https://pul.llc/blog.html">
+  <meta name="theme-color" content="#0A1628">
+  <link rel="icon" type="image/jpeg" href="pul_logo.jpeg">
+  <link rel="stylesheet" href="css/styles.css?v=20260724_mkt">
+  <link rel="stylesheet" href="css/marketing.css?v=20260724_mkt">
+</head>
+<body class="mkt-body">
+  <div id="mkt-header"></div>
+
+  <main class="mkt-wrap">
+    <header class="mkt-hero" id="blog-hero">
+      <div class="mkt-badge">Blog</div>
+      <h1>Ideas for building independence</h1>
+      <p class="lede">
+        Short, practical notes on FIS, money habits, and using Pul — written for real Nigerian households and ambitious savers.
+        Educational only; not personalised financial advice.
+      </p>
+    </header>
+
+    <div id="blog-list"></div>
+    <div id="blog-post" style="display:none"></div>
+
+    <div id="mkt-footer"></div>
+  </main>
+
+  <!-- marked.js for Markdown posts (optional; blog.js has a fallback) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js" crossorigin="anonymous"></script>
+  <script src="js/marketing-shell.js?v=20260724_mkt"></script>
+  <script src="js/blog.js?v=20260724_mkt"></script>
+  <script>MarketingShell.mount({ active: 'blog' });</script>
+</body>
+</html>

@@ -187,6 +187,13 @@ const WPAuth = (() => {
           Determine your <span>Financial Independence</span> Score
         </div>
         <p class="auth-brand-sub">Track your net worth, crush debt, plan for retirement — all built for Nigeria.</p>
+        <p style="margin:0 0 1rem;font-size:0.82rem">
+          <a href="how-it-works.html" style="color:var(--clr-accent)">How FIS works</a>
+          <span style="color:var(--clr-text-3)"> · </span>
+          <a href="about.html" style="color:var(--clr-text-2)">About</a>
+          <span style="color:var(--clr-text-3)"> · </span>
+          <a href="blog.html" style="color:var(--clr-text-2)">Blog</a>
+        </p>
         <div class="auth-features">
           <div class="auth-feature">
             <div class="auth-feature-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00C896" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
@@ -296,6 +303,13 @@ const WPAuth = (() => {
         </div>
         <div class="auth-brand-tagline">Determine your <span>Financial Independence</span> Score</div>
         <p class="auth-brand-sub">Nigeria's most comprehensive personal finance platform. Free forever.</p>
+        <p style="margin:0 0 1rem;font-size:0.82rem">
+          <a href="how-it-works.html" style="color:var(--clr-accent)">How FIS works</a>
+          <span style="color:var(--clr-text-3)"> · </span>
+          <a href="about.html" style="color:var(--clr-text-2)">About</a>
+          <span style="color:var(--clr-text-3)"> · </span>
+          <a href="blog.html" style="color:var(--clr-text-2)">Blog</a>
+        </p>
         ${typeof APP_CONFIG !== 'undefined' && APP_CONFIG.brandSocialHTML ? APP_CONFIG.brandSocialHTML() : ''}
       </div>
       <div class="auth-form-pane">
