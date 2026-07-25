@@ -171,6 +171,17 @@ const WPApp = (() => {
   function _showApp() {
     document.getElementById('root').innerHTML = `
       <div class="app-shell">
+        <header class="mobile-header-bar" id="mobile-header-bar">
+          <button type="button" class="mobile-menu-btn" id="mobile-menu-toggle" aria-label="Toggle menu">
+            <span>☰</span>
+          </button>
+          <div class="mobile-header-brand">
+            <img class="brand-logo" src="pul_logo.jpeg" alt="Pul" width="28" height="24" />
+            <span>Pul Planning</span>
+          </div>
+          <a href="blog.html" target="_blank" rel="noopener noreferrer" class="mobile-header-blog-link">Blog ↗</a>
+        </header>
+        <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
         <aside class="sidebar" id="sidebar">
           <div class="sidebar-logo">
             <img class="brand-logo" src="pul_logo.jpeg" alt="Pul" width="52" height="44" />
@@ -202,16 +213,36 @@ const WPApp = (() => {
     _renderNav();
     _updateUserInfo();
     _registerAppRoutes();
-    // Do not start() here — boot() decides initial route after onboarding checks.
-    // (Calling start() immediately re-dispatches #/login and can loop with auth handlers.)
 
-    // Mobile sidebar toggle (once)
+    // Mobile sidebar toggle handler
+    const toggleBtn = document.getElementById('mobile-menu-toggle');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    if (toggleBtn) {
+      toggleBtn.onclick = (e) => {
+        e.stopPropagation();
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) {
+          sidebar.classList.toggle('open');
+          if (backdrop) backdrop.classList.toggle('open', sidebar.classList.contains('open'));
+        }
+      };
+    }
+    if (backdrop) {
+      backdrop.onclick = () => {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) sidebar.classList.remove('open');
+        backdrop.classList.remove('open');
+      };
+    }
+
     if (!window.__wpSidebarClickBound) {
       window.__wpSidebarClickBound = true;
       document.addEventListener('click', (e) => {
         const sidebar = document.getElementById('sidebar');
-        if (sidebar && !sidebar.contains(e.target)) {
+        const toggle = document.getElementById('mobile-menu-toggle');
+        if (sidebar && sidebar.classList.contains('open') && !sidebar.contains(e.target) && !toggle?.contains(e.target)) {
           sidebar.classList.remove('open');
+          document.getElementById('sidebar-backdrop')?.classList.remove('open');
         }
       });
     }
@@ -318,6 +349,7 @@ const WPApp = (() => {
 
   function _closeMobileSidebar() {
     document.getElementById('sidebar')?.classList.remove('open');
+    document.getElementById('sidebar-backdrop')?.classList.remove('open');
   }
 
   function _updateUserInfo() {

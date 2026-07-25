@@ -112,6 +112,28 @@ const WPSettings = (() => {
           <div class="input-hint" style="margin-top:0.75rem">Replay opens the onboarding steps again (pre-filled). Exit anytime without saving if you only wanted a tour.</div>
         </div>
 
+        <!-- Resources & Public Pages -->
+        <div class="card" style="max-width:600px;padding:2rem;margin-bottom:1.5rem;">
+          <h3 style="margin-bottom:0.5rem;font-weight:700;color:#ffffff">📚 Resources &amp; Guides</h3>
+          <p style="color:var(--clr-text-2);font-size:0.85rem;margin:0 0 1.25rem;line-height:1.55">
+            Read articles on financial independence, money habits, and how to get the most out of Pul Planning:
+          </p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+            <a href="blog.html" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;">
+              📝 <span>Blog &amp; Articles</span>
+            </a>
+            <a href="how-it-works.html" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;">
+              🗺️ <span>How It Works</span>
+            </a>
+            <a href="about.html" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;">
+              ℹ️ <span>About Pul</span>
+            </a>
+            <a href="privacy.html" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;">
+              🔒 <span>Privacy &amp; Terms</span>
+            </a>
+          </div>
+        </div>
+
         <!-- Email Digest / Scheduled reports (#78 — moved off Reports) -->
         <div class="card" style="max-width:600px;padding:2rem;" id="settings-digest-card">
           <h3 style="margin-bottom:0.5rem;font-weight:700;color:#ffffff">📬 Email Digest &amp; Scheduled Reports</h3>
