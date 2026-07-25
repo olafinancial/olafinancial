@@ -62,10 +62,11 @@ const WPRetirement = (() => {
               </div>
             </div>
             <div class="form-group ret-juris-field juris-NG">
-              <label for="ret-avc">Voluntary Contribution (VC) Balance (${symbol})</label>
+              <label for="ret-avc">Additional Voluntary Contribution (AVC) Balance (${symbol})</label>
               <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
                 <input class="input" type="text" inputmode="decimal" id="ret-avc" placeholder="0">
               </div>
+              <span class="text-xs text-muted" style="margin-top:0.2rem;display:block">AVC balance in your RSA (PENCOM) — not a separate investment account</span>
             </div>
             <div class="form-group ret-juris-field juris-NG">
               <label for="ret-gratuity">Gratuity Benefit (${symbol})</label>
@@ -109,23 +110,18 @@ const WPRetirement = (() => {
               <span class="text-xs text-muted" style="margin-top:0.2rem;display:block" id="ret-contrib-hint">Nigeria default: 18% of monthly gross (8% + 10%). Override with your remittance slip.</span>
             </div>
             <div class="form-group">
-              <label for="ret-invest">Extra monthly investment (non-RSA) (${symbol})</label>
-              <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
-                <input class="input" type="text" inputmode="decimal" id="ret-invest" placeholder="0">
-              </div>
-            </div>
-            <div class="form-group">
               <label for="ret-return">Expected RSA return (% / year)</label>
               <input class="input" type="number" id="ret-return" min="0" max="25" step="0.5" value="10">
-              <span class="text-xs text-muted" style="margin-top:0.2rem;display:block">PFA long-run assumption (typical 8–12%)</span>
+              <span class="text-xs text-muted" style="margin-top:0.2rem;display:block">PFA long-run assumption (typical 8–12%). Updated when Risk Profile changes unless you override.</span>
             </div>
             <div class="form-group">
-              <label for="ret-risk">Personal investment risk (extra savings)</label>
+              <label for="ret-risk">Risk Profile</label>
               <select class="select" id="ret-risk">
                 <option value="conservative" ${risk==='conservative'?'selected':''}>Conservative (~8%)</option>
                 <option value="moderate"     ${risk==='moderate'    ?'selected':''}>Moderate (~10%)</option>
                 <option value="aggressive"   ${risk==='aggressive'  ?'selected':''}>Aggressive (~12%)</option>
               </select>
+              <span class="text-xs text-muted" style="margin-top:0.2rem;display:block">Guides assumed RSA return; contributions still go through RSA / AVC</span>
             </div>
           </div>
         </div>
@@ -176,7 +172,7 @@ const WPRetirement = (() => {
           <div class="section-title" style="margin:0 0 0.5rem">Investment holdings</div>
           <p class="text-sm text-muted" style="margin:0 0 0.75rem;max-width:40rem">
             Track stocks and tickers on <strong>Assets</strong> (<em>Marked to market</em>).
-            This planner projects RSA and optional monthly investments only — market prices are not fetched here.
+            This planner projects your <strong>RSA</strong> (including AVC) — retirement top-ups are modelled via monthly RSA contribution and AVC balance, not a separate investment line.
           </p>
           <a href="#/assets" class="btn btn-secondary btn-sm">Open Assets</a>
         </div>
@@ -210,7 +206,7 @@ const WPRetirement = (() => {
     document.getElementById('ret-goal-pw')?.addEventListener('click', () => _setGoalType('programmed_withdrawal'));
     document.getElementById('ret-goal-ls')?.addEventListener('click', () => _setGoalType('lump_sum'));
 
-    ['ret-rsa','ret-avc','ret-gratuity','ret-401k','ret-gen-pension','ret-salary','ret-monthly-contrib','ret-invest','ret-monthly-need','ret-lump-sum']
+    ['ret-rsa','ret-avc','ret-gratuity','ret-401k','ret-gen-pension','ret-salary','ret-monthly-contrib','ret-monthly-need','ret-lump-sum']
       .forEach(id => {
         const el = document.getElementById(id);
         if (el) WPUtils.maskNumberInput(el);
@@ -221,6 +217,22 @@ const WPRetirement = (() => {
       _syncNeedFromRatio();
     });
     document.getElementById('ret-replace-ratio')?.addEventListener('input', _syncNeedFromRatio);
+
+    // Risk Profile presets → Expected RSA return (unless user overrode return)
+    const riskEl = document.getElementById('ret-risk');
+    const returnEl = document.getElementById('ret-return');
+    const riskToReturn = { conservative: 8, moderate: 10, aggressive: 12 };
+    if (riskEl && returnEl) {
+      // Align return with initial risk once
+      if (!returnEl.dataset.manual) {
+        returnEl.value = riskToReturn[riskEl.value] ?? 10;
+      }
+      riskEl.addEventListener('change', () => {
+        if (returnEl.dataset.manual === '1') return;
+        returnEl.value = riskToReturn[riskEl.value] ?? 10;
+      });
+      returnEl.addEventListener('input', () => { returnEl.dataset.manual = '1'; });
+    }
 
     await _prefillFromState();
     _syncDefaultContribution();
@@ -378,7 +390,8 @@ const WPRetirement = (() => {
     }
 
     const salaryKobo = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ret-salary').value));
-    const investKobo = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ret-invest').value));
+    // Extra non-RSA monthly investment removed (#94) — AVC is the only top-up path into RSA
+    const investKobo = 0;
     const needKobo   = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ret-monthly-need').value));
     const lumpKobo   = WPUtils.nairaToKobo(WPUtils.cleanNum(document.getElementById('ret-lump-sum')?.value));
     const riskKey    = document.getElementById('ret-risk').value;
@@ -492,10 +505,9 @@ const WPRetirement = (() => {
 
       <div class="kpi-grid" style="margin-bottom:1.5rem">
         <div class="card"><div class="card-title">Years to Retirement</div><div class="card-value">${retAge - age}</div></div>
-        <div class="card"><div class="card-title">Projected RSA / Pension</div><div class="card-value gold">${WPUtils.fmt(plan.projectedRSAKobo,{compact:true})}</div></div>
+        <div class="card"><div class="card-title">Projected RSA (incl. AVC)</div><div class="card-value gold">${WPUtils.fmt(plan.projectedRSAKobo,{compact:true})}</div></div>
         <div class="card"><div class="card-title">Programmed Withdrawal</div><div class="card-value accent">${WPUtils.fmt(plan.rsaMonthlyDrawdownKobo,{compact:true})}<span class="text-xs text-muted">/mo</span></div></div>
-        <div class="card"><div class="card-title">Extra Investments</div><div class="card-value">${WPUtils.fmt(plan.projectedInvestKobo,{compact:true})}</div></div>
-        <div class="card"><div class="card-title">Total Projected</div><div class="card-value">${WPUtils.fmt(plan.projectedFundKobo,{compact:true})}</div></div>
+        <div class="card"><div class="card-title">Total Projected Fund</div><div class="card-value">${WPUtils.fmt(plan.projectedFundKobo,{compact:true})}</div></div>
         ${hasGoal && isPW ? `<div class="card"><div class="card-title">Capital for target PW</div><div class="card-value">${WPUtils.fmt(plan.requiredNestEggKobo,{compact:true})}</div><div class="card-meta">At ${Number(plan.drawdownReturnPct||6).toFixed(1)}% drawdown</div></div>` : ''}
         ${hasGoal && !isPW ? `<div class="card"><div class="card-title">Target lump sum</div><div class="card-value">${WPUtils.fmt(plan.desiredLumpSumKobo,{compact:true})}</div></div>` : ''}
       </div>
