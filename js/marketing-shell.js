@@ -39,6 +39,7 @@ const MarketingShell = (() => {
       footer.innerHTML = `
         <div>© ${new Date().getFullYear()} Pul Planning · Educational tools, not personalised financial advice</div>
         <div style="display:flex;flex-wrap:wrap;gap:0.75rem 1rem">
+          <a href="https://chat.whatsapp.com/J7MfF9p5VPS0vqURHpCu5w" target="_blank" rel="noopener noreferrer" style="color:#25D366;font-weight:600">💬 WhatsApp Group</a>
           <a href="${rootPrefix}how-it-works.html">How it works</a>
           <a href="${rootPrefix}about.html">About</a>
           <a href="${rootPrefix}blog.html">Blog</a>

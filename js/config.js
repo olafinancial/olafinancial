@@ -110,6 +110,11 @@ const APP_CONFIG = {
 
   // Public social profiles (open in new tab)
   social: {
+    whatsapp: {
+      label: 'WhatsApp',
+      handle: 'WhatsApp Group',
+      url: 'https://chat.whatsapp.com/J7MfF9p5VPS0vqURHpCu5w',
+    },
     x: {
       label: 'X',
       handle: '@pulplanning',
@@ -136,11 +141,13 @@ const APP_CONFIG = {
     const s = this.social;
     const cls = variant === 'compact' ? 'brand-social brand-social--compact' : 'brand-social';
     // Simple monochrome SVG marks (currentColor)
+    const iconWa = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.572-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.989c-.001 5.45-4.436 9.884-9.886 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662a11.87 11.87 0 005.71 1.455h.005c6.554 0 11.89-5.335 11.893-11.893 0-3.177-1.238-6.164-3.488-8.414"/></svg>`;
     const iconX = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.727-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg>`;
     const iconIg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>`;
     const iconFb = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 12.07C22 6.48 17.52 2 11.93 2S1.86 6.48 1.86 12.07c0 5.02 3.66 9.18 8.44 9.93v-7.02H7.9v-2.91h2.4V9.84c0-2.37 1.41-3.68 3.57-3.68 1.03 0 2.12.18 2.12.18v2.33h-1.2c-1.18 0-1.55.73-1.55 1.48v1.78h2.64l-.42 2.91h-2.22V22c4.78-.75 8.44-4.91 8.44-9.93z"/></svg>`;
     return `
       <div class="${cls}" aria-label="Follow Pul Planning">
+        <a class="brand-social-link" href="${s.whatsapp.url}" target="_blank" rel="noopener noreferrer" title="Join WhatsApp Group" aria-label="Pul Planning WhatsApp Group">${iconWa}<span>WhatsApp</span></a>
         <a class="brand-social-link" href="${s.x.url}" target="_blank" rel="noopener noreferrer" title="${s.x.handle} on X" aria-label="Pul Planning on X">${iconX}<span>${s.x.handle}</span></a>
         <a class="brand-social-link" href="${s.instagram.url}" target="_blank" rel="noopener noreferrer" title="Instagram ${s.instagram.handle}" aria-label="Pul Planning on Instagram">${iconIg}<span>Instagram</span></a>
         <a class="brand-social-link" href="${s.facebook.url}" target="_blank" rel="noopener noreferrer" title="Facebook" aria-label="Pul Planning on Facebook">${iconFb}<span>Facebook</span></a>

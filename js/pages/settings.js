@@ -119,6 +119,9 @@ const WPSettings = (() => {
             Read articles on financial independence, money habits, and how to get the most out of Pul Planning:
           </p>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+            <a href="https://chat.whatsapp.com/J7MfF9p5VPS0vqURHpCu5w" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;grid-column:span 2;background:rgba(37,211,102,0.12);border-color:rgba(37,211,102,0.3);color:#25D366;font-weight:600;">
+              💬 <span>Join WhatsApp Group (Q&amp;A, Tips &amp; Tricks)</span>
+            </a>
             <a href="blog.html" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;">
               📝 <span>Blog &amp; Articles</span>
             </a>
