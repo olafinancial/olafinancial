@@ -14,7 +14,9 @@ const APP_URL         = process.env.APP_URL || 'https://pul.llc'
 
 // Admin Supabase client — bypasses RLS to read all user data
 function adminClient() {
-  return createClient(SUPABASE_URL, SUPABASE_SECRET, {
+  const rawUrl = process.env.SUPABASE_URL || ''
+  const supabaseUrl = (rawUrl.includes('supabase.co') ? rawUrl : 'https://kwymfdbvfzexhckuaorh.supabase.co').replace(/\/+$/, '')
+  return createClient(supabaseUrl, SUPABASE_SECRET, {
     auth: { persistSession: false },
   })
 }

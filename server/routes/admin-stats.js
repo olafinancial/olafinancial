@@ -14,10 +14,14 @@ const ADMIN_SECRET    = process.env.ADMIN_SECRET || 'pul_admin_secret'
 const OWNER_EMAILS    = ['sabrinahill@gmail.com', 'kaluaja@gmail.com']
 
 function adminClient() {
-  if (!SUPABASE_URL || !SUPABASE_SECRET) {
-    throw new Error('SUPABASE_URL and SUPABASE_SECRET_KEY environment variables are required')
+  const rawUrl = process.env.SUPABASE_URL || ''
+  const supabaseUrl = (rawUrl.includes('supabase.co') ? rawUrl : 'https://kwymfdbvfzexhckuaorh.supabase.co').replace(/\/+$/, '')
+  const supabaseSecret = process.env.SUPABASE_SECRET_KEY
+
+  if (!supabaseSecret) {
+    throw new Error('SUPABASE_SECRET_KEY is missing on Render. Please add SUPABASE_SECRET_KEY in Render Dashboard → pul-planning-backend → Environment Variables.')
   }
-  return createClient(SUPABASE_URL, SUPABASE_SECRET, {
+  return createClient(supabaseUrl, supabaseSecret, {
     auth: { persistSession: false },
   })
 }
