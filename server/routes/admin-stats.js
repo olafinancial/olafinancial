@@ -14,96 +14,82 @@ const OWNER_EMAILS    = ['sabrinahill@gmail.com', 'kaluaja@gmail.com']
 function adminClient() {
   const rawUrl = process.env.SUPABASE_URL || ''
   const supabaseUrl = (rawUrl.includes('supabase.co') ? rawUrl : 'https://kwymfdbvfzexhckuaorh.supabase.co').replace(/\/+$/, '')
-  // Use secret key if present, otherwise fallback to anon key for public profile queries
-  const supabaseKey = process.env.SUPABASE_SECRET_KEY || 'sb_publishable_i_muV01vzwnLzYvaiU6RCg_JV0-qcD6'
+  const supabaseSecret = process.env.SUPABASE_SECRET_KEY || ''
 
-  return createClient(supabaseUrl, supabaseKey, {
+  return createClient(supabaseUrl, supabaseSecret, {
     auth: { persistSession: false },
   })
 }
 
 /**
- * Fetches user statistics from Supabase Auth + user_profiles table.
- * Resilient fallback: uses user_profiles table if auth.admin API is unavailable.
+ * Fetches user statistics from Supabase Auth (auth.users).
+ * Requires SUPABASE_SECRET_KEY (service_role key) on server.
  */
 export async function fetchUserStats() {
+  const supabaseSecret = process.env.SUPABASE_SECRET_KEY
+  if (!supabaseSecret) {
+    return {
+      total_users: 0,
+      new_today: 0,
+      active_24h: 0,
+      confirmed_users: 0,
+      recent_users: [],
+      error_notice: 'SUPABASE_SECRET_KEY is missing on Render. Please set SUPABASE_SECRET_KEY in Render Dashboard → pul-planning-backend → Environment Variables.',
+      timestamp: new Date().toISOString(),
+    }
+  }
+
   const supabase = adminClient()
 
-  let users = []
-  let totalUsers = 0
-  let newToday = 0
-  let activeToday = 0
-  let confirmedUsers = 0
-  let recentUsers = []
+  // Query Supabase Auth admin API to list all registered accounts
+  const { data, error } = await supabase.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  })
 
+  if (error) {
+    return {
+      total_users: 0,
+      new_today: 0,
+      active_24h: 0,
+      confirmed_users: 0,
+      recent_users: [],
+      error_notice: `Supabase Error: ${error.message}. Ensure SUPABASE_SECRET_KEY in Render is the secret/service_role key from Supabase Settings → API.`,
+      timestamp: new Date().toISOString(),
+    }
+  }
+
+  const users = data?.users || []
   const now = new Date()
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
-  // 1. Attempt listing users via Supabase Auth Admin API
-  try {
-    const { data, error } = await supabase.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000,
-    })
+  const totalUsers = users.length
+  const newToday = users.filter(u => new Date(u.created_at) >= oneDayAgo).length
+  const activeToday = users.filter(u => u.last_sign_in_at && new Date(u.last_sign_in_at) >= oneDayAgo).length
+  const confirmedUsers = users.filter(u => u.email_confirmed_at).length
 
-    if (!error && data?.users && Array.isArray(data.users)) {
-      users = data.users
-      totalUsers = users.length
-      newToday = users.filter(u => new Date(u.created_at) >= oneDayAgo).length
-      activeToday = users.filter(u => u.last_sign_in_at && new Date(u.last_sign_in_at) >= oneDayAgo).length
-      confirmedUsers = users.filter(u => u.email_confirmed_at).length
-    }
-  } catch (err) {
-    console.warn('[admin-stats] auth.admin.listUsers fallback to user_profiles:', err.message)
-  }
-
-  // 2. Fetch profile metadata from user_profiles table
-  const { data: profiles, error: pError } = await supabase
+  // Fetch optional profile metadata (names, states) from user_profiles
+  const { data: profiles } = await supabase
     .from('user_profiles')
-    .select('user_id, full_name, state, employment_type, created_at, updated_at')
+    .select('user_id, full_name, state, employment_type, created_at')
 
-  const profileList = profiles || []
+  const profileMap = new Map((profiles || []).map(p => [p.user_id, p]))
 
-  // If Auth Admin SDK was unavailable, calculate stats from user_profiles table
-  if (totalUsers === 0 && profileList.length > 0) {
-    totalUsers = profileList.length
-    newToday = profileList.filter(p => p.created_at && new Date(p.created_at) >= oneDayAgo).length
-    activeToday = profileList.filter(p => p.updated_at && new Date(p.updated_at) >= oneDayAgo).length
-    confirmedUsers = totalUsers
-  }
-
-  const profileMap = new Map(profileList.map(p => [p.user_id, p]))
-
-  if (users.length > 0) {
-    recentUsers = [...users]
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .slice(0, 10)
-      .map(u => {
-        const p = profileMap.get(u.id) || {}
-        return {
-          id: u.id,
-          email: u.email || '—',
-          name: p.full_name || '—',
-          state: p.state || '—',
-          employment: p.employment_type || '—',
-          created_at: u.created_at,
-          confirmed: !!u.email_confirmed_at,
-        }
-      })
-  } else {
-    recentUsers = [...profileList]
-      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-      .slice(0, 10)
-      .map(p => ({
-        id: p.user_id,
-        email: '—',
-        name: p.full_name || 'User Profile',
+  const recentUsers = [...users]
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 10)
+    .map(u => {
+      const p = profileMap.get(u.id) || {}
+      return {
+        id: u.id,
+        email: u.email || '—',
+        name: p.full_name || '—',
         state: p.state || '—',
         employment: p.employment_type || '—',
-        created_at: p.created_at || now.toISOString(),
-        confirmed: true,
-      }))
-  }
+        created_at: u.created_at,
+        confirmed: !!u.email_confirmed_at,
+      }
+    })
 
   return {
     total_users: totalUsers,
@@ -136,16 +122,20 @@ export async function handleAdminStats(req) {
     const format = url.searchParams.get('format')
 
     if (format === 'text') {
-      const text = `📊 Pul Planning Daily User Stats (${new Date(stats.timestamp).toLocaleDateString()})
+      let text = `📊 Pul Planning Daily User Stats (${new Date(stats.timestamp).toLocaleDateString()})
 ========================================
 Total Registered Users: ${stats.total_users}
 New Signups (24h):     +${stats.new_today}
 Active Users (24h):    ${stats.active_24h}
 Confirmed Emails:      ${stats.confirmed_users}
 ========================================
-Recent Signups:
-${stats.recent_users.map(u => ` • ${u.name} (${u.email}) - ${u.state} [${new Date(u.created_at).toLocaleDateString()}]`).join('\n')}
 `
+      if (stats.error_notice) {
+        text += `\n⚠️ SETUP NOTICE:\n${stats.error_notice}\n`
+      } else {
+        text += `Recent Signups:\n${stats.recent_users.map(u => ` • ${u.name} (${u.email}) - ${u.state} [${new Date(u.created_at).toLocaleDateString()}]`).join('\n')}\n`
+      }
+
       return new Response(text, {
         headers: { 'Content-Type': 'text/plain; charset=utf-8' },
       })
@@ -215,6 +205,8 @@ export async function sendOwnerDailyStatsReport() {
             </td>
           </tr>
         </table>
+
+        ${stats.error_notice ? `<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#FCA5A5;padding:12px;border-radius:6px;font-size:13px;margin-bottom:20px;">⚠️ ${stats.error_notice}</div>` : ''}
 
         <h3 style="color:#FFFFFF;font-size:15px;margin-top:24px;margin-bottom:12px;font-weight:700;">Recent Signups</h3>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
