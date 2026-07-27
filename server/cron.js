@@ -5,6 +5,7 @@
 // ============================================================
 
 import { runDigestJob } from './routes/digest.js'
+import { sendOwnerDailyStatsReport } from './routes/admin-stats.js'
 
 let _timer = null
 
@@ -22,7 +23,7 @@ export function startCron() {
     return
   }
 
-  console.log('[cron] Email digest scheduler started (checks hourly at :00)')
+  console.log('[cron] Email digest & owner stats scheduler started (checks hourly at :00)')
 
   // Run immediately on startup only if it's the right hour
   if (shouldRunNow()) _runDigests()
@@ -47,14 +48,20 @@ export function stopCron() {
 
 async function _runDigests() {
   const start = Date.now()
-  console.log(`[cron] Running email digest job at ${new Date().toISOString()}`)
+  console.log(`[cron] Running email digest & owner stats job at ${new Date().toISOString()}`)
   try {
     const results = await runDigestJob()
-    console.log(`[cron] Digest job complete in ${Date.now() - start}ms — sent:${results.sent} skipped:${results.skipped} errors:${results.errors.length}`)
+    console.log(`[cron] User digest job complete in ${Date.now() - start}ms — sent:${results.sent} skipped:${results.skipped} errors:${results.errors.length}`)
     if (results.errors.length) {
       results.errors.forEach(e => console.error(`[cron]   ✗ ${e.user_id}: ${e.error}`))
     }
   } catch (err) {
-    console.error('[cron] Digest job failed:', err.message)
+    console.error('[cron] User digest job failed:', err.message)
+  }
+
+  try {
+    await sendOwnerDailyStatsReport()
+  } catch (err) {
+    console.error('[cron] Daily owner stats report failed:', err.message)
   }
 }

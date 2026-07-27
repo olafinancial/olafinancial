@@ -17,6 +17,7 @@ import { handleHealth }        from "./routes/health.js"
 import { handleEcon }          from "./routes/econ.js"
 import { handleDigestRun }     from "./routes/digest.js"
 import { handleAccountReset, handleAccountDelete } from "./routes/account.js"
+import { handleAdminStats, handleTriggerStatsEmail } from "./routes/admin-stats.js"
 import { startCron }           from "./cron.js"
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url))
@@ -41,8 +42,10 @@ const API_ROUTES = {
   "GET  /api/profile":         handleProfile,
   "POST /api/snapshot":        handleSnapshot,
   "GET  /api/admin/users":     handleAdminUsers,
+  "GET  /api/stats":           handleAdminStats,         // One-click secret stats endpoint
+  "GET  /api/stats/email":     handleTriggerStatsEmail,  // Manual owner stats email trigger
   "GET  /api/econ":            handleEcon,
-  "GET  /api/digest/run":      handleDigestRun,   // admin trigger
+  "GET  /api/digest/run":      handleDigestRun,          // admin trigger
   "POST /api/account/reset":   handleAccountReset,
   "POST /api/account/delete":  handleAccountDelete,
 }
