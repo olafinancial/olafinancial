@@ -11,9 +11,18 @@ const RESEND_FROM     = process.env.RESEND_FROM || 'Pul Planning <digest@pul.llc
 const ADMIN_SECRET    = process.env.ADMIN_SECRET || 'pul_admin_secret'
 const OWNER_EMAILS    = ['sabrinahill@gmail.com', 'kaluaja@gmail.com']
 
-function adminClient() {
+function getCleanSupabaseUrl() {
   const rawUrl = process.env.SUPABASE_URL || ''
-  const supabaseUrl = (rawUrl.includes('supabase.co') ? rawUrl : 'https://kwymfdbvfzexhckuaorh.supabase.co').replace(/\/+$/, '')
+  try {
+    if (rawUrl && rawUrl.includes('supabase.co')) {
+      return new URL(rawUrl).origin
+    }
+  } catch (e) {}
+  return 'https://kwymfdbvfzexhckuaorh.supabase.co'
+}
+
+function adminClient() {
+  const supabaseUrl = getCleanSupabaseUrl()
   const supabaseSecret = process.env.SUPABASE_SECRET_KEY || ''
 
   return createClient(supabaseUrl, supabaseSecret, {
