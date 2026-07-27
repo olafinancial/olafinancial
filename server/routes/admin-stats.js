@@ -14,20 +14,11 @@ const OWNER_EMAILS    = ['sabrinahill@gmail.com', 'kaluaja@gmail.com']
 function getCleanSupabaseUrl() {
   const rawUrl = process.env.SUPABASE_URL || ''
   try {
-    if (rawUrl && rawUrl.includes('supabase.co')) {
+    if (rawUrl && rawUrl.includes('kwymfdbvfzexhckuaorh.supabase.co')) {
       return new URL(rawUrl).origin
     }
   } catch (e) {}
   return 'https://kwymfdbvfzexhckuaorh.supabase.co'
-}
-
-function adminClient() {
-  const supabaseUrl = getCleanSupabaseUrl()
-  const supabaseSecret = process.env.SUPABASE_SECRET_KEY || ''
-
-  return createClient(supabaseUrl, supabaseSecret, {
-    auth: { persistSession: false },
-  })
 }
 
 /**
@@ -36,6 +27,8 @@ function adminClient() {
  */
 export async function fetchUserStats() {
   const supabaseSecret = process.env.SUPABASE_SECRET_KEY
+  const supabaseUrl = getCleanSupabaseUrl()
+
   if (!supabaseSecret) {
     return {
       total_users: 0,
@@ -43,70 +36,84 @@ export async function fetchUserStats() {
       active_24h: 0,
       confirmed_users: 0,
       recent_users: [],
-      error_notice: 'SUPABASE_SECRET_KEY is missing on Render. Please set SUPABASE_SECRET_KEY in Render Dashboard → pul-planning-backend → Environment Variables.',
+      error_notice: 'SUPABASE_SECRET_KEY is missing on Render. Please add SUPABASE_SECRET_KEY in Render Dashboard → pul-planning-backend → Environment Variables.',
       timestamp: new Date().toISOString(),
     }
   }
 
-  const supabase = adminClient()
-
-  // Query Supabase Auth admin API to list all registered accounts
-  const { data, error } = await supabase.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
+  const supabase = createClient(supabaseUrl, supabaseSecret, {
+    auth: { persistSession: false },
   })
 
-  if (error) {
+  try {
+    // Query Supabase Auth admin API to list all registered accounts
+    const { data, error } = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    })
+
+    if (error) {
+      return {
+        total_users: 0,
+        new_today: 0,
+        active_24h: 0,
+        confirmed_users: 0,
+        recent_users: [],
+        error_notice: `Supabase Auth API Error: ${error.message} (code: ${error.code || error.status || 'unknown'})`,
+        timestamp: new Date().toISOString(),
+      }
+    }
+
+    const users = data?.users || []
+    const now = new Date()
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+    const totalUsers = users.length
+    const newToday = users.filter(u => new Date(u.created_at) >= oneDayAgo).length
+    const activeToday = users.filter(u => u.last_sign_in_at && new Date(u.last_sign_in_at) >= oneDayAgo).length
+    const confirmedUsers = users.filter(u => u.email_confirmed_at).length
+
+    // Fetch optional profile metadata (names, states) from user_profiles
+    const { data: profiles } = await supabase
+      .from('user_profiles')
+      .select('user_id, full_name, state, employment_type, created_at')
+
+    const profileMap = new Map((profiles || []).map(p => [p.user_id, p]))
+
+    const recentUsers = [...users]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 10)
+      .map(u => {
+        const p = profileMap.get(u.id) || {}
+        return {
+          id: u.id,
+          email: u.email || '—',
+          name: p.full_name || '—',
+          state: p.state || '—',
+          employment: p.employment_type || '—',
+          created_at: u.created_at,
+          confirmed: !!u.email_confirmed_at,
+        }
+      })
+
+    return {
+      total_users: totalUsers,
+      new_today: newToday,
+      active_24h: activeToday,
+      confirmed_users: confirmedUsers,
+      recent_users: recentUsers,
+      timestamp: now.toISOString(),
+    }
+  } catch (err) {
     return {
       total_users: 0,
       new_today: 0,
       active_24h: 0,
       confirmed_users: 0,
       recent_users: [],
-      error_notice: `Supabase Error: ${error.message}. Ensure SUPABASE_SECRET_KEY in Render is the secret/service_role key from Supabase Settings → API.`,
+      error_notice: `Server Exception: ${err.message}`,
       timestamp: new Date().toISOString(),
     }
-  }
-
-  const users = data?.users || []
-  const now = new Date()
-  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-
-  const totalUsers = users.length
-  const newToday = users.filter(u => new Date(u.created_at) >= oneDayAgo).length
-  const activeToday = users.filter(u => u.last_sign_in_at && new Date(u.last_sign_in_at) >= oneDayAgo).length
-  const confirmedUsers = users.filter(u => u.email_confirmed_at).length
-
-  // Fetch optional profile metadata (names, states) from user_profiles
-  const { data: profiles } = await supabase
-    .from('user_profiles')
-    .select('user_id, full_name, state, employment_type, created_at')
-
-  const profileMap = new Map((profiles || []).map(p => [p.user_id, p]))
-
-  const recentUsers = [...users]
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    .slice(0, 10)
-    .map(u => {
-      const p = profileMap.get(u.id) || {}
-      return {
-        id: u.id,
-        email: u.email || '—',
-        name: p.full_name || '—',
-        state: p.state || '—',
-        employment: p.employment_type || '—',
-        created_at: u.created_at,
-        confirmed: !!u.email_confirmed_at,
-      }
-    })
-
-  return {
-    total_users: totalUsers,
-    new_today: newToday,
-    active_24h: activeToday,
-    confirmed_users: confirmedUsers,
-    recent_users: recentUsers,
-    timestamp: now.toISOString(),
   }
 }
 
