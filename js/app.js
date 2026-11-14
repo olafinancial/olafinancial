@@ -24,9 +24,42 @@ const WPApp = (() => {
   let _activePage = null;
   let _pageLoadGen = 0; // cancel stale async page loads
 
+  const IMPORT_CODE_KEY = 'wp_clearnumber_code';
+  const IMPORT_PENDING_KEY = 'wp_clearnumber_pending';
+
+  /** Remember ?code= from #/import before the router strips the query. */
+  function captureClearNumberCode() {
+    try {
+      const hash = window.location.hash || '';
+      const q = hash.indexOf('?');
+      if (q === -1) return;
+      const code = new URLSearchParams(hash.slice(q + 1)).get('code');
+      if (code && String(code).trim()) {
+        sessionStorage.setItem(IMPORT_CODE_KEY, String(code).trim());
+        sessionStorage.setItem(IMPORT_PENDING_KEY, '1');
+      }
+    } catch { /* ignore */ }
+  }
+
+  function clearNumberPending() {
+    try {
+      return sessionStorage.getItem(IMPORT_PENDING_KEY) === '1' && !!sessionStorage.getItem(IMPORT_CODE_KEY);
+    } catch {
+      return false;
+    }
+  }
+
+  function clearClearNumberPending() {
+    try {
+      sessionStorage.removeItem(IMPORT_PENDING_KEY);
+      sessionStorage.removeItem(IMPORT_CODE_KEY);
+    } catch { /* ignore */ }
+  }
+
   // ── BOOT ──────────────────────────────────────────────────
   async function boot() {
     try {
+      captureClearNumberCode();
       WPDb.init();
       const session = await WPDb.getSession();
 
@@ -41,6 +74,13 @@ const WPApp = (() => {
 
       // Always initialize the app shell structure and routes first
       _showApp();
+
+      // ClearNumber handoff wins over the setup wizard so the code survives sign-up.
+      if (clearNumberPending()) {
+        history.replaceState(null, '', '#/import');
+        WPRouter.start();
+        return;
+      }
 
       // Route guard: onboarding incomplete (only if logged in)
       if (state.user && (!state.profile || !state.profile.onboarding_done)) {
@@ -145,6 +185,10 @@ const WPApp = (() => {
       }
       const container = _ensureAuthRoot();
       if (container) WPAuth.renderSignup(container);
+    });
+    WPRouter.register('/import', () => {
+      const container = _ensureAuthRoot();
+      if (container && typeof WPImport !== 'undefined') WPImport.init(container);
     });
     WPRouter.register('/logged-out', () => {
       const container = _ensureAuthRoot();
@@ -400,6 +444,7 @@ const WPApp = (() => {
       '/calculators':   typeof WPCalculators !== 'undefined' ? WPCalculators : null,
       '/reports':       typeof WPReports !== 'undefined' ? WPReports : null,
       '/settings':      typeof WPSettings !== 'undefined' ? WPSettings : null,
+      '/import':        typeof WPImport !== 'undefined' ? WPImport : null,
       // Legacy: salary calculator lives under Calculators → Salary / PAYE
       '/salary-calc':   {
         async init(container) {
@@ -442,7 +487,7 @@ const WPApp = (() => {
     } catch (e) { console.warn('[page destroy outer]', e); }
 
     // Route guard: incomplete onboarding → wizard only
-    if (state.user && page !== WPOnboarding && (!state.profile || !state.profile.onboarding_done)) {
+    if (state.user && page !== WPOnboarding && page !== WPImport && (!state.profile || !state.profile.onboarding_done)) {
       // Only redirect if onboarding route exists (app shell)
       if (WPRouter.hasRoute('/onboarding')) {
         WPRouter.navigate('/onboarding', true);
@@ -564,7 +609,10 @@ const WPApp = (() => {
     return { cf, totalAssets, totalLiabilities, netWorth, passiveKPIs, debtToAsset, efTarget, efBalance, efStatus };
   }
 
-  return { state, boot, loadCurrentMonthData, computeSummary, NAV_ITEMS, enterAuthShell };
+  return {
+    state, boot, loadCurrentMonthData, computeSummary, NAV_ITEMS, enterAuthShell,
+    captureClearNumberCode, clearClearNumberPending, clearNumberPending,
+  };
 })();
 
 // ── TOAST SYSTEM ──────────────────────────────────────────

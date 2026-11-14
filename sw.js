@@ -5,7 +5,7 @@
 // ============================================================
 
 // Bump this when shipping SW logic changes (pairs with js/cache-control.js BUILD_ID)
-const CACHE_NAME = 'pul-planning-v32';
+const CACHE_NAME = 'pul-planning-v33';
 
 const PRECACHE = [
   '/',
@@ -15,6 +15,7 @@ const PRECACHE = [
   '/js/config.js',
   '/js/cache-control.js',
   '/js/utils.js',
+  '/js/clearnumber-map.js',
   '/js/supabase-client.js',
   '/js/auth.js',
   '/js/router.js',
@@ -36,6 +37,7 @@ const PRECACHE = [
   '/js/pages/insurance.js',
   '/js/pages/reports.js',
   '/js/pages/settings.js',
+  '/js/pages/import.js',
   '/js/pages/calculators.js',
   '/js/lib/supabase.min.js',
   '/js/lib/chart.umd.min.js',

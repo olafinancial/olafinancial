@@ -163,6 +163,18 @@ const WPDb = (() => {
     return upsert('monthly_snapshots', { user_id: userId, period_month: period, ...snapshot }, ['user_id','period_month']);
   }
 
+  async function previewClearNumber(code) {
+    const { data, error } = await client().rpc('preview_clearnumber_handoff', { p_code: code });
+    if (error) throw error;
+    return data;
+  }
+
+  async function redeemClearNumber(code) {
+    const { data, error } = await client().rpc('redeem_clearnumber_handoff', { p_code: code });
+    if (error) throw error;
+    return data;
+  }
+
   /** User-owned tables wiped by “Reset my data” (auth account kept). */
   const USER_DATA_TABLES = [
     'income_entries',
@@ -423,7 +435,7 @@ const WPDb = (() => {
     fetchAll, fetchOne, insert, upsert, update, remove,
     getProfile, updateProfile, getIncomeByPeriod, getExpensesByDateRange,
     getAssetsByPeriod, getLiabilitiesByPeriod, getMonthlySnapshots,
-    getRefData, saveSnapshot,
+    getRefData, saveSnapshot, previewClearNumber, redeemClearNumber,
     resetUserData, clearUserLocalState, seedDemoData, USER_DATA_TABLES,
   };
 })();
