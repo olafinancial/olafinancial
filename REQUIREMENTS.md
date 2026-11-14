@@ -608,13 +608,13 @@ Based on "goals sheet 1" (Age, Desired Retirement Age, Period to Retire, pay-cyc
   - Health insurance (plan tier, insurer)
   - Home/property insurance (coverage amount)
   - Vehicle insurance (third-party vs. comprehensive)
-- System analyzes:
-  - Life cover adequacy: Recommended = 10x annual income (or enough to clear all debts + 5 years income replacement)
+- System explains cover types people often compare. It does not recommend a product or name an insurer.
+  - Life cover people often compare: about 10× annual income, or enough to clear debts plus several years of income replacement (a rule of thumb, not advice)
   - Health plan tier vs. dependents and age
   - Property coverage vs. asset value
-- **Gap alerts:** Color-coded flags for under-insured areas
-- **Nigerian-specific insurers reference list:** AIICO, Leadway, AXA Mansard, Cornerstone, NAICOM-licensed providers
-- **NAICOM note:** Display disclaimer that insurance recommendations are informational; consult a NAICOM-licensed broker
+- **Gap alerts:** Color-coded flags where logged cover is below those rules of thumb
+- Do not name real insurers or products in the UI, examples, or placeholders. Use generic labels such as "Insurer name" and "Policy name".
+- **Education note:** State that this is general education, not advice, and that users should compare quotes and speak with a licensed adviser or broker (in Nigeria, a NAICOM-licensed broker)
 - **Acceptance Criteria:** Gaps identified with NGN amount and percentage shortfall
 
 ---

@@ -6,6 +6,7 @@ const WPInsurance = (() => {
   let _data = {};
   let _step = 1;
   const TOTAL_STEPS = 5;
+  const EDU_NOTE = 'This is general education, not advice. Compare quotes and speak with a licensed adviser or broker.';
 
   const CURRENCY_OPTIONS = [
     { code: 'NGN', symbol: '₦' },
@@ -93,7 +94,8 @@ const WPInsurance = (() => {
       <div class="page-header">
         <div>
           <h1 class="page-title">Insurance Needs Assessment</h1>
-          <p class="page-subtitle">Complete our comprehensive assessment to identify coverage gaps and get product recommendations</p>
+          <p class="page-subtitle">Learn which cover types typically address different needs.</p>
+          <p class="page-subtitle" style="margin-top:0.35rem">${EDU_NOTE}</p>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:center">
           <select id="ins-page-currency" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
@@ -124,17 +126,18 @@ const WPInsurance = (() => {
             </div>
           </div>
 
-          <!-- Recommendation Sidebar -->
+          <!-- Educational sidebar: cover types to compare -->
           <div class="card" style="display:flex;flex-direction:column;gap:1.5rem;padding:1.5rem" id="ins-sidebar-card">
-            <div class="section-title" style="margin:0">Recommendation Logic</div>
+            <div class="section-title" style="margin:0">Cover types that may fit your answers</div>
             <div style="text-align:center;padding:1.5rem;background:rgba(255,255,255,0.02);border-radius:10px;border:1px solid var(--clr-border)">
-              <div style="font-size:0.75rem;color:var(--clr-text-3);text-transform:uppercase;font-weight:600;letter-spacing:0.05em">Recommended Class</div>
-              <div id="sidebar-rec-product" style="font-size:1.6rem;font-weight:800;margin:0.5rem 0;color:var(--clr-accent)">Pending Assessment</div>
-              <div id="sidebar-rec-details" style="font-size:0.8rem;color:var(--clr-text-2)">Fill questionnaire to trigger recommendation.</div>
+              <div style="font-size:0.75rem;color:var(--clr-text-3);text-transform:uppercase;font-weight:600;letter-spacing:0.05em">Things to compare</div>
+              <div id="sidebar-rec-product" style="font-size:1.6rem;font-weight:800;margin:0.5rem 0;color:var(--clr-accent)">Answer the steps</div>
+              <div id="sidebar-rec-details" style="font-size:0.8rem;color:var(--clr-text-2)">Your answers are used only to explain which cover types people often compare for similar needs.</div>
             </div>
             <div style="font-size:0.82rem;line-height:1.5;color:var(--clr-text-2)">
-              🕌 <strong class="text-white">Takaful Focus:</strong> Islamic Sharia-compliant cooperative insurance will be recommended if Takaful preference is selected in step 1.
+              🕌 <strong class="text-white">Takaful:</strong> If you select a Takaful preference in step 1, the notes describe Sharia-compliant cover types (such as Family Takaful) that typically address the same needs.
             </div>
+            <p style="margin:0;font-size:0.78rem;line-height:1.45;color:var(--clr-text-3)">${EDU_NOTE}</p>
           </div>
         </div>
         <div id="ins-report-view" style="display:none;margin-top:1.5rem"></div>
@@ -155,7 +158,7 @@ const WPInsurance = (() => {
     }
 
     _renderStep();
-    _updateRecommendation();
+    _updateCoverNotes();
 
     // Evaluate insights
     WPInsights.evaluate('insurance', {
@@ -505,7 +508,7 @@ const WPInsurance = (() => {
     if (_step < TOTAL_STEPS) {
       _step++;
       _renderStep();
-      _updateRecommendation();
+      _updateCoverNotes();
     } else {
       _generateAssessment();
     }
@@ -515,7 +518,7 @@ const WPInsurance = (() => {
     if (_step > 1) {
       _step--;
       _renderStep();
-      _updateRecommendation();
+      _updateCoverNotes();
     }
   }
 
@@ -550,49 +553,83 @@ const WPInsurance = (() => {
     }
   }
 
-  function _updateRecommendation() {
-    const sidebarProd = document.getElementById('sidebar-rec-product');
-    const sidebarDetails = document.getElementById('sidebar-rec-details');
-    if (!sidebarProd || !sidebarDetails) return;
-
+  /**
+   * Educational notes only. Explains cover types people often compare
+   * for similar answers.
+   */
+  function _coverTypeNotes() {
     const answers = _data.answers;
     const isTakaful = _data.takaful === 'yes';
 
     if (answers.lifeInterest === 'no') {
-      sidebarProd.textContent = isTakaful ? "General Takaful" : "Health / Property";
-      sidebarDetails.textContent = "Focusing on property, auto, and medical protection.";
-      return;
+      return isTakaful
+        ? {
+            title: 'General Takaful',
+            detail: 'General Takaful is cooperative cover for property, vehicles, and medical costs, structured without interest (riba). People often compare it when life cover is not the main need.'
+          }
+        : {
+            title: 'Health, property, and motor cover',
+            detail: 'Health, property, and motor policies typically address medical bills, a home or its contents, and vehicle risk. People often compare these when life cover is not the main need.'
+          };
     }
 
     if (answers.cashValue === 'no') {
-      sidebarProd.textContent = isTakaful ? "Family Takaful (Term)" : "Term Life Insurance";
-      sidebarDetails.textContent = "Pure protection to cover liabilities and protect dependents at the lowest cost.";
-      return;
+      return isTakaful
+        ? {
+            title: 'Family Takaful (term-style)',
+            detail: 'Family Takaful is a Sharia-compliant arrangement that typically pays a benefit if the participant dies during an agreed term. People often compare it when the need is income replacement or debt cover for dependants, without a savings element.'
+          }
+        : {
+            title: 'Term life',
+            detail: 'Term life pays a benefit if the life insured dies during a set period, and usually has no cash value. People often compare it when the need is to cover debts and dependants for a limited time.'
+          };
     }
 
-    // Cash Value
     if (isTakaful) {
-      sidebarProd.textContent = "Investment-Linked Takaful";
-      sidebarDetails.textContent = "Sharia-compliant permanent structure tracking Halal equity indices.";
-      return;
+      return {
+        title: 'Investment-linked Takaful',
+        detail: 'Investment-linked Family Takaful combines a protection benefit with a participant fund that follows Sharia screens. People often compare it when they want long-term cover and a savings element. Fund choices, charges, and surplus sharing differ by operator.'
+      };
     }
 
     if (answers.growthStyle === 'a') {
-      sidebarProd.textContent = "Whole Life Insurance";
-      sidebarDetails.textContent = "Guaranteed cash accumulation + potential dividends. Predictable and safe.";
-    } else if (answers.growthStyle === 'b') {
-      sidebarProd.textContent = "Universal Life";
-      sidebarDetails.textContent = "Premium flexibility and adjustable death benefits tracking current yields.";
-    } else if (answers.growthStyle === 'c') {
-      sidebarProd.textContent = "Indexed Universal Life";
-      sidebarDetails.textContent = "Growth linked to equity index (e.g., S&P 500) with a 0% floor protection.";
-    } else if (answers.growthStyle === 'd') {
-      sidebarProd.textContent = "Variable Universal Life";
-      sidebarDetails.textContent = "Direct mutual funds exposure for high risk tolerances.";
-    } else {
-      sidebarProd.textContent = "Permanent Life";
-      sidebarDetails.textContent = "Cash-accumulating plans tailored to your parameters.";
+      return {
+        title: 'Whole life',
+        detail: 'Whole life is permanent cover that typically builds guaranteed cash value and may pay dividends. People often compare it when they want lifelong cover and more predictable accumulation, and accept higher premiums than term cover.'
+      };
     }
+    if (answers.growthStyle === 'b') {
+      return {
+        title: 'Universal life',
+        detail: 'Universal life is permanent cover with flexible premiums and an adjustable benefit. Cash value usually tracks a declared interest rate. People often compare it when they want room to change payments over time.'
+      };
+    }
+    if (answers.growthStyle === 'c') {
+      return {
+        title: 'Indexed universal life',
+        detail: 'Indexed universal life links cash-value crediting to a market index (for example the S&P 500) and often includes a floor that limits index losses. People often compare it when they want market-linked growth with some downside limit. Caps, participation rates, and charges vary by contract.'
+      };
+    }
+    if (answers.growthStyle === 'd') {
+      return {
+        title: 'Variable universal life',
+        detail: 'Variable universal life places cash value in investment options such as funds, so the value can rise or fall with markets. People often compare it when they accept investment volatility inside a permanent policy.'
+      };
+    }
+    return {
+      title: 'Permanent life (cash value)',
+      detail: 'Permanent life policies are designed to stay in force for life and can build cash value. Common types include whole life and universal life. People often compare them when they want lifelong cover plus a savings element. Guarantees, flexibility, and charges differ by contract.'
+    };
+  }
+
+  function _updateCoverNotes() {
+    const sidebarProd = document.getElementById('sidebar-rec-product');
+    const sidebarDetails = document.getElementById('sidebar-rec-details');
+    if (!sidebarProd || !sidebarDetails) return;
+
+    const notes = _coverTypeNotes();
+    sidebarProd.textContent = notes.title;
+    sidebarDetails.textContent = notes.detail;
   }
 
   function _generateAssessment() {
@@ -605,8 +642,8 @@ const WPInsurance = (() => {
     wizardCard.style.display = 'none';
     if (sidebarCard) sidebarCard.style.display = 'none';
 
-    _updateRecommendation();
-    const recommendedProduct = document.getElementById('sidebar-rec-product')?.textContent || 'Term Life';
+    const notes = _coverTypeNotes();
+    _updateCoverNotes();
 
     const answers = _data.answers;
     const pageCurrency = localStorage.getItem('wp_page_currency_insurance') || WPApp.state.profile?.currency || 'NGN';
@@ -652,13 +689,11 @@ const WPInsurance = (() => {
         </div>
 
         <div style="background:rgba(0, 200, 150, 0.05); border:1px solid var(--clr-accent); border-radius:10px; padding:1.5rem; margin-bottom:2rem">
-          <h3 style="color:#ffffff; margin:0 0 0.5rem; display:flex; align-items:center; gap:0.5rem">🎯 Recommended Solution: ${recommendedProduct}</h3>
-          <p style="margin:0; font-size:0.9rem; line-height:1.6; color:var(--clr-text-2)">
-            Based on your responses, we recommend a <strong>${recommendedProduct}</strong> policy. 
-            ${_data.takaful === 'yes' 
-              ? "This solution utilizes a Sharia-compliant cooperative fund structure, avoiding riba (interest) or gharar (uncertainty) while fulfilling your protective requirements." 
-              : "This aligns with your preferences for risk tolerance, accumulation objectives, and liability coverage requirements."}
-          </p>
+          <h3 style="color:#ffffff; margin:0 0 0.35rem">Cover types that may fit your answers</h3>
+          <div style="font-size:0.75rem;color:var(--clr-text-3);text-transform:uppercase;font-weight:600;letter-spacing:0.05em;margin-bottom:0.35rem">Things to compare</div>
+          <p style="margin:0 0 0.5rem; font-size:1.05rem; font-weight:700; color:var(--clr-accent)">${notes.title}</p>
+          <p style="margin:0 0 0.75rem; font-size:0.9rem; line-height:1.6; color:var(--clr-text-2)">${notes.detail}</p>
+          <p style="margin:0; font-size:0.82rem; line-height:1.5; color:var(--clr-text-3)">${EDU_NOTE}</p>
         </div>
 
         ${answers.otherInterests.length ? `
@@ -695,6 +730,7 @@ const WPInsurance = (() => {
         <div>
           <h1 class="page-title">Insurance Policies & Takaful</h1>
           <p class="page-subtitle">Add and manage your active policies</p>
+          <p class="page-subtitle" style="margin-top:0.35rem">${EDU_NOTE}</p>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:center">
           <select id="ins-page-currency-pol" class="select select-sm" style="width:110px;background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text-1)">
@@ -783,7 +819,7 @@ const WPInsurance = (() => {
                 </div>
                 <div class="form-group">
                   <label for="ins-name">Policy Name / Description</label>
-                  <input class="input" type="text" id="ins-name" placeholder="e.g. Leadway Term Life Protection" required>
+                  <input class="input" type="text" id="ins-name" placeholder="e.g. Policy name" required>
                 </div>
               </div>
               
@@ -801,7 +837,7 @@ const WPInsurance = (() => {
                 </div>
                 <div class="form-group">
                   <label for="ins-provider">Insurance Provider</label>
-                  <input class="input" type="text" id="ins-provider" placeholder="e.g. AIICO Insurance" required>
+                  <input class="input" type="text" id="ins-provider" placeholder="e.g. Insurer name" required>
                 </div>
               </div>
 
