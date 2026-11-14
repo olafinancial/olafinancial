@@ -868,15 +868,18 @@ var WPClearNumberMap = (function () {
     var fiSavingsMajor = fiSavings && fiSavings > 0 ? fiSavings / 100 : 0;
     var fiLocal = null;
     if (fiExpenseMajor > 0 || fiPortfolioMajor > 0 || fiSavingsMajor > 0) {
-      var fiSkip = !!existing.fiSaved;
+      // A saved calculator on this device is replaced with the workbook
+      // figures when the person confirms. Other device keys are not touched.
+      var fiDetail = 'Expenses ' + formatMajor(Math.round(fiExpenseMajor * 100), currency)
+        + ' / month · portfolio ' + formatMajor(Math.round(fiPortfolioMajor * 100), currency)
+        + ' · savings ' + formatMajor(Math.round(fiSavingsMajor * 100), currency) + ' / month';
+      if (existing.fiSaved) fiDetail += '. Replaces the numbers saved on this device';
       fiLocal = {
-        write: !fiSkip,
-        skip: fiSkip,
-        reason: fiSkip ? 'Already saved on this device' : '',
+        write: true,
+        skip: false,
+        reason: '',
         label: 'FI Calculator',
-        detail: 'Expenses ' + formatMajor(Math.round(fiExpenseMajor * 100), currency)
-          + ' / month · portfolio ' + formatMajor(Math.round(fiPortfolioMajor * 100), currency)
-          + ' · savings ' + formatMajor(Math.round(fiSavingsMajor * 100), currency) + ' / month',
+        detail: fiDetail,
         payload: {
           expenses: fiExpenseMajor,
           passive: 0,

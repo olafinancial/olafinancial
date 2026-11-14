@@ -75,6 +75,17 @@ const WPDb = (() => {
     return data;
   }
 
+  /**
+   * One PostgREST insert for many rows. Same user JWT and RLS checks as
+   * insert(); the request is not privileged. Empty input does not hit the network.
+   */
+  async function insertMany(table, rows) {
+    if (!rows || !rows.length) return [];
+    const { data, error } = await fromTable(table).insert(rows).select();
+    if (error) throw error;
+    return data || [];
+  }
+
   async function upsert(table, row, conflictCols = ['id']) {
     const { data, error } = await fromTable(table).upsert(row, { onConflict: conflictCols.join(',') }).select().single();
     if (error) throw error;
@@ -432,7 +443,7 @@ const WPDb = (() => {
   return {
     init, client,
     getSession, getUser, signOut, signUp, signIn, signInWithGoogle, resetPassword,
-    fetchAll, fetchOne, insert, upsert, update, remove,
+    fetchAll, fetchOne, insert, insertMany, upsert, update, remove,
     getProfile, updateProfile, getIncomeByPeriod, getExpensesByDateRange,
     getAssetsByPeriod, getLiabilitiesByPeriod, getMonthlySnapshots,
     getRefData, saveSnapshot, previewClearNumber, redeemClearNumber,

@@ -251,8 +251,7 @@ const WPApp = (() => {
         </main>
         <!-- Mobile bottom nav -->
         <nav class="bottom-nav" id="bottom-nav"></nav>
-      </div>
-      <div id="toast-container"></div>`;
+      </div>`;
 
     _renderNav();
     _updateUserInfo();
@@ -617,18 +616,30 @@ const WPApp = (() => {
 
 // ── TOAST SYSTEM ──────────────────────────────────────────
 const WPToast = (() => {
+  function container() {
+    const all = document.querySelectorAll ? document.querySelectorAll('#toast-container') : [];
+    // The shell used to clone a container inside #root. boot() replaces #root,
+    // which deleted the toast before anyone could read it. Prefer the node
+    // that lives outside #root (index.html).
+    for (let i = 0; i < all.length; i++) {
+      const el = all[i];
+      if (!el.closest || !el.closest('#root')) return el;
+    }
+    return document.getElementById('toast-container');
+  }
+
   function show(message, type = 'info', duration = 4000) {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
+    const host = container();
+    if (!host) return;
     const el = document.createElement('div');
-    el.className = `toast ${type}`;
+    el.className = `toast ${type} show`;
     const icons = { success: '&#x2713;', error: '&#x2715;', warning: '&#x26A0;', info: '&#x2139;' };
     el.innerHTML = `<span style="font-size:1.1rem">${icons[type]||'&#x2139;'}</span><span>${message}</span>`;
-    container.appendChild(el);
+    host.appendChild(el);
     setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(100%)'; el.style.transition = '0.3s'; setTimeout(() => el.remove(), 300); }, duration);
   }
   return {
-    success: (msg) => show(msg, 'success'),
+    success: (msg, duration) => show(msg, 'success', duration == null ? 4000 : duration),
     error:   (msg) => show(msg, 'error', 5000),
     warning: (msg) => show(msg, 'warning'),
     info:    (msg) => show(msg, 'info'),
