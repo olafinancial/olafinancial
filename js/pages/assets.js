@@ -456,7 +456,7 @@ const WPAssets = (() => {
             ${cleanNotes?`<br><span class="text-xs text-muted">${cleanNotes}</span>`:''}
           </td>
           <td><span class="badge badge-neutral">${(a.asset_type||'').replace('_',' ')}${subTypeLabel}</span></td>
-          <td class="text-muted text-sm">${a.institution_name||'—'}</td>
+          <td class="text-muted text-sm">${WPUtils.institutionLabel(a)}</td>
           <td class="td-mono">${WPUtils.fmt(openBalPage, { currency: pageCurrency })}</td>
           <td class="td-mono fw-600">${WPUtils.fmt(balPage, { currency: pageCurrency })}</td>
           <td class="td-mono text-accent">${a.interest_rate?a.interest_rate+'%':'—'}</td>
@@ -525,12 +525,12 @@ const WPAssets = (() => {
           <div class="form-group">
             <label for="af-inst-type">Institution Type</label>
             <select class="select" id="af-inst-type">
-              <option value=""           ${!e.institution_type              ?'selected':''}>Not Applicable</option>
-              <option value="dmb"        ${e.institution_type==='dmb'       ?'selected':''}>DMB (Commercial Bank)</option>
-              <option value="mfb"        ${e.institution_type==='mfb'       ?'selected':''}>Microfinance / Neobank</option>
-              <option value="investment" ${e.institution_type==='investment'||e._preferTicker?'selected':''}>Investment / Brokerage</option>
-              <option value="mmo"        ${e.institution_type==='mmo'       ?'selected':''}>Mobile Money (PSB)</option>
-              <option value="other"      ${e.institution_type==='other'     ?'selected':''}>Other</option>
+              <option value=""           ${!WPUtils.normalizeInstitutionType(e.institution_type) ?'selected':''}>Not Applicable</option>
+              <option value="dmb"        ${WPUtils.normalizeInstitutionType(e.institution_type)==='dmb'       ?'selected':''}>DMB (Commercial Bank)</option>
+              <option value="mfb"        ${WPUtils.normalizeInstitutionType(e.institution_type)==='mfb'       ?'selected':''}>Microfinance / Neobank</option>
+              <option value="investment" ${WPUtils.normalizeInstitutionType(e.institution_type)==='investment'||e._preferTicker?'selected':''}>Investment / Brokerage</option>
+              <option value="psb"        ${WPUtils.normalizeInstitutionType(e.institution_type)==='psb'       ?'selected':''}>Mobile Money (PSB)</option>
+              <option value="other"      ${WPUtils.normalizeInstitutionType(e.institution_type)==='other'     ?'selected':''}>Other</option>
             </select>
           </div>
         </div>
@@ -848,7 +848,7 @@ const WPAssets = (() => {
       user_id:              WPApp.state.user.id,
       asset_name:           assetName,
       asset_type:           typeVal,
-      institution_type:     document.getElementById('af-inst-type').value || null,
+      institution_type:     WPUtils.normalizeInstitutionType(document.getElementById('af-inst-type').value) || null,
       institution_name:     document.getElementById('af-inst').value.trim(),
       open_balance:         rawOpen,
       close_balance:        rawClose,

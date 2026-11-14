@@ -86,25 +86,40 @@ const APP_CONFIG = {
 
   /** HTML for the numbered getting-started path (onboarding + dashboard). */
   gettingStartedPathHTML(opts = {}) {
-    const { interactive = false, compact = false } = opts;
+    const { interactive = false, compact = false, done = {} } = opts;
     const steps = this.gettingStartedPath || [];
+    const doneByRoute = {
+      '/goals': !!done.goals,
+      '/income': !!done.income,
+      '/expenses': !!done.expenses,
+      '/balance-sheet': !!done.balance,
+    };
     return `
       <ol class="guide-path ${compact ? 'guide-path--compact' : ''}">
-        ${steps.map((s, i) => `
-          <li class="guide-path-step">
-            <div class="guide-path-num" aria-hidden="true">${s.n}</div>
+        ${steps.map((s, i) => {
+          const isDone = !!doneByRoute[s.route];
+          const doneTitles = {
+            '/income': 'Income logged',
+            '/expenses': 'Expenses logged',
+            '/goals': 'Goals started',
+            '/balance-sheet': 'Assets & debts listed',
+          };
+          const shownTitle = isDone ? (doneTitles[s.route] || s.title) : s.title;
+          return `
+          <li class="guide-path-step${isDone ? ' guide-path-step--done' : ''}">
+            <div class="guide-path-num" aria-hidden="true">${isDone ? '✓' : s.n}</div>
             <div class="guide-path-body">
-              <div class="guide-path-title">${i === 0 ? 'Start here: ' : ''}${s.title}</div>
-              <p class="guide-path-blurb">${s.blurb}</p>
-              ${s.tip ? `<p class="guide-path-tip">${s.tip}</p>` : ''}
+              <div class="guide-path-title">${!isDone && i === 0 ? 'Start here: ' : ''}${shownTitle}</div>
+              <p class="guide-path-blurb">${isDone ? 'Already in your account. Open the page to review or add more.' : s.blurb}</p>
+              ${!isDone && s.tip ? `<p class="guide-path-tip">${s.tip}</p>` : ''}
               ${interactive
-                ? `<button type="button" class="btn btn-secondary btn-sm guide-path-cta" data-guide-route="${s.route}">${s.cta} →</button>`
+                ? `<button type="button" class="btn btn-secondary btn-sm guide-path-cta" data-guide-route="${s.route}">${isDone ? 'Review' : s.cta} →</button>`
                 : `<span class="guide-path-hint text-muted text-xs">Menu: <strong>${s.route.replace('/', '') || 'dashboard'}</strong></span>`
               }
             </div>
             ${i < steps.length - 1 ? '<div class="guide-path-connector" aria-hidden="true"></div>' : ''}
-          </li>
-        `).join('')}
+          </li>`;
+        }).join('')}
       </ol>`;
   },
 

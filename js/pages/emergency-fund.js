@@ -56,9 +56,9 @@ const WPEmergencyFund = (() => {
     try {
       const uid = WPApp.state.user.id;
       const PERIOD = WPUtils.currentPeriod();
-      const now = new Date();
-      const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
-      const end   = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10);
+      const range = WPUtils.currentMonthRange();
+      const start = range.start;
+      const end   = range.end;
 
       const [assets, expenses] = await Promise.all([
         WPDb.getAssetsByPeriod(uid, PERIOD),
@@ -176,7 +176,7 @@ const WPEmergencyFund = (() => {
                 return `
                   <tr>
                     <td><strong>${a.asset_name}</strong></td>
-                    <td>${a.institution_name || '—'}</td>
+                    <td>${WPUtils.institutionLabel(a)}</td>
                     <td style="text-transform:capitalize">${a.asset_type.replace('_',' ')}</td>
                     <td class="td-mono fw-700" style="text-align:right">${WPUtils.fmt(aBalPage, {currency: pageCurrency})}</td>
                   </tr>

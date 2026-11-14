@@ -287,6 +287,10 @@ const WPSettings = (() => {
           retirement_age: retAge,
           currency: newCurrency,
         }, ['user_id']);
+        if (age && retAge) WPUtils.saveRetirementAges(uid, age, retAge);
+        else {
+          try { localStorage.removeItem('wp_retirement_ages_' + uid); } catch { /* ignore */ }
+        }
         
         const views = ['balance_sheet', 'dashboard', 'income', 'expenses', 'cashflow', 'debt', 'emergency', 'goals', 'reports'];
         views.forEach(v => {

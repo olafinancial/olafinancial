@@ -281,15 +281,6 @@ function toMonthlyKobo(amountKobo, frequency = 'monthly') {
   return Math.round(map[f] != null ? map[f] : a);
 }
 
-function calcFV(annualRate, years, monthlyPaymentKobo = 0, presentValueKobo = 0) {
-  const r = annualRate / 12;
-  const n = Math.round(years * 12);
-  if (n <= 0) return presentValueKobo;
-  if (Math.abs(r) < 1e-10) return presentValueKobo + monthlyPaymentKobo * n;
-  const growth = Math.pow(1 + r, n);
-  return Math.round(presentValueKobo * growth + monthlyPaymentKobo * (growth - 1) / r);
-}
-
 function calcAnnuity(balanceKobo, annualRate, years) {
   const r = annualRate / 12;
   const n = years * 12;
@@ -409,5 +400,111 @@ describe('calcPIT (Nigerian Tax Act 2025 §30(2) six deductibles)', () => {
   });
   test('zero income pays no tax', () => {
     expect(calcPIT(0)).toBe(0);
+  });
+});
+
+const fs = require('fs');
+const vm = require('vm');
+const path = require('path');
+
+function loadWPUtils(storage) {
+  const code = fs.readFileSync(path.join(__dirname, '../../js/utils.js'), 'utf8');
+  const sandbox = {
+    console,
+    Date, Math, Number, String, parseInt, parseFloat, isFinite, isNaN,
+    localStorage: storage || { getItem: () => null, setItem() {}, removeItem() {} },
+    setTimeout,
+    clearTimeout,
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(code, sandbox, { filename: 'utils.js' });
+  if (!sandbox.WPUtils) throw new Error('WPUtils did not load');
+  return sandbox.WPUtils;
+}
+
+describe('calendar dates (no UTC shift)', () => {
+  const WPUtils = loadWPUtils();
+
+  test('localISODate uses the local calendar day', () => {
+    expect(WPUtils.localISODate(new Date(2026, 10, 13, 0, 30))).toBe('2026-11-13');
+  });
+
+  test('currentMonthRange stays inside the local month', () => {
+    const range = WPUtils.currentMonthRange(new Date(2026, 10, 13));
+    expect(range.start).toBe('2026-11-01');
+    expect(range.end).toBe('2026-11-30');
+    expect(range.period).toBe('2026-11-01');
+  });
+
+  test('fmtDate keeps 13 Nov on a date-only string', () => {
+    const label = WPUtils.fmtDate('2026-11-13');
+    expect(label).toMatch(/13/);
+    expect(label).not.toMatch(/\b12\b/);
+  });
+});
+
+describe('institution and recurrence mapping', () => {
+  const WPUtils = loadWPUtils();
+
+  test('folds Cyrillic mmо and Latin mmo onto psb', () => {
+    expect(WPUtils.normalizeInstitutionType('mm\u043e')).toBe('psb');
+    expect(WPUtils.normalizeInstitutionType('mmo')).toBe('psb');
+    expect(WPUtils.normalizeInstitutionType('')).toBe('');
+    expect(WPUtils.normalizeInstitutionType('dmb')).toBe('dmb');
+  });
+
+  test('institution column shows type when the name is blank', () => {
+    expect(WPUtils.institutionLabel({ institution_type: 'dmb', institution_name: '' }))
+      .toBe('DMB (Commercial Bank)');
+    expect(WPUtils.institutionLabel({ institution_type: 'psb', institution_name: 'Opay' }))
+      .toBe('Opay · Mobile Money (PSB)');
+  });
+
+  test('maps UI recurrence labels onto the database codes', () => {
+    expect(WPUtils.normalizeRecurrenceFreq('bi-weekly')).toBe('biweekly');
+    expect(WPUtils.normalizeRecurrenceFreq('annually')).toBe('annual');
+    expect(WPUtils.normalizeRecurrenceFreq('custom:every 10 days')).toBe('custom');
+    expect(WPUtils.normalizeRecurrenceFreq('')).toBe(null);
+  });
+});
+
+describe('debt payoff schedule', () => {
+  const WPUtils = loadWPUtils();
+
+  test('extra payment shortens the chart to the payoff month', () => {
+    const debt = [{ name: 'Car', balanceKobo: 100000, apr: 0, monthlyPaymentKobo: 25000 }];
+    const min = WPUtils.calcDebtStrategy(debt, 0, 'avalanche');
+    const extra = WPUtils.calcDebtStrategy(debt, 25000, 'avalanche');
+    expect(min[0].monthsToPayoff).toBe(4);
+    expect(min.schedule[0].points.length - 1).toBe(4);
+    expect(min.schedule[0].points[min.schedule[0].points.length - 1]).toBe(0);
+    expect(extra[0].monthsToPayoff).toBe(2);
+    expect(extra.schedule[0].points.length - 1).toBe(2);
+    expect(extra.schedule[0].points.length).toBeLessThan(60);
+  });
+});
+
+describe('shared retirement age', () => {
+  test('Reports and Retirement read the same saved ages', () => {
+    const mem = {};
+    const storage = {
+      getItem: (k) => (k in mem ? mem[k] : null),
+      setItem: (k, v) => { mem[k] = String(v); },
+      removeItem: (k) => { delete mem[k]; },
+    };
+    const WPUtils = loadWPUtils(storage);
+    WPUtils.saveRetirementAges('user-1', 35, 60);
+    const ages = WPUtils.readRetirementAges({ age: 54, retirement_age: 65 }, 'user-1');
+    expect(ages).toEqual({ age: 35, retirementAge: 60 });
+    const report = WPUtils.buildStrategicHealthReport({
+      profile: { age: 54, retirement_age: 65, full_name: 'Ada' },
+      userId: 'user-1',
+      assets: [{ asset_name: 'RSA', asset_type: 'retirement_contribution', close_balance: 100, notes: '[NGN]' }],
+    });
+    const retirement = report.checks.find(c => c.id === 'retirement');
+    expect(retirement.headline).toMatch(/60/);
+    expect(retirement.headline).toMatch(/25 years/);
+    expect(retirement.headline).not.toMatch(/target age 65/);
   });
 });

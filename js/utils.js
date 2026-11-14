@@ -94,7 +94,32 @@ const WPUtils = (() => {
 
   function fmtDate(dateStr) {
     if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('en-NG', { day: '2-digit', month: 'short', year: 'numeric' });
+    // Date-only strings ('YYYY-MM-DD') parse as UTC midnight, which
+    // displays as the previous local day west of UTC. Format the
+    // calendar date itself.
+    const match = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const d = match
+      ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+      : new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-NG', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  /** Local calendar date as YYYY-MM-DD (not UTC via toISOString). */
+  function localISODate(date = new Date()) {
+    const d = date instanceof Date ? date : new Date(date);
+    if (Number.isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  /** Inclusive local calendar month, for expense date filters. */
+  function currentMonthRange(now = new Date()) {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { start: localISODate(start), end: localISODate(end), period: localISODate(start) };
   }
 
   // ── NIGERIAN PIT — NIGERIA TAX ACT 2025 §30(2) ───────────
@@ -328,16 +353,18 @@ const WPUtils = (() => {
     let monthCounts = new Array(remaining.length).fill(0);
     let strategyInterest = new Array(remaining.length).fill(0);
     let freed = 0;
+    // Opening balance plus one point per simulated month, so the chart
+    // ends when the strategy pays the debt off (extra payments included).
+    const schedule = remaining.map(d => ({ name: d.name, points: [d.balance] }));
 
     for (let month = 0; month < 600; month++) {
-      let allPaid = true;
+      if (remaining.every(d => d.balance <= 0)) break;
       let extraLeft = extraPaymentKobo + freed;
       freed = 0;
 
       for (let i = 0; i < remaining.length; i++) {
         const d = remaining[i];
         if (d.balance <= 0) continue;
-        allPaid = false;
 
         const r = d.apr / 100 / 12;
         const interest = Math.round(d.balance * r);
@@ -358,15 +385,17 @@ const WPUtils = (() => {
           d.balance = 0;
         }
       }
-      if (allPaid) break;
+      schedule.forEach((series, i) => series.points.push(remaining[i].balance));
     }
 
-    return results.map((r, i) => ({
+    const out = results.map((r, i) => ({
       ...r,
       monthsToPayoff: monthCounts[i] || 0,
       totalInterestStrategy:  strategyInterest[i] || 0,
       interestSaved: Math.max(0, (r.totalInterestMinPmt || 0) - (strategyInterest[i] || 0)),
     }));
+    out.schedule = schedule;
+    return out;
   }
 
   // ── BALANCE SHEET ─────────────────────────────────────────
@@ -718,8 +747,91 @@ const WPUtils = (() => {
 
   // ── PERIOD HELPERS ────────────────────────────────────────
   function currentPeriod() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}-01`;
+    return currentMonthRange().period;
+  }
+
+  /**
+   * Map UI recurrence labels onto expense_entries.recurrence_freq.
+   * Returns null when the expense is not recurring.
+   */
+  function normalizeRecurrenceFreq(value) {
+    const f = String(value || '').trim().toLowerCase();
+    if (!f) return null;
+    if (f === 'bi-weekly' || f === 'bi_weekly' || f === 'biweekly') return 'biweekly';
+    if (f === 'annually' || f === 'yearly' || f === 'annual') return 'annual';
+    if (f === 'custom' || f.startsWith('custom:')) return 'custom';
+    if (['daily', 'weekly', 'monthly', 'quarterly'].includes(f)) return f;
+    return null;
+  }
+
+  const INSTITUTION_LABELS = {
+    dmb: 'DMB (Commercial Bank)',
+    mfb: 'Microfinance / Neobank',
+    psb: 'Mobile Money (PSB)',
+    investment: 'Investment / Brokerage',
+    other: 'Other',
+  };
+
+  /** Fold the legacy Cyrillic "mmо" typo and Latin mmo onto psb. */
+  function normalizeInstitutionType(value) {
+    if (value == null) return '';
+    const raw = String(value).trim();
+    if (!raw) return '';
+    const folded = raw
+      .replace(/\u043e/g, 'o')
+      .replace(/\u041e/g, 'o')
+      .toLowerCase();
+    if (folded === 'mmo' || folded === 'psb') return 'psb';
+    if (Object.prototype.hasOwnProperty.call(INSTITUTION_LABELS, folded)) return folded;
+    return '';
+  }
+
+  function institutionLabel(asset) {
+    const type = normalizeInstitutionType(asset && asset.institution_type);
+    const typeLabel = INSTITUTION_LABELS[type] || '';
+    const name = String((asset && asset.institution_name) || '').trim();
+    if (name && typeLabel) return `${name} · ${typeLabel}`;
+    return name || typeLabel || '—';
+  }
+
+  function _retirementAgeKey(userId) {
+    return `wp_retirement_ages_${userId || 'anon'}`;
+  }
+
+  /**
+   * Retirement planner and Reports share this source:
+   * the ages last saved from Retirement or Settings, otherwise the profile.
+   */
+  function readRetirementAges(profile = {}, userId) {
+    let saved = null;
+    try {
+      const uid = userId || (typeof WPApp !== 'undefined' && WPApp.state?.user?.id);
+      if (uid && typeof localStorage !== 'undefined') {
+        saved = JSON.parse(localStorage.getItem(_retirementAgeKey(uid)) || 'null');
+      }
+    } catch { saved = null; }
+    const ageRaw = saved && saved.age != null ? Number(saved.age) : (profile && profile.age != null ? Number(profile.age) : null);
+    const retRaw = saved && saved.retirementAge != null
+      ? Number(saved.retirementAge)
+      : (profile && profile.retirement_age != null ? Number(profile.retirement_age) : 60);
+    return {
+      age: Number.isFinite(ageRaw) ? ageRaw : null,
+      retirementAge: Number.isFinite(retRaw) ? retRaw : 60,
+    };
+  }
+
+  function saveRetirementAges(userId, age, retirementAge) {
+    if (!userId || typeof localStorage === 'undefined') return;
+    const ageN = Number(age);
+    const retN = Number(retirementAge);
+    if (!Number.isFinite(ageN) || !Number.isFinite(retN)) return;
+    try {
+      localStorage.setItem(_retirementAgeKey(userId), JSON.stringify({
+        age: ageN,
+        retirementAge: retN,
+        savedAt: Date.now(),
+      }));
+    } catch { /* ignore quota / private mode */ }
   }
 
   function periodLabel(periodMonth) {
@@ -1104,8 +1216,9 @@ const WPUtils = (() => {
       return t === 'retirement_contribution' || t === 'pension' || t.includes('retirement');
     });
     const retBal = retAssets.reduce((s, a) => s + bal(a), 0);
-    const age = profile.age || null;
-    const retAge = profile.retirement_age || 60;
+    const ages = readRetirementAges(profile, ctx.userId);
+    const age = ages.age;
+    const retAge = ages.retirementAge;
     const yearsToRet = age != null ? Math.max(0, retAge - age) : null;
     // crude: funded if retirement assets >= 3× annual net income or any plan exists with progress
     const annualNet = netIncome * 12;
@@ -1466,6 +1579,9 @@ const WPUtils = (() => {
 
   return {
     fmt, cleanNum, maskNumberInput, nairaToKobo, koboToNaira, pct, fmtPct, fmtDate,
+    localISODate, currentMonthRange, normalizeRecurrenceFreq,
+    normalizeInstitutionType, institutionLabel,
+    readRetirementAges, saveRetirementAges,
     calcPIT, summarizePIT, calcTaxableIncome, calcRentRelief, normalizePITReliefs,
     effectiveTaxRate, taxBracket,
     calcPensionEmployee, calcNHF, calcNHIS,
@@ -1490,4 +1606,6 @@ const WPUtils = (() => {
     shareBrandedCapture, calcShareCopy,
   };
 })();
+
+if (typeof globalThis !== 'undefined') globalThis.WPUtils = WPUtils;
 

@@ -297,7 +297,7 @@ const WPDashboard = (() => {
       return;
     }
 
-    const pathHtml = APP_CONFIG.gettingStartedPathHTML({ interactive: true });
+    const pathHtml = APP_CONFIG.gettingStartedPathHTML({ interactive: true, done: _guideDone() });
     el.style.display = '';
     el.innerHTML = `
       <div class="section-header" style="align-items:flex-start;flex-wrap:wrap;gap:0.75rem">
@@ -360,30 +360,48 @@ const WPDashboard = (() => {
     try {
       await WPApp.loadCurrentMonthData();
       const s = WPApp.computeSummary();
+      _renderGettingStarted();
       _renderKPIs(s);
       _renderCharts(s);
       _renderAlerts(s);
       _renderPYF(s);
 
-      // Fetch live econ data and update macro card
-      try {
-        const econRes = await fetch('/api/econ');
-        if (econRes.ok) {
-          const econ = await econRes.json();
-          _updateEconCard(econ);
-          // Pass inflation to WPInsights for dashboard rules
-          WPInsights.evaluate('dashboard', {
-            netWorthKobo:    s.netWorth,
-            hasEmergencyFund: s.efBalance > 0,
-            inflation:       econ.inflation?.value || 0,
-            netWorthTrend:   'stable', // Future: compute from snapshots
-            incomeCount:     WPApp.state.data.income?.length || 0,
-          }, document.getElementById('dash-insights'));
-        }
-      } catch (_) { /* econ fetch optional — don't fail the page */ }
+      const econ = await _loadEcon();
+      WPInsights.evaluate('dashboard', {
+        netWorthKobo:    s.netWorth,
+        hasEmergencyFund: s.efBalance > 0,
+        inflation:       econ?.inflation?.value || 0,
+        netWorthTrend:   'stable',
+        incomeCount:     WPApp.state.data.income?.length || 0,
+        expenseCount:    WPApp.state.data.expenses?.length || 0,
+      }, document.getElementById('dash-insights'));
     } catch (err) {
       WPToast.error('Failed to load dashboard data.');
       console.error(err);
+    }
+  }
+
+  function _guideDone() {
+    const d = WPApp.state?.data || {};
+    return {
+      goals: (d.goals || []).length > 0,
+      income: (d.income || []).length > 0,
+      expenses: (d.expenses || []).length > 0,
+      balance: (d.assets || []).length > 0 || (d.liabilities || []).length > 0,
+    };
+  }
+
+  /** Static econ file ships with the site. GitHub Pages has no /api/econ. */
+  async function _loadEcon() {
+    try {
+      const url = new URL('server/data/econ-ng.json', window.location.href);
+      const econRes = await fetch(url.href);
+      if (!econRes.ok) return null;
+      const econ = await econRes.json();
+      _updateEconCard(econ);
+      return econ;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -476,7 +494,7 @@ const WPDashboard = (() => {
       <a href="#/emergency-fund" class="card animate-in card-link" style="animation-delay:0.2s" title="Open Emergency Fund">
         <div class="card-title">Emergency Fund</div>
         <div class="card-value ${s.efStatus.status==='on_track'?'accent':s.efStatus.status==='critical'?'danger':'gold'}">${WPUtils.fmt(efBalance,{compact:true, currency: pageCurrency})}</div>
-        <div class="card-meta">${s.efStatus.label||'—'} · Target ${WPUtils.fmt(efTarget,{compact:true, currency: pageCurrency})}</div>
+        <div class="card-meta">${s.efStatus.label||'—'} · ${s.efTarget > 0 ? (s.efBalance / (s.efTarget / 3)).toFixed(1) + ' months' : '—'} · Target ${WPUtils.fmt(efTarget,{compact:true, currency: pageCurrency})}</div>
         <div class="card-link-hint">Emergency Fund →</div>
       </a>`;
   }

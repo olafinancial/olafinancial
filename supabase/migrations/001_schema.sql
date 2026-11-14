@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS income_entries (
   income_type     TEXT NOT NULL CHECK (income_type IN ('active','passive','investment')),
   source_name     TEXT NOT NULL,
   gross_amount    BIGINT NOT NULL CHECK (gross_amount >= 0),  -- stored in kobo (₦ × 100)
-  frequency       TEXT NOT NULL CHECK (frequency IN ('monthly','quarterly','annual','one_time')),
+  frequency       TEXT NOT NULL CHECK (frequency IN ('weekly','biweekly','monthly','quarterly','semiannual','annual','one_time')),
   -- Deductions (stored in kobo)
   paye_tax        BIGINT DEFAULT 0,
   pension_contrib BIGINT DEFAULT 0,          -- employee 8% of emoluments
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS expense_entries (
   description     TEXT,
   merchant        TEXT,
   is_recurring    BOOLEAN DEFAULT FALSE,
-  recurrence_freq TEXT CHECK (recurrence_freq IN ('daily','weekly','monthly','quarterly','annual')),
+  recurrence_freq TEXT CHECK (recurrence_freq IS NULL OR recurrence_freq IN ('daily','weekly','biweekly','monthly','quarterly','annual','custom')),
   created_at      TIMESTAMPTZ DEFAULT NOW(),
   updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS assets (
   asset_type          TEXT NOT NULL,         -- e.g. 'savings','fixed_deposit','equity','property','vehicle'
   is_income_generating BOOLEAN NOT NULL DEFAULT FALSE,
   institution_name    TEXT,                  -- bank / broker name
-  institution_type    TEXT CHECK (institution_type IN ('dmb','mfb','mmо','investment','other')),
+  institution_type    TEXT CHECK (institution_type IS NULL OR institution_type IN ('dmb','mfb','psb','investment','other')),
   open_balance        BIGINT DEFAULT 0,      -- in kobo
   interest_rate       NUMERIC(8,4) DEFAULT 0, -- annual % rate
   tenor_months        INTEGER,
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS financial_goals (
   id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id             UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   goal_name           TEXT NOT NULL,
-  goal_type           TEXT CHECK (goal_type IN ('retirement','mortgage','college','emergency','custom')),
+  goal_type           TEXT CHECK (goal_type IS NULL OR goal_type IN ('retirement','mortgage','college','emergency','custom','debt','investment','travel','business','spend')),
   target_amount       BIGINT NOT NULL,       -- in kobo
   target_date         DATE NOT NULL,
   current_savings     BIGINT DEFAULT 0,      -- in kobo (present value)
@@ -142,7 +142,7 @@ CREATE TABLE IF NOT EXISTS financial_goals (
 CREATE TABLE IF NOT EXISTS insurance_policies (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  policy_type     TEXT NOT NULL CHECK (policy_type IN ('life','health','home','vehicle','other')),
+  policy_type     TEXT NOT NULL CHECK (policy_type IN ('life','health','home','vehicle','takaful','other')),
   insurer_name    TEXT,
   policy_number   TEXT,
   sum_assured     BIGINT DEFAULT 0,          -- in kobo

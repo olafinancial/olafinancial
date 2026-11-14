@@ -9,9 +9,9 @@ const WPExpenses = (() => {
   let _endDate   = '';
 
   async function init(container) {
-    const now   = new Date();
-    _startDate  = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
-    _endDate    = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10);
+    const range = WPUtils.currentMonthRange();
+    _startDate  = range.start;
+    _endDate    = range.end;
 
     container.innerHTML = `
       <div class="page-theme-expenses">
@@ -156,7 +156,7 @@ const WPExpenses = (() => {
       wrap.innerHTML = '<div style="padding:3rem;text-align:center;color:var(--clr-text-2)">No expenses in this date range. Click "Log Expense" to add one.</div>';
       return;
     }
-    const sorted = [..._entries].sort((a,b) => new Date(b.expense_date) - new Date(a.expense_date));
+    const sorted = [..._entries].sort((a,b) => String(b.expense_date).localeCompare(String(a.expense_date)));
     wrap.innerHTML = `<table>
       <thead><tr>
         <th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Type</th><th></th>
@@ -307,7 +307,7 @@ const WPExpenses = (() => {
           </div>
           <div class="form-group">
             <label for="ef-date">Date</label>
-            <input class="input" type="date" id="ef-date" value="${e.expense_date||new Date().toISOString().slice(0,10)}" required>
+            <input class="input" type="date" id="ef-date" value="${e.expense_date||WPUtils.localISODate()}" required>
           </div>
         </div>
         <div class="form-row">
@@ -554,6 +554,9 @@ const WPExpenses = (() => {
       merchant:         document.getElementById('ef-merchant').value.trim(),
       is_discretionary: document.getElementById('ef-disc').checked,
       is_recurring:     document.getElementById('ef-recur').checked,
+      recurrence_freq:  document.getElementById('ef-recur').checked
+        ? WPUtils.normalizeRecurrenceFreq(freq)
+        : null,
     };
     try {
       if (existingId) {

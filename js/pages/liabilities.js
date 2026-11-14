@@ -214,8 +214,9 @@ const WPLiabilities = (() => {
           <div class="form-group" style="flex: 1;">
             <label for="lf-mpmt">Monthly Payment (${symbol})</label>
             <div class="input-prefix-group"><span class="input-prefix">${symbol}</span>
-              <input class="input" type="text" inputmode="decimal" id="lf-mpmt" value="${e.monthly_payment?WPUtils.koboToNaira(e.monthly_payment):''}" ${e.apr?'readonly':''}>
+              <input class="input" type="text" inputmode="decimal" id="lf-mpmt" value="${e.monthly_payment?WPUtils.koboToNaira(e.monthly_payment):''}">
             </div>
+            <p class="text-xs text-muted" id="lf-mpmt-hint" style="margin:0.35rem 0 0">Enter the amount you actually pay. If you set an APR, a calculated payment is filled in only while this box is empty.</p>
           </div>
         </div>
       </form>`;
@@ -244,39 +245,50 @@ const WPLiabilities = (() => {
       document.querySelector('label[for="lf-mpmt"]').textContent = `Monthly Payment (${newSym})`;
     });
 
+    let lastSuggested = null;
     function updateCalculatedPayment() {
-      if (noAprCheck.checked) return;
+      const hint = document.getElementById('lf-mpmt-hint');
+      if (noAprCheck.checked) {
+        if (hint) hint.textContent = 'Enter the amount you actually pay each month.';
+        return;
+      }
       const aprVal = parseFloat(aprInput.value) || 0;
       const balVal = WPUtils.cleanNum(openInput.value) || 0;
       const typeVal = typeSelect.value;
-      if (aprVal > 0 && balVal > 0) {
-        let r = (aprVal / 100) / 12;
-        let months = 36;
-        if (typeVal === 'mortgage') months = 180;
-        else if (typeVal === 'auto_loan') months = 60;
-        else if (typeVal === 'credit_card') {
-          mpmtInput.value = Math.round(balVal * Math.max(0.025, r + 0.01));
-          mpmtInput.dispatchEvent(new Event('input'));
-          return;
-        }
-        const pmt = Math.round(balVal * r * Math.pow(1 + r, months) / (Math.pow(1 + r, months) - 1));
-        mpmtInput.value = pmt;
+      if (!(aprVal > 0 && balVal > 0)) {
+        if (hint) hint.textContent = 'Enter the amount you actually pay. A suggestion appears once both balance and APR are set.';
+        return;
+      }
+      let r = (aprVal / 100) / 12;
+      let months = 36;
+      let label = '36-month';
+      let pmt;
+      if (typeVal === 'mortgage') { months = 180; label = '15-year'; }
+      else if (typeVal === 'auto_loan') { months = 60; label = '60-month'; }
+      else if (typeVal === 'credit_card') {
+        pmt = Math.round(balVal * Math.max(0.025, r + 0.01));
+        label = 'minimum-style';
+      }
+      if (pmt == null) {
+        pmt = Math.round(balVal * r * Math.pow(1 + r, months) / (Math.pow(1 + r, months) - 1));
+      }
+      const current = WPUtils.cleanNum(mpmtInput.value) || 0;
+      if (!current || current === lastSuggested) {
+        mpmtInput.value = Number(pmt).toLocaleString('en-US');
         mpmtInput.dispatchEvent(new Event('input'));
-      } else {
-        mpmtInput.value = '';
+      }
+      lastSuggested = pmt;
+      if (hint) {
+        hint.textContent = `Suggested ${label} payment at this APR: ${Number(pmt).toLocaleString('en-US')}. You can type your real payment instead.`;
       }
     }
 
     noAprCheck.addEventListener('change', () => {
       const manual = noAprCheck.checked;
       aprContainer.style.display = manual ? 'none' : 'block';
-      if (manual) {
-        aprInput.value = '';
-        mpmtInput.readOnly = false;
-      } else {
-        mpmtInput.readOnly = true;
-        updateCalculatedPayment();
-      }
+      mpmtInput.readOnly = false;
+      if (manual) aprInput.value = '';
+      updateCalculatedPayment();
     });
 
     aprInput.addEventListener('input', updateCalculatedPayment);

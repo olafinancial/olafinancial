@@ -9,8 +9,9 @@ const WPRetirement = (() => {
 
   async function init(container) {
     const profile = WPApp.state.profile || {};
-    const age     = profile.age || 35;
-    const retAge  = profile.retirement_age || 60;
+    const ages    = WPUtils.readRetirementAges(profile, WPApp.state.user?.id);
+    const age     = ages.age || 35;
+    const retAge  = ages.retirementAge || 60;
     const risk    = profile.risk_tolerance || 'moderate';
 
     const currencyCode = WPApp.state.profile?.currency || APP_CONFIG.currency || 'NGN';
@@ -186,6 +187,9 @@ const WPRetirement = (() => {
         console.error(err);
         WPToast.error('Could not calculate retirement plan. Check inputs and try again.');
       }
+    });
+    ['ret-age', 'ret-retire'].forEach(id => {
+      document.getElementById(id)?.addEventListener('change', () => { _persistAges(); });
     });
 
     const jurisSelect = document.getElementById('ret-jurisdiction');
@@ -366,7 +370,24 @@ const WPRetirement = (() => {
     }
   }
 
+  function _persistAges() {
+    const uid = WPApp.state.user?.id;
+    const age = parseInt(document.getElementById('ret-age')?.value, 10);
+    const retirementAge = parseInt(document.getElementById('ret-retire')?.value, 10);
+    if (!uid || !Number.isFinite(age) || !Number.isFinite(retirementAge)) return;
+    if (age < 1 || age > 119 || retirementAge < 18 || retirementAge > 100) return;
+    WPUtils.saveRetirementAges(uid, age, retirementAge);
+    if (WPApp.state.profile) {
+      WPApp.state.profile.age = age;
+      WPApp.state.profile.retirement_age = retirementAge;
+    }
+    WPDb.updateProfile(uid, { age, retirement_age: retirementAge }).catch(err => {
+      console.warn('Retirement age save:', err?.message || err);
+    });
+  }
+
   function _calculate() {
+    _persistAges();
     const juris      = document.getElementById('ret-jurisdiction').value;
     const age        = parseInt(document.getElementById('ret-age').value) || 35;
     const retAge     = parseInt(document.getElementById('ret-retire').value) || 60;

@@ -93,7 +93,7 @@ const WPDebt = (() => {
         <div id="debt-list"></div>
         <!-- Payoff Timeline Chart -->
         <div class="chart-wrap" style="margin-top:1.5rem;display:none" id="debt-chart-wrap">
-          <div class="chart-title">Debt Payoff Timeline (60 months)</div>
+          <div class="chart-title" id="debt-chart-title">Debt Payoff Timeline</div>
           <div class="chart-container" style="height:280px"><canvas id="chart-debt-timeline"></canvas></div>
         </div>
         <!-- Interest Saved Table -->
@@ -271,9 +271,16 @@ const WPDebt = (() => {
 
     const stratLabel = strategy === 'snowball' ? 'Snowball' : 'Avalanche';
 
-    // Show chart
+    // Show chart for the simulated payoff, including the extra payment.
     document.getElementById('debt-chart-wrap').style.display = '';
-    WPCharts.debtTimeline('chart-debt-timeline', debts);
+    const payoffMonths = Math.max(0, ...(results.schedule || []).map(s => Math.max(0, (s.points || []).length - 1)));
+    const titleEl = document.getElementById('debt-chart-title');
+    if (titleEl) {
+      titleEl.textContent = payoffMonths
+        ? `Debt Payoff Timeline (${payoffMonths} month${payoffMonths === 1 ? '' : 's'})`
+        : 'Debt Payoff Timeline';
+    }
+    WPCharts.debtTimeline('chart-debt-timeline', results.schedule || []);
 
     // Update section title
     document.getElementById('debt-savings-title').textContent = `Interest Savings with ${stratLabel}`;

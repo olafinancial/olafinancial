@@ -195,24 +195,27 @@ const WPCharts = (() => {
   }
 
   // ── DEBT PAYOFF TIMELINE ─────────────────────────────────
-  function debtTimeline(canvasId, debtResults) {
+  // schedule: [{ name, points: kobo balances per month, including month 0 }]
+  function debtTimeline(canvasId, schedule) {
     _destroy(canvasId);
-    const months = Array.from({ length: 60 }, (_, i) => `M${i+1}`);
+    const series = Array.isArray(schedule) ? schedule : [];
+    const len = Math.max(1, ...series.map(s => (s.points || []).length));
+    const labels = Array.from({ length: len }, (_, i) => (i === 0 ? 'Now' : `M${i}`));
     return new Chart(document.getElementById(canvasId), {
       type: 'line',
       data: {
-        labels: months,
-        datasets: debtResults.map((d, i) => ({
+        labels,
+        datasets: series.map((d, i) => ({
           label: d.name,
-          data: (() => {
-            const r = d.apr / 100 / 12;
-            let bal = WPUtils.koboToNaira(d.balanceKobo || 0);
-            return months.map(() => { const interest = bal * r; const pmt = Math.min(bal + interest, WPUtils.koboToNaira(d.monthlyPaymentKobo||0)); bal = Math.max(0, bal + interest - pmt); return +bal.toFixed(0); });
-          })(),
+          data: labels.map((_, idx) => {
+            const kobo = (d.points || [])[idx];
+            return kobo == null ? null : +WPUtils.koboToNaira(kobo).toFixed(0);
+          }),
           borderColor: PALETTE[i % PALETTE.length],
           backgroundColor: 'transparent',
           tension: 0.3,
           pointRadius: 0,
+          spanGaps: false,
         })),
       },
       options: {
