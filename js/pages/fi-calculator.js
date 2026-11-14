@@ -223,12 +223,25 @@ const WPFICalculator = (() => {
       WPToast.info('Reset to sample figures.');
     });
 
-    document.getElementById('fi-from-app')?.addEventListener('click', () => {
-      const d = _defaultsFromApp();
-      _fill(d);
-      _recalculate();
-      _persist();
-      WPToast.success('Loaded from your income, expenses, and assets.');
+    document.getElementById('fi-from-app')?.addEventListener('click', async () => {
+      const btn = document.getElementById('fi-from-app');
+      if (btn) btn.disabled = true;
+      try {
+        const d = await _loggedFromDatabase();
+        if (!d) {
+          WPToast.warning('No income, expenses, or assets logged for this month yet.');
+          return;
+        }
+        _fill(d);
+        _recalculate();
+        _persist();
+        WPToast.success('Loaded from your income, expenses, and assets.');
+      } catch (err) {
+        console.error(err);
+        WPToast.error('Could not load logged data.');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
     });
 
     document.getElementById('fi-share')?.addEventListener('click', async () => {
@@ -300,6 +313,71 @@ const WPFICalculator = (() => {
     const el = document.getElementById('fi-passive');
     if (el) el.value = _fmtInput(total);
     _syncingPassive = false;
+  }
+
+  function _toBase(amountKobo, notes) {
+    const base = WPApp.state.profile?.currency || 'NGN';
+    const cur = WPUtils.getEntryCurrency(notes);
+    return WPUtils.convert(amountKobo || 0, cur, base);
+  }
+
+  /** Fresh month query — does not reuse sample figures or a stale dashboard cache. */
+  async function _loggedFromDatabase() {
+    const uid = WPApp.state.user?.id;
+    if (!uid) return null;
+    const period = WPUtils.currentPeriod();
+    const range = WPUtils.currentMonthRange();
+    const [income, expenses, assets] = await Promise.all([
+      WPDb.getIncomeByPeriod(uid, period),
+      WPDb.getExpensesByDateRange(uid, range.start, range.end),
+      WPDb.getAssetsByPeriod(uid, period),
+    ]);
+    if (WPApp.state?.data) {
+      WPApp.state.data.income = income;
+      WPApp.state.data.expenses = expenses;
+      WPApp.state.data.assets = assets;
+    }
+
+    const expensesNaira = Math.round(WPUtils.koboToNaira(
+      expenses.reduce((s, e) => s + _toBase(e.amount, e.description || e.notes), 0)
+    ));
+    const passiveEntries = income.filter(e => e.income_type === 'passive');
+    const buckets = { dividends: 0, rentals: 0, pensions: 0, otherPassive: 0 };
+    passiveEntries.forEach(e => {
+      const name = `${e.source_name || ''} ${e.notes || ''}`.toLowerCase();
+      const amt = WPUtils.koboToNaira(_toBase(e.gross_amount, e.notes));
+      if (/dividend|interest|bond|tbill|t-bill|fixed deposit|fd|coupon|mmf|money market/.test(name)) buckets.dividends += amt;
+      else if (/rent|rental|lease|property|tenant/.test(name)) buckets.rentals += amt;
+      else if (/pension|rsa|annuity|pfa/.test(name)) buckets.pensions += amt;
+      else buckets.otherPassive += amt;
+    });
+    Object.keys(buckets).forEach(k => { buckets[k] = Math.round(buckets[k]); });
+    const passiveNaira = buckets.dividends + buckets.rentals + buckets.pensions + buckets.otherPassive;
+    const portfolioNaira = Math.round(WPUtils.koboToNaira(
+      assets.reduce((s, a) => s + _toBase(a.close_balance || a.open_balance, a.notes), 0)
+    ));
+    const incomeNaira = Math.round(WPUtils.koboToNaira(
+      income.reduce((s, e) => {
+        const gross = _toBase(e.gross_amount, e.notes);
+        const ded = _toBase((e.paye_tax || 0) + (e.pension_contrib || 0) + (e.nhf_contrib || 0) + (e.other_deductions || 0), e.notes);
+        return s + gross - ded;
+      }, 0)
+    ));
+    const monthlySavings = Math.max(0, incomeNaira - expensesNaira);
+
+    if (expensesNaira <= 0 && passiveNaira <= 0 && portfolioNaira <= 0) return null;
+
+    return {
+      expenses: expensesNaira,
+      passive: passiveNaira,
+      dividends: buckets.dividends,
+      rentals: buckets.rentals,
+      pensions: buckets.pensions,
+      otherPassive: buckets.otherPassive,
+      portfolio: portfolioNaira,
+      returnRate: parseFloat(document.getElementById('fi-return')?.value) || 9,
+      monthlySavings,
+    };
   }
 
   function _defaultsFromApp() {

@@ -5,9 +5,9 @@
 const WPCashflow = (() => {
 
   async function init(container) {
-    const now   = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
-    const end   = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10);
+    const range = WPUtils.currentMonthRange();
+    const start = range.start;
+    const end   = range.end;
 
     const baseCur = WPApp.state.profile?.currency || 'NGN';
     const pageCurrency = localStorage.getItem('wp_page_currency_cashflow') || baseCur;

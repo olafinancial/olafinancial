@@ -502,18 +502,24 @@ const WPApp = (() => {
     if (!state.user) return;
     const uid    = state.user.id;
     const period = WPUtils.currentPeriod();
+    const range  = WPUtils.currentMonthRange();
+
+    async function optional(label, promise, fallback) {
+      try { return await promise; }
+      catch (err) {
+        console.warn('[data]', label, err?.message || err);
+        return fallback;
+      }
+    }
 
     const [income, expenses, assets, liabilities, goals, ef, snapshots] = await Promise.all([
       WPDb.getIncomeByPeriod(uid, period),
-      WPDb.getExpensesByDateRange(uid,
-        period,
-        new Date(new Date(period).getFullYear(), new Date(period).getMonth() + 1, 0).toISOString().slice(0,10)
-      ),
+      WPDb.getExpensesByDateRange(uid, range.start, range.end),
       WPDb.getAssetsByPeriod(uid, period),
       WPDb.getLiabilitiesByPeriod(uid, period),
-      WPDb.fetchAll('financial_goals', { user_id: uid }),
-      WPDb.fetchAll('emergency_fund',  { user_id: uid }),
-      WPDb.getMonthlySnapshots(uid, 12),
+      optional('goals', WPDb.fetchAll('financial_goals', { user_id: uid }), []),
+      optional('emergency_fund', WPDb.fetchAll('emergency_fund', { user_id: uid }), []),
+      optional('snapshots', WPDb.getMonthlySnapshots(uid, 12), []),
     ]);
 
     state.data.income      = income;
@@ -536,8 +542,23 @@ const WPApp = (() => {
     const passiveKPIs      = WPUtils.passiveIncomeKPI(income, cf.totalExpenses);
     const debtToAsset      = WPUtils.debtToAssetRatio(totalLiabilities, totalAssets);
 
-    const efTarget  = WPUtils.emergencyFundTarget(cf.nonDiscretionary);
-    const efBalance = emergencyFund?.current_balance || 0;
+    // Same emergency-fund source as the Emergency Fund page: assets tagged
+    // [Emergency Fund], measured against this month's essential expenses.
+    const baseCur = state.profile?.currency || 'NGN';
+    const efFromAssets = (assets || [])
+      .filter(a => a.notes && String(a.notes).includes('[Emergency Fund]'))
+      .reduce((sum, a) => {
+        const cur = WPUtils.getEntryCurrency(a.notes);
+        return sum + WPUtils.convert(a.close_balance || a.open_balance || 0, cur, baseCur);
+      }, 0);
+    const essential = (expenses || [])
+      .filter(e => !e.is_discretionary)
+      .reduce((sum, e) => {
+        const cur = WPUtils.getEntryCurrency(e.description || e.notes);
+        return sum + WPUtils.convert(e.amount || 0, cur, baseCur);
+      }, 0);
+    const efTarget  = WPUtils.emergencyFundTarget(essential);
+    const efBalance = efFromAssets > 0 ? efFromAssets : (emergencyFund?.current_balance || 0);
     const efStatus  = WPUtils.emergencyFundStatus(efBalance, efTarget);
 
     return { cf, totalAssets, totalLiabilities, netWorth, passiveKPIs, debtToAsset, efTarget, efBalance, efStatus };

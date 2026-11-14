@@ -258,6 +258,7 @@ const WPGoals = (() => {
       notes:          finalNotes,
     };
     if (!row.goal_name || !row.target_amount) { WPToast.warning('Name and target amount are required.'); return; }
+    if (!row.target_date) { WPToast.warning('A target date is required.'); return; }
     try {
       if (existingId) await WPDb.update('goals', existingId, row);
       else            await WPDb.insert('goals', row);

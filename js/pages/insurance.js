@@ -734,7 +734,7 @@ const WPInsurance = (() => {
                     return `
                       <tr>
                         <td><strong>${p.name}</strong> ${p.currency && p.currency !== pageCurrency ? `<span class="badge badge-neutral" style="font-size:10px">${p.currency}</span>` : ''}</td>
-                        <td><span class="badge badge-neutral">${p.type.toUpperCase()}</span></td>
+                        <td><span class="badge badge-neutral">${({ motor: 'vehicle', property: 'home' }[p.type] || p.type || 'other').toUpperCase()}</span></td>
                         <td>${p.provider}</td>
                         <td class="td-mono text-right">${WPUtils.fmt(displaySum, { currency: pageCurrency })}</td>
                         <td class="td-mono text-right">${WPUtils.fmt(displayPrem, { currency: pageCurrency })}</td>
@@ -793,8 +793,8 @@ const WPInsurance = (() => {
                   <select class="select" id="ins-type" required>
                     <option value="life">Life Insurance</option>
                     <option value="health">Health Insurance</option>
-                    <option value="motor">Motor Insurance</option>
-                    <option value="property">Property / Home</option>
+                    <option value="vehicle">Motor / Vehicle</option>
+                    <option value="home">Property / Home</option>
                     <option value="takaful">Takaful (Islamic)</option>
                     <option value="other">Other / Custom</option>
                   </select>
@@ -909,7 +909,7 @@ const WPInsurance = (() => {
         const polCur = p.currency || baseCur;
         document.getElementById('ins-idx').value = idx;
         document.getElementById('ins-name').value = p.name;
-        document.getElementById('ins-type').value = p.type;
+        document.getElementById('ins-type').value = ({ motor: 'vehicle', property: 'home' }[p.type] || p.type);
         document.getElementById('ins-provider').value = p.provider;
         document.getElementById('ins-sum-value').value = p.sumAssured.toLocaleString();
         document.getElementById('ins-premium').value = p.premium.toLocaleString();

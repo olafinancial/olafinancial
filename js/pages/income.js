@@ -137,6 +137,7 @@ const WPIncome = (() => {
   async function _load() {
     try {
       _entries = await WPDb.getIncomeByPeriod(WPApp.state.user.id, PERIOD);
+      const pageCurrency = localStorage.getItem('wp_page_currency_income') || WPApp.state.profile?.currency || 'NGN';
       _renderKPIs();
       _renderTable('all');
       _renderSegments(pageCurrency);
@@ -215,7 +216,7 @@ const WPIncome = (() => {
         const net = (e.gross_amount||0)-(e.paye_tax||0)-(e.pension_contrib||0)-(e.nhf_contrib||0)-(e.other_deductions||0);
         const typeBadge = {active:'badge-info',passive:'badge-gold',investment:'badge-accent'}[e.income_type]||'badge-neutral';
         const cur = WPUtils.getEntryCurrency(e.notes);
-        const cleanNotes = (e.notes || '').replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').trim();
+        const cleanNotes = _stripDeductionTags(e.notes || '').replace(/\[(USD|NGN|EUR|GBP|AED|CNY|XOF|XAF|KES|GHS|CAD|ZAR|SAR|AUD)\]/g, '').trim();
 
         const convertedGross = WPUtils.convert(e.gross_amount||0, cur, pageCurrency);
         const convertedTax   = WPUtils.convert(e.paye_tax||0, cur, pageCurrency);

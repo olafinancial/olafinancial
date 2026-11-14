@@ -145,9 +145,9 @@ const WPReports = (() => {
       const uid       = WPApp.state.user.id;
       const snapshots = await WPDb.getMonthlySnapshots(uid, 12);
       const PERIOD    = WPUtils.currentPeriod();
-      const now       = new Date();
-      const start     = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
-      const end       = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10);
+      const range     = WPUtils.currentMonthRange();
+      const start     = range.start;
+      const end       = range.end;
       const [income, expenses, assets, liabs, goals] = await Promise.all([
         WPDb.getIncomeByPeriod(uid, PERIOD),
         WPDb.getExpensesByDateRange(uid, start, end),
@@ -328,7 +328,11 @@ const WPReports = (() => {
       return s + WPUtils.convert(l.close_balance||l.open_balance||0, cur, baseCur);
     }, 0);
     
-    const avgSavings = snapshots.length ? snapshots.reduce((s,x)=>s+(x.net_cash_flow||0),0)/snapshots.length : 0;
+    const cfNow = WPUtils.calcCashFlow(income, expenses);
+    const avgSavings = snapshots.length
+      ? snapshots.reduce((s,x)=>s+(x.net_cash_flow||0),0)/snapshots.length
+      : (cfNow.netCashFlow || 0);
+    const hasSavingsFigure = snapshots.length > 0 || income.length > 0 || expenses.length > 0;
 
     const nwPage = WPUtils.convert(totalAssets - totalLiab, baseCur, pageCurrency);
     const nwChangePage = WPUtils.convert(nwChange, baseCur, pageCurrency);
@@ -368,7 +372,8 @@ const WPReports = (() => {
       <div class="card"><div class="card-title">Net Worth Change (12M)</div>
         <div class="card-value ${nwChange>=0?'accent':'danger'}">${WPUtils.fmt(nwChangePage,{compact:true,signed:true, currency: pageCurrency})}</div></div>
       <div class="card"><div class="card-title">Avg Monthly Savings</div>
-        <div class="card-value">${snapshots.length?WPUtils.fmt(avgSavingsPage,{compact:true, currency: pageCurrency}):'—'}</div></div>
+        <div class="card-value">${hasSavingsFigure?WPUtils.fmt(avgSavingsPage,{compact:true,signed:true, currency: pageCurrency}):'—'}</div>
+        <div class="card-meta">${snapshots.length ? `Across ${snapshots.length} snapshot${snapshots.length===1?'':'s'}` : 'This month — save a snapshot to average over time'}</div></div>
       <div class="card"><div class="card-title">Snapshots Recorded</div>
         <div class="card-value">${snapshots.length}</div><div class="card-meta">out of 12 months</div></div>`;
   }

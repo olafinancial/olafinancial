@@ -245,7 +245,12 @@ const WPDb = (() => {
       const d = new Date();
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
     })();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = (typeof WPUtils !== 'undefined' && WPUtils.localISODate)
+      ? WPUtils.localISODate()
+      : (() => {
+          const d = new Date();
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        })();
     const naira = (n) => Math.round(n * 100); // kobo
 
     await upsert('user_profiles', {
@@ -399,7 +404,9 @@ const WPDb = (() => {
         goal_name: 'Demo Emergency Fund',
         goal_type: 'emergency',
         target_amount: naira(3_000_000),
-        target_date: targetDate.toISOString().slice(0, 10),
+        target_date: (typeof WPUtils !== 'undefined' && WPUtils.localISODate)
+          ? WPUtils.localISODate(targetDate)
+          : `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`,
         current_savings: naira(2_200_000),
         expected_return_rate: 0.08,
         monthly_contribution: naira(50_000),
