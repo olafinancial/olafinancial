@@ -53,7 +53,7 @@ To set up your native placement, please provide the following 5 assets:
 ### 3. Display Name
 * **What it is**: The partner or product name displayed in bold.
 * **Format**: Plain text (maximum 30 characters).
-  * *Example: `Leadway Auto Cover`*
+  * *Example: `Partner product name`*
 
 ### 4. Tagline / Hook
 * **What it is**: A single sentence highlighting your value proposition.
