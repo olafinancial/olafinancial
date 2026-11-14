@@ -9,6 +9,11 @@
 const WPImport = (() => {
   const CODE_KEY = 'wp_clearnumber_code';
   const PENDING_KEY = 'wp_clearnumber_pending';
+  const RESULT_KEY = 'wp_clearnumber_result';
+  const FI_FIELDS = [
+    'expenses', 'passive', 'dividends', 'rentals', 'pensions', 'otherPassive',
+    'portfolio', 'returnRate', 'monthlySavings',
+  ];
 
   function esc(value) {
     return String(value == null ? '' : value)
@@ -34,16 +39,57 @@ const WPImport = (() => {
   }
 
   function explainRpc(error) {
-    const msg = String((error && (error.message || error.details || error)) || '');
-    const code = error && error.code;
-    if (msg.includes('code_used')) return 'This import link was already used. In ClearNumber, choose Continue in Pul Planning again.';
-    if (msg.includes('code_expired')) return 'This import link has expired. In ClearNumber, choose Continue in Pul Planning again.';
-    if (msg.includes('code_not_found')) return 'This import link is not valid.';
-    if (msg.includes('not_authenticated')) return 'Sign in to preview your workbook.';
-    if (code === 'PGRST202' || /schema cache|could not find the function|does not exist|404/i.test(msg)) {
-      return 'Import is not switched on yet. The ClearNumber handoff still needs to be applied in Supabase.';
+    const chunks = [];
+    if (typeof error === 'string') chunks.push(error);
+    else if (error && typeof error === 'object') {
+      ['message', 'details', 'hint', 'code', 'error_description'].forEach(key => {
+        if (error[key]) chunks.push(String(error[key]));
+      });
+    } else if (error != null) {
+      chunks.push(String(error));
     }
-    return 'Could not load the workbook.';
+    const msg = chunks.join(' ');
+    const code = error && error.code;
+    if (/code_used/i.test(msg)) {
+      return {
+        title: 'This link was already used',
+        message: 'This import link was already used, so it cannot add the workbook again. In ClearNumber, choose Continue in Pul Planning to get a new link.',
+        terminal: true,
+      };
+    }
+    if (/code_expired/i.test(msg)) {
+      return {
+        title: 'This link has expired',
+        message: 'This import link has expired. Links last 24 hours and work once. In ClearNumber, choose Continue in Pul Planning to get a new one.',
+        terminal: true,
+      };
+    }
+    if (/code_not_found/i.test(msg)) {
+      return {
+        title: 'This link is not valid',
+        message: 'This import link is not valid. Open Pul from ClearNumber with Continue in Pul Planning.',
+        terminal: true,
+      };
+    }
+    if (/not_authenticated/i.test(msg)) {
+      return {
+        title: 'Sign in to continue',
+        message: 'Sign in to preview your workbook.',
+        terminal: true,
+      };
+    }
+    if (code === 'PGRST202' || /schema cache|could not find the function|does not exist|404/i.test(msg)) {
+      return {
+        title: 'Import is not switched on yet',
+        message: 'Import is not switched on yet. The ClearNumber handoff still needs to be applied in Supabase.',
+        terminal: true,
+      };
+    }
+    return {
+      title: 'Could not open this workbook',
+      message: 'Could not load the workbook. Please try the link again.',
+      terminal: false,
+    };
   }
 
   function hasWork(plan) {
@@ -92,44 +138,204 @@ const WPImport = (() => {
     };
   }
 
-  async function writePlan(plan, userId) {
-    if (plan.profilePatch && Object.keys(plan.profilePatch).length) {
-      WPApp.state.profile = await WPDb.updateProfile(userId, plan.profilePatch);
-      if (plan.profilePatch.currency) {
-        const views = ['balance_sheet', 'dashboard', 'income', 'expenses', 'cashflow', 'debt', 'emergency', 'goals', 'reports'];
-        views.forEach(view => {
-          try { localStorage.setItem('wp_page_currency_' + view, plan.profilePatch.currency); } catch { /* ignore */ }
-        });
+  function rowsToWrite(items, userId) {
+    return (items || [])
+      .filter(item => item && !item.skip && item.row)
+      .map(item => Object.assign({ user_id: userId }, item.row));
+  }
+
+  function countAdded(list) {
+    return rowsToWrite(list, '').length;
+  }
+
+  /**
+   * Merge workbook FI inputs into the calculator key. Known inputs are
+   * replaced. Any other property already stored on that key, and every
+   * other localStorage key, is left alone.
+   */
+  function applyImportedFi(userId, payload) {
+    if (!userId || !payload || typeof payload !== 'object') return null;
+    const key = 'wp_fi_calc_' + userId;
+    let prev = {};
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) prev = parsed;
       }
+    } catch { prev = {}; }
+    const next = Object.assign({}, prev);
+    FI_FIELDS.forEach(field => {
+      if (Object.prototype.hasOwnProperty.call(payload, field)) next[field] = payload[field];
+    });
+    try {
+      localStorage.setItem(key, JSON.stringify(next));
+    } catch { return null; }
+    return next;
+  }
+
+  /**
+   * One request per table, all tables in flight together.
+   * The old path awaited every row, so a full workbook (about 15 rows)
+   * sat on "Adding…" for one network round trip per row.
+   * RLS is unchanged: each request still uses the signed-in user's JWT.
+   */
+  async function writePlan(plan, userId) {
+    const tasks = [];
+    const inserts = (plan && plan.inserts) || {};
+
+    if (plan.profilePatch && Object.keys(plan.profilePatch).length) {
+      tasks.push((async () => {
+        WPApp.state.profile = await WPDb.updateProfile(userId, plan.profilePatch);
+        if (plan.profilePatch.currency) {
+          const views = ['balance_sheet', 'dashboard', 'income', 'expenses', 'cashflow', 'debt', 'emergency', 'goals', 'reports'];
+          views.forEach(view => {
+            try { localStorage.setItem('wp_page_currency_' + view, plan.profilePatch.currency); } catch { /* ignore */ }
+          });
+        }
+      })());
     }
+
+    const writeRows = (table, rows) => {
+      if (typeof WPDb.insertMany === 'function') return WPDb.insertMany(table, rows);
+      return Promise.all(rows.map(row => WPDb.insert(table, row)));
+    };
 
     const groups = [
-      ['income_entries', plan.inserts.income],
-      ['expense_entries', plan.inserts.expenses],
-      ['assets', plan.inserts.assets],
-      ['liabilities', plan.inserts.liabilities],
-      ['goals', plan.inserts.goals],
+      ['income_entries', inserts.income],
+      ['expense_entries', inserts.expenses],
+      ['assets', inserts.assets],
+      ['liabilities', inserts.liabilities],
+      ['goals', inserts.goals],
     ];
     for (const [table, items] of groups) {
-      for (const item of items || []) {
-        if (!item || item.skip || !item.row) continue;
-        await WPDb.insert(table, Object.assign({ user_id: userId }, item.row));
+      const rows = rowsToWrite(items, userId);
+      if (rows.length) tasks.push(writeRows(table, rows));
+    }
+
+    const ef = plan.emergencyFund;
+    if (ef && !ef.skip && ef.row) {
+      if (ef.action === 'insert') {
+        tasks.push(writeRows('emergency_fund', [Object.assign({ user_id: userId }, ef.row)]));
+      } else if (ef.action === 'update' && ef.id) {
+        tasks.push(WPDb.update('emergency_fund', ef.id, ef.row));
       }
     }
 
-    if (plan.emergencyFund && !plan.emergencyFund.skip && plan.emergencyFund.row) {
-      if (plan.emergencyFund.action === 'insert') {
-        await WPDb.insert('emergency_fund', Object.assign({ user_id: userId }, plan.emergencyFund.row));
-      } else if (plan.emergencyFund.action === 'update' && plan.emergencyFund.id) {
-        await WPDb.update('emergency_fund', plan.emergencyFund.id, plan.emergencyFund.row);
-      }
-    }
+    await Promise.all(tasks);
 
     if (plan.fiLocal && plan.fiLocal.write && plan.fiLocal.payload) {
-      try {
-        localStorage.setItem('wp_fi_calc_' + userId, JSON.stringify(plan.fiLocal.payload));
-      } catch { /* ignore */ }
+      applyImportedFi(userId, plan.fiLocal.payload);
     }
+  }
+
+  function successMessage(plan) {
+    const inserts = (plan && plan.inserts) || {};
+    const parts = [];
+    const add = (n, singular, plural) => {
+      if (!n) return;
+      parts.push(n + ' ' + (n === 1 ? singular : plural));
+    };
+    add(countAdded(inserts.assets), 'asset', 'assets');
+    add(countAdded(inserts.liabilities), 'debt', 'debts');
+    add(countAdded(inserts.goals), 'goal', 'goals');
+    add(countAdded(inserts.income), 'income entry', 'income entries');
+    add(countAdded(inserts.expenses), 'expense', 'expenses');
+    const ef = plan && plan.emergencyFund;
+    if (ef && !ef.skip && ef.row && ef.action !== 'skip') parts.push('emergency fund');
+    const fi = !!(plan && plan.fiLocal && plan.fiLocal.write && plan.fiLocal.payload);
+    if (!parts.length && !fi) {
+      return 'Your ClearNumber numbers are in. Nothing new was added, because those rows were already in your plan.';
+    }
+    if (!parts.length) return 'Your ClearNumber numbers are in: FI Calculator updated.';
+    const base = 'Your ClearNumber numbers are in: ' + parts.join(', ') + ' added.';
+    return fi ? base + ' FI Calculator updated.' : base;
+  }
+
+  function rememberSuccess(message, extra) {
+    try {
+      sessionStorage.setItem(RESULT_KEY, JSON.stringify(Object.assign({
+        message: String(message || ''),
+      }, extra || {})));
+    } catch { /* ignore */ }
+  }
+
+  function landAfterImport(message, options) {
+    const fi = !!(options && options.fi);
+    rememberSuccess(message, { fi });
+    if (typeof WPApp !== 'undefined' && typeof WPApp.clearClearNumberPending === 'function') {
+      WPApp.clearClearNumberPending();
+    }
+    const routerReady = typeof WPRouter !== 'undefined'
+      && typeof WPRouter.navigate === 'function'
+      && (typeof WPRouter.hasRoute !== 'function' || WPRouter.hasRoute('/dashboard'));
+    if (routerReady) WPRouter.navigate('/dashboard', true);
+    if (typeof WPToast !== 'undefined' && typeof WPToast.success === 'function') {
+      WPToast.success(message, 8000);
+    }
+    return { message, landed: !!routerReady, fi };
+  }
+
+  function mountSuccessBanner(host) {
+    if (!host || typeof document === 'undefined') return false;
+    let raw = null;
+    try { raw = sessionStorage.getItem(RESULT_KEY); } catch { return false; }
+    if (!raw) return false;
+    let parsed = null;
+    try { parsed = JSON.parse(raw); } catch { return false; }
+    const message = parsed && parsed.message ? String(parsed.message) : '';
+    if (!message) return false;
+
+    host.innerHTML = '';
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success';
+    alert.setAttribute('data-import-success', '1');
+    alert.style.alignItems = 'center';
+    alert.style.justifyContent = 'space-between';
+    alert.style.flexWrap = 'wrap';
+    alert.style.gap = '0.75rem';
+
+    const text = document.createElement('div');
+    const title = document.createElement('div');
+    title.style.fontWeight = '700';
+    title.textContent = message;
+    const sub = document.createElement('div');
+    sub.className = 'text-xs';
+    sub.style.marginTop = '0.25rem';
+    sub.textContent = parsed.fi
+      ? 'The FI Calculator now uses these numbers. Other saved items on this device were left alone.'
+      : 'Other saved items on this device were left alone.';
+    text.appendChild(title);
+    text.appendChild(sub);
+
+    const actions = document.createElement('div');
+    actions.className = 'flex gap-2';
+    actions.style.flexWrap = 'wrap';
+
+    if (parsed.fi) {
+      const fiBtn = document.createElement('button');
+      fiBtn.type = 'button';
+      fiBtn.className = 'btn btn-secondary btn-sm';
+      fiBtn.textContent = 'Open FI Calculator';
+      fiBtn.addEventListener('click', () => {
+        if (typeof WPRouter !== 'undefined' && WPRouter.navigate) WPRouter.navigate('/fi');
+      });
+      actions.appendChild(fiBtn);
+    }
+
+    const ok = document.createElement('button');
+    ok.type = 'button';
+    ok.className = 'btn btn-primary btn-sm';
+    ok.textContent = 'OK';
+    ok.addEventListener('click', () => {
+      try { sessionStorage.removeItem(RESULT_KEY); } catch { /* ignore */ }
+      host.innerHTML = '';
+    });
+    actions.appendChild(ok);
+    alert.appendChild(text);
+    alert.appendChild(actions);
+    host.appendChild(alert);
+    return true;
   }
 
   function renderItems(title, items) {
@@ -233,7 +439,8 @@ const WPImport = (() => {
     try {
       preview = await WPDb.previewClearNumber(code);
     } catch (error) {
-      renderMessage(container, 'Could not open this workbook', explainRpc(error), `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`);
+      const explained = explainRpc(error);
+      renderMessage(container, explained.title, explained.message, `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`);
       document.getElementById('import-dismiss')?.addEventListener('click', leaveWithoutImport);
       return;
     }
@@ -327,16 +534,30 @@ const WPImport = (() => {
         });
         if (next.error) throw new Error(next.error);
         await writePlan(next, user.id);
-        if (typeof WPApp.clearClearNumberPending === 'function') WPApp.clearClearNumberPending();
-        WPToast.success('ClearNumber workbook added to your plan.');
-        history.replaceState(null, '', '#/dashboard');
-        await WPApp.boot();
+        const message = successMessage(next);
+        const fi = !!(next.fiLocal && next.fiLocal.write && next.fiLocal.payload);
+        const landed = landAfterImport(message, { fi });
+        if (!landed.landed) {
+          renderMessage(
+            container,
+            'Your ClearNumber numbers are in',
+            message,
+            `<button type="button" class="btn btn-primary" id="import-home">Go to dashboard</button>`
+          );
+          document.getElementById('import-home')?.addEventListener('click', leaveWithoutImport);
+        }
       } catch (error) {
         console.warn('[import] confirm', error);
+        const explained = explainRpc(error);
+        if (!claimed && explained.terminal) {
+          renderMessage(container, explained.title, explained.message, `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`);
+          document.getElementById('import-dismiss')?.addEventListener('click', leaveWithoutImport);
+          return;
+        }
         if (errEl) {
           errEl.textContent = claimed
             ? 'Some rows could not be saved. Retry to add the ones still missing. The link itself is already used.'
-            : explainRpc(error);
+            : explained.message;
           errEl.style.display = 'block';
         }
         if (btn) {
@@ -350,5 +571,15 @@ const WPImport = (() => {
 
   function destroy() {}
 
-  return { init, destroy };
+  return {
+    init,
+    destroy,
+    explainRpc,
+    successMessage,
+    writePlan,
+    applyImportedFi,
+    landAfterImport,
+    mountSuccessBanner,
+    RESULT_KEY,
+  };
 })();

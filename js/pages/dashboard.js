@@ -38,6 +38,7 @@ const WPDashboard = (() => {
         </div>
       </div>
       <div class="page-body">
+        <div id="dash-import-result"></div>
         <!-- Household preview banner — combined multi-account data is NOT implemented yet -->
         <div id="dash-household-banner" style="display:none;margin-bottom:1.25rem;padding:1.2rem;background:linear-gradient(135deg, rgba(245,158,11,0.12), rgba(56,189,248,0.08));border:1px solid var(--clr-gold);border-radius:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
           <div>
@@ -145,6 +146,9 @@ const WPDashboard = (() => {
 
     _setGreeting();
     _setPeriod();
+    if (typeof WPImport !== 'undefined' && typeof WPImport.mountSuccessBanner === 'function') {
+      WPImport.mountSuccessBanner(document.getElementById('dash-import-result'));
+    }
     document.getElementById('dash-refresh')?.addEventListener('click', () => _load());
     document.getElementById('dash-snapshot')?.addEventListener('click', _saveSnapshot);
 

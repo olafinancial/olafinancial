@@ -171,12 +171,14 @@ describe('example workbook', () => {
 
   test('prepares FI Calculator numbers in major units', () => {
     expect(result.fiLocal.write).toBe(true);
+    expect(result.fiLocal.skip).toBe(false);
     expect(result.fiLocal.payload).toMatchObject({
       expenses: 315000,
       portfolio: 50000000,
       monthlySavings: 100000,
       returnRate: 9,
     });
+    expect(result.fiLocal.detail).not.toMatch(/replaces/i);
   });
 
   test('every written value is one the live checks allow', () => {
@@ -243,8 +245,14 @@ describe('does not duplicate existing names', () => {
     expect(result.inserts.goals.find(item => item.label === 'Emergency Fund').skip).toBe(true);
     expect(added(result.inserts.goals).map(item => item.label)).toEqual(['Retirement Savings']);
     expect(result.emergencyFund.action).toBe('skip');
-    expect(result.fiLocal.write).toBe(false);
-    expect(result.fiLocal.reason).toBe('Already saved on this device');
+    expect(result.fiLocal.write).toBe(true);
+    expect(result.fiLocal.skip).toBe(false);
+    expect(result.fiLocal.payload).toMatchObject({
+      expenses: 315000,
+      portfolio: 50000000,
+      monthlySavings: 100000,
+    });
+    expect(result.fiLocal.detail).toMatch(/replaces the numbers saved on this device/i);
   });
 
   test('a second copy of the same name inside one workbook is not added twice', () => {
