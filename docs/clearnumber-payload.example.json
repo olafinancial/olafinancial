@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "profile": {
+    "full_name": "Ada Okonkwo",
+    "age": 34,
+    "state": "Lagos",
+    "currency": "NGN",
+    "employment_type": "salaried",
+    "retirement_age": 60,
+    "risk_tolerance": "moderate"
+  },
+  "income": {
+    "source_name": "Salary",
+    "income_type": "active",
+    "gross_monthly": 500000,
+    "pension_monthly": 40000,
+    "net_monthly": 420000
+  },
+  "expenses": [
+    { "category": "Housing", "amount_monthly": 150000 },
+    { "category": "Food", "amount_monthly": 80000 },
+    { "category": "Transportation", "amount_monthly": 40000 },
+    { "category": "Utilities-Power Generation", "amount_monthly": 25000 },
+    { "category": "Dining Out", "amount_monthly": 20000 }
+  ],
+  "assets": [
+    {
+      "name": "Savings Account",
+      "asset_type": "savings",
+      "balance": 1200000,
+      "is_emergency_fund": true,
+      "institution_type": "dmb"
+    },
+    {
+      "name": "Fixed Deposit / T-Bill",
+      "asset_type": "fixed_deposit",
+      "balance": 500000,
+      "interest_rate": 12.5
+    },
+    {
+      "name": "Equities / ETFs",
+      "asset_type": "equity",
+      "balance": 800000,
+      "institution_type": "investment"
+    }
+  ],
+  "debts": [
+    {
+      "name": "Personal Loan",
+      "liability_type": "personal_loan",
+      "balance": 400000,
+      "apr": 18.5,
+      "monthly_payment": 25000,
+      "lender_name": "GTBank"
+    }
+  ],
+  "pension": {
+    "rsa_balance": 2500000,
+    "monthly_gross": 500000,
+    "rsa_contribution_monthly": 90000,
+    "retirement_age": 60,
+    "pfa_name": "Stanbic IBTC"
+  },
+  "targets": {
+    "emergency_fund_target": 1050000,
+    "retirement_target": 80000000,
+    "fi_portfolio": 50000000,
+    "monthly_savings": 100000,
+    "monthly_expenses": 315000,
+    "expected_return_percent": 9
+  }
+}

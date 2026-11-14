@@ -172,6 +172,13 @@ const WPAuth = (() => {
     return { score, label: labels[score] || 'Weak', color: colors[score] || 'danger' };
   }
 
+  function clearNumberBanner() {
+    let pending = false;
+    try { pending = sessionStorage.getItem('wp_clearnumber_pending') === '1'; } catch { /* ignore */ }
+    if (!pending) return '';
+    return `<div class="alert alert-success" style="display:flex;margin-bottom:1rem">Your ClearNumber workbook is held in this browser. After you sign in, Pul shows it before anything is added.</div>`;
+  }
+
   // ── RENDER AUTH UI ────────────────────────────────────────
   function renderLogin(container) {
     container.innerHTML = `
@@ -222,6 +229,7 @@ const WPAuth = (() => {
         <div class="auth-form-inner">
           <h1 class="auth-form-title">Welcome back</h1>
           <p class="auth-form-sub">Sign in to your Pul Planning account</p>
+          ${clearNumberBanner()}
           <div id="auth-error" class="alert alert-danger" style="display:none"></div>
           <form id="login-form">
             <div class="form-group">
@@ -316,6 +324,7 @@ const WPAuth = (() => {
         <div class="auth-form-inner">
           <h1 class="auth-form-title">Create your account</h1>
           <p class="auth-form-sub">Free forever. No credit card needed.</p>
+          ${clearNumberBanner()}
           <div id="auth-error" class="alert alert-danger" style="display:none"></div>
           <form id="signup-form">
             <div class="form-group">

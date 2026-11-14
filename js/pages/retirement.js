@@ -365,6 +365,20 @@ const WPRetirement = (() => {
         if (el401) el401.value = Math.round(WPUtils.koboToNaira(totalGen)).toLocaleString('en-NG');
         if (elGen) elGen.value = Math.round(WPUtils.koboToNaira(totalGen)).toLocaleString('en-NG');
       }
+
+      // ClearNumber stores the workbook's monthly RSA remittance on the RSA asset.
+      let contribMonthlyKobo = 0;
+      assets.forEach(a => {
+        const match = String(a.notes || '').match(/\[rsa_contrib_monthly:(\d+)\]/);
+        if (match) contribMonthlyKobo = Math.max(contribMonthlyKobo, parseInt(match[1], 10) || 0);
+      });
+      if (contribMonthlyKobo > 0) {
+        const contribEl = document.getElementById('ret-monthly-contrib');
+        if (contribEl && !contribEl.value) {
+          contribEl.value = Math.round(WPUtils.koboToNaira(contribMonthlyKobo)).toLocaleString('en-NG');
+          contribEl.dataset.manual = '1';
+        }
+      }
     } catch (e) {
       console.warn('Retirement prefill:', e?.message || e);
     }

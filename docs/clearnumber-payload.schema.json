@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://pul.llc/schemas/clearnumber-payload-v1.json",
+  "title": "ClearNumber workbook handoff",
+  "description": "Payload stored server-side for one Pul Planning import. Amounts are major currency units (naira, dollars), never kobo and never placed in the URL. schema_version must be 1. Properties not listed here are stored but not imported.",
+  "type": "object",
+  "required": ["schema_version"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "profile": {
+      "type": "object",
+      "properties": {
+        "full_name": { "type": "string", "maxLength": 120 },
+        "age": { "type": "integer", "minimum": 1, "maximum": 119 },
+        "state": { "type": "string", "maxLength": 80 },
+        "currency": {
+          "type": "string",
+          "enum": ["USD", "NGN", "EUR", "GBP", "AED", "CNY", "XOF", "XAF", "KES", "GHS", "CAD", "ZAR", "SAR", "AUD"]
+        },
+        "employment_type": {
+          "type": "string",
+          "enum": ["salaried", "self_employed", "business_owner", "retired", "student", "other"]
+        },
+        "retirement_age": { "type": "integer", "minimum": 18, "maximum": 100 },
+        "risk_tolerance": {
+          "type": "string",
+          "enum": ["conservative", "moderate", "aggressive"],
+          "description": "balanced is accepted and stored as moderate."
+        }
+      }
+    },
+    "income": {
+      "type": "object",
+      "description": "One active monthly income row. gross_monthly is the monthly gross in major units. Pul stores frequency monthly. Tax is gross minus pension minus net, and is never negative.",
+      "properties": {
+        "source_name": { "type": "string", "maxLength": 120, "default": "Salary" },
+        "income_type": { "type": "string", "enum": ["active", "passive", "investment"], "default": "active" },
+        "gross_monthly": { "type": "number", "minimum": 0 },
+        "pension_monthly": { "type": "number", "minimum": 0, "description": "Employee pension deduction for the month (major units)." },
+        "net_monthly": { "type": "number", "minimum": 0 }
+      }
+    },
+    "expenses": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "object",
+        "required": ["category", "amount_monthly"],
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "Use Pul's expense names. Unknown names are saved as Other and the original name is kept as the description.",
+            "examples": [
+              "Housing", "Food", "Transportation", "Utilities-Power Generation",
+              "Utilities-Refuse", "Utilities-Water", "Dining Out", "Communication",
+              "Education", "Entertainment", "Family Support", "Gifts & Charity",
+              "Health", "Insurance", "Interest & Debt", "Investment",
+              "Land Use Act/Tenement Rate", "Security", "Shopping", "Taxes", "Other"
+            ]
+          },
+          "amount_monthly": { "type": "number", "exclusiveMinimum": 0 }
+        }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "maxLength": 120 },
+          "asset_type": {
+            "type": "string",
+            "enum": [
+              "savings", "fixed_deposit", "equity", "property", "vehicle",
+              "retirement_contribution", "alternative", "commodities", "crypto",
+              "currency", "forex", "not_applicable", "other"
+            ]
+          },
+          "balance": { "type": "number", "minimum": 0 },
+          "is_emergency_fund": { "type": "boolean" },
+          "institution_type": {
+            "type": "string",
+            "enum": ["dmb", "mfb", "psb", "investment", "other"],
+            "description": "Live check from migration 006. mmo is stored as psb. Blank is stored as null."
+          },
+          "institution_name": { "type": "string", "maxLength": 120 },
+          "interest_rate": { "type": "number", "minimum": 0, "maximum": 200, "description": "Annual percent. 12.5 means 12.5%." }
+        }
+      }
+    },
+    "debts": {
+      "type": "array",
+      "maxItems": 40,
+      "description": "Written to liabilities, which the Debt Planner reads.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "maxLength": 120 },
+          "liability_type": {
+            "type": "string",
+            "enum": ["mortgage", "personal_loan", "auto_loan", "credit_card", "student_loan", "qard_hasan", "other"]
+          },
+          "balance": { "type": "number", "exclusiveMinimum": 0 },
+          "apr": { "type": "number", "minimum": 0, "maximum": 200, "description": "Percent. 18.5 means 18.5%. A fraction below 1 (0.185) is treated as 18.5%." },
+          "monthly_payment": { "type": "number", "minimum": 0 },
+          "lender_name": { "type": "string", "maxLength": 120 }
+        }
+      }
+    },
+    "pension": {
+      "type": "object",
+      "description": "RSA balance becomes a retirement_contribution asset. The retirement screen reads that balance, monthly gross from income, and the contribution tag.",
+      "properties": {
+        "rsa_balance": { "type": "number", "minimum": 0 },
+        "monthly_gross": { "type": "number", "minimum": 0, "description": "Used as salary gross only when income.gross_monthly is omitted." },
+        "rsa_contribution_monthly": { "type": "number", "minimum": 0, "description": "Total monthly RSA remittance (employee plus employer), major units." },
+        "retirement_age": { "type": "integer", "minimum": 18, "maximum": 100 },
+        "pfa_name": { "type": "string", "maxLength": 120 }
+      }
+    },
+    "goals": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "properties": {
+          "goal_name": { "type": "string", "maxLength": 120 },
+          "goal_type": {
+            "type": "string",
+            "enum": ["retirement", "mortgage", "college", "emergency", "custom", "debt", "investment", "travel", "business", "spend"]
+          },
+          "target_amount": { "type": "number", "exclusiveMinimum": 0 },
+          "current_savings": { "type": "number", "minimum": 0 },
+          "monthly_contribution": { "type": "number", "minimum": 0 },
+          "target_date": { "type": "string", "format": "date" },
+          "expected_return_percent": { "type": "number", "minimum": 0, "maximum": 50 }
+        }
+      }
+    },
+    "targets": {
+      "type": "object",
+      "description": "Creates Emergency Fund and Retirement Savings goals when those names are not already present, and fills the FI Calculator on this device.",
+      "properties": {
+        "emergency_fund_target": { "type": "number", "minimum": 0 },
+        "retirement_target": { "type": "number", "minimum": 0 },
+        "fi_portfolio": { "type": "number", "minimum": 0 },
+        "monthly_savings": { "type": "number", "minimum": 0 },
+        "monthly_expenses": { "type": "number", "minimum": 0 },
+        "expected_return_percent": { "type": "number", "minimum": 0, "maximum": 50, "description": "9 means 9% a year." }
+      }
+    }
+  }
+}

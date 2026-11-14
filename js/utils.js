@@ -1026,6 +1026,7 @@ const WPUtils = (() => {
       .replace(/\[mortgage_int:\d+\]/gi, '')
       .replace(/\[life_ins:\d+\]/gi, '')
       .replace(/\[annual_rent:\d+\]/gi, '')
+      .replace(/\[rsa_contrib_monthly:\d+\]/gi, '')
       .replace(/\s+/g, ' ')
       .trim();
   }
