@@ -60,6 +60,9 @@ const WPApp = (() => {
   async function boot() {
     try {
       captureClearNumberCode();
+      if (typeof WPClearNumberId !== 'undefined' && typeof WPClearNumberId.captureFromHash === 'function') {
+        WPClearNumberId.captureFromHash();
+      }
       WPDb.init();
       const session = await WPDb.getSession();
 
@@ -70,6 +73,19 @@ const WPApp = (() => {
 
       state.user = session.user;
       state.profile = await WPDb.getProfile(session.user.id);
+      if (state.user && (!state.profile || !state.profile.client_number) && typeof WPDb.ensureClientNumber === 'function') {
+        try {
+          const ensured = await WPDb.ensureClientNumber();
+          if (ensured && ensured.client_number) {
+            state.profile = Object.assign({}, state.profile || {}, {
+              client_number: ensured.client_number,
+              client_number_source: ensured.source || (state.profile && state.profile.client_number_source),
+            });
+          }
+        } catch (e) {
+          console.warn('[boot] client number', e?.message || e);
+        }
+      }
       WPAuth.startIdleWatcher();
 
       // Always initialize the app shell structure and routes first
@@ -77,6 +93,11 @@ const WPApp = (() => {
 
       // ClearNumber handoff wins over the setup wizard so the code survives sign-up.
       if (clearNumberPending()) {
+        history.replaceState(null, '', '#/import');
+        WPRouter.start();
+        return;
+      }
+      if (typeof WPClearNumberId !== 'undefined' && WPClearNumberId.numberPending && WPClearNumberId.numberPending()) {
         history.replaceState(null, '', '#/import');
         WPRouter.start();
         return;

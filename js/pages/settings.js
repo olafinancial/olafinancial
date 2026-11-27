@@ -5,6 +5,19 @@
 const WPSettings = (() => {
 
   async function init(container) {
+    if (WPApp.state.user && (!WPApp.state.profile || !WPApp.state.profile.client_number) && typeof WPDb.ensureClientNumber === 'function') {
+      try {
+        const ensured = await WPDb.ensureClientNumber();
+        if (ensured && ensured.client_number) {
+          WPApp.state.profile = Object.assign({}, WPApp.state.profile || {}, {
+            client_number: ensured.client_number,
+            client_number_source: ensured.source || (WPApp.state.profile && WPApp.state.profile.client_number_source),
+          });
+        }
+      } catch (e) {
+        console.warn('[settings] client number', e?.message || e);
+      }
+    }
     const baseCur = WPApp.state.profile?.currency || 'NGN';
     const profile = WPApp.state.profile || {};
 
@@ -41,6 +54,18 @@ const WPSettings = (() => {
         </div>
       </div>
       <div class="page-body animate-in">
+
+        <div class="card" style="max-width:600px;padding:2rem;margin-bottom:1.5rem;" id="client-number-card">
+          <h3 style="margin-bottom:0.5rem;font-weight:700;color:#ffffff">Client / Student ID</h3>
+          <p style="color:var(--clr-text-2);font-size:0.85rem;margin:0 0 1rem;line-height:1.55">
+            This same number works on Pul Planning and ClearNumber.
+          </p>
+          <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.25rem">
+            <div id="client-number-value" style="font-family:ui-monospace,monospace;font-size:1.35rem;font-weight:700;letter-spacing:0.08em;color:#ffffff">Not assigned yet</div>
+            <button type="button" class="btn btn-secondary btn-sm" id="copy-client-number">Copy</button>
+          </div>
+          <div id="settings-cn-entry"></div>
+        </div>
 
         <!-- Profile & Preferences -->
         <div class="card" style="max-width:600px;padding:2rem;margin-bottom:1.5rem;">
@@ -268,6 +293,41 @@ const WPSettings = (() => {
       sessionStorage.setItem('wp_calc_tab', 'zakat');
     });
 
+    function paintClientNumber(value) {
+      const formatted = (typeof WPClearNumberId !== 'undefined' && WPClearNumberId.canonical)
+        ? WPClearNumberId.canonical(value)
+        : (value || '');
+      const el = document.getElementById('client-number-value');
+      const copyBtn = document.getElementById('copy-client-number');
+      if (el) el.textContent = formatted || 'Not assigned yet';
+      if (copyBtn) copyBtn.disabled = !formatted;
+      return formatted;
+    }
+
+    paintClientNumber(profile.client_number);
+
+    document.getElementById('copy-client-number')?.addEventListener('click', async () => {
+      const btn = document.getElementById('copy-client-number');
+      const shown = document.getElementById('client-number-value')?.textContent || '';
+      if (!btn || typeof WPClearNumberId === 'undefined' || !WPClearNumberId.canonical(shown)) return;
+      const ok = await WPClearNumberId.copyText(shown);
+      const previous = btn.textContent;
+      btn.textContent = ok ? 'Copied' : 'Copy failed';
+      setTimeout(() => { btn.textContent = previous; }, 1600);
+    });
+
+    if (typeof WPClearNumberId !== 'undefined' && typeof WPClearNumberId.mountPullForm === 'function') {
+      WPClearNumberId.mountPullForm(document.getElementById('settings-cn-entry'), {
+        note: false,
+        inputId: 'settings-cn-number-input',
+        buttonId: 'settings-cn-number-submit',
+        onResult(result) {
+          paintClientNumber(result && result.client_number);
+          WPClearNumberId.finishPull(result);
+        },
+      });
+    }
+
     // ── Profile save ─────────────────────────────────────────
     document.getElementById('save-settings-btn').addEventListener('click', async () => {
       const btn = document.getElementById('save-settings-btn');
@@ -280,6 +340,8 @@ const WPSettings = (() => {
         const age = parseInt(document.getElementById('set-age').value) || null;
         const retAge = parseInt(document.getElementById('set-retirement').value) || 60;
 
+        const keptNumber = WPApp.state.profile && WPApp.state.profile.client_number;
+        const keptSource = WPApp.state.profile && WPApp.state.profile.client_number_source;
         WPApp.state.profile = await WPDb.upsert('user_profiles', {
           user_id: uid,
           full_name: name,
@@ -287,6 +349,11 @@ const WPSettings = (() => {
           retirement_age: retAge,
           currency: newCurrency,
         }, ['user_id']);
+        if (WPApp.state.profile && keptNumber && !WPApp.state.profile.client_number) {
+          WPApp.state.profile.client_number = keptNumber;
+          WPApp.state.profile.client_number_source = keptSource;
+        }
+        paintClientNumber(WPApp.state.profile && WPApp.state.profile.client_number);
         if (age && retAge) WPUtils.saveRetirementAges(uid, age, retAge);
         else {
           try { localStorage.removeItem('wp_retirement_ages_' + uid); } catch { /* ignore */ }

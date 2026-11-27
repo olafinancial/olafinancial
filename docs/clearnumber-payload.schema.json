@@ -7,9 +7,28 @@
   "required": ["schema_version"],
   "properties": {
     "schema_version": { "const": 1 },
+    "client_number": {
+      "type": "string",
+      "pattern": "^CN-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$",
+      "description": "Optional shared Client / Student ID. When valid, Pul stores this workbook for pull_clearnumber_number and may claim the ID on redeem. Invalid values are ignored and do not reject the one-time code. See docs/client-number.md."
+    },
+    "student_id": {
+      "type": "string",
+      "pattern": "^CN-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$",
+      "description": "Alias of client_number. The stored column is client_number."
+    },
     "profile": {
       "type": "object",
       "properties": {
+        "client_number": {
+          "type": "string",
+          "pattern": "^CN-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$"
+        },
+        "student_id": {
+          "type": "string",
+          "pattern": "^CN-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$",
+          "description": "Alias of profile.client_number."
+        },
         "full_name": { "type": "string", "maxLength": 120 },
         "age": { "type": "integer", "minimum": 1, "maximum": 119 },
         "state": { "type": "string", "maxLength": 80 },
