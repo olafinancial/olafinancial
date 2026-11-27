@@ -340,6 +340,26 @@ var WPClearNumberMap = (function () {
     return 'https://pul.llc/#/import?code=' + encodeURIComponent(clean);
   }
 
+  // Shared with ClearNumber. CN- plus 8 characters. 0/O and 1/I are
+  // left out so a number read aloud cannot be confused. Spaces and
+  // extra hyphens are ignored. A one-time handoff code does not match.
+  var CLIENT_NUMBER_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+  function normalizeClientNumber(value) {
+    var compact = String(value == null ? '' : value).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!/^CN[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/.test(compact)) return null;
+    return 'CN-' + compact.slice(2);
+  }
+
+  function clientNumberFromPayload(payload) {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
+    var top = normalizeClientNumber(payload.client_number);
+    if (top) return top;
+    var profile = payload.profile;
+    if (profile && typeof profile === 'object') return normalizeClientNumber(profile.client_number);
+    return null;
+  }
+
   function emptyPlan(currency, warnings, error) {
     return {
       error: error || null,
@@ -917,6 +937,9 @@ var WPClearNumberMap = (function () {
     CURRENCIES: CURRENCIES,
     mapPayload: mapPayload,
     importUrl: importUrl,
+    CLIENT_NUMBER_ALPHABET: CLIENT_NUMBER_ALPHABET,
+    normalizeClientNumber: normalizeClientNumber,
+    clientNumberFromPayload: clientNumberFromPayload,
     toMinor: toMinor,
     normalizeInstitution: normalizeInstitution,
     normalizeGoalType: normalizeGoalType,

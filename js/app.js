@@ -26,6 +26,7 @@ const WPApp = (() => {
 
   const IMPORT_CODE_KEY = 'wp_clearnumber_code';
   const IMPORT_PENDING_KEY = 'wp_clearnumber_pending';
+  const IMPORT_ENTRY_KEY = 'wp_clearnumber_entry';
 
   /** Remember ?code= from #/import before the router strips the query. */
   function captureClearNumberCode() {
@@ -56,6 +57,20 @@ const WPApp = (() => {
     } catch { /* ignore */ }
   }
 
+  function requestClearNumberEntry() {
+    try { sessionStorage.setItem(IMPORT_ENTRY_KEY, '1'); } catch { /* ignore */ }
+  }
+
+  function takeClearNumberEntryRequest() {
+    try {
+      if (sessionStorage.getItem(IMPORT_ENTRY_KEY) !== '1') return false;
+      sessionStorage.removeItem(IMPORT_ENTRY_KEY);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   // ── BOOT ──────────────────────────────────────────────────
   async function boot() {
     try {
@@ -77,6 +92,14 @@ const WPApp = (() => {
 
       // ClearNumber handoff wins over the setup wizard so the code survives sign-up.
       if (clearNumberPending()) {
+        history.replaceState(null, '', '#/import');
+        WPRouter.start();
+        return;
+      }
+
+      // "Input your ClearNumber #" was chosen before sign-in. Open that
+      // form once, ahead of the setup wizard, the same way a handoff code does.
+      if (takeClearNumberEntryRequest()) {
         history.replaceState(null, '', '#/import');
         WPRouter.start();
         return;
@@ -610,7 +633,7 @@ const WPApp = (() => {
 
   return {
     state, boot, loadCurrentMonthData, computeSummary, NAV_ITEMS, enterAuthShell,
-    captureClearNumberCode, clearClearNumberPending, clearNumberPending,
+    captureClearNumberCode, clearClearNumberPending, clearNumberPending, requestClearNumberEntry,
   };
 })();
 

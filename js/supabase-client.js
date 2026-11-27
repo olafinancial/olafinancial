@@ -186,6 +186,17 @@ const WPDb = (() => {
     return data;
   }
 
+  /**
+   * Claim an existing ClearNumber # / Client / Student ID for this profile.
+   * Returns the stored workbook when ClearNumber has published one.
+   * Does not redeem a one-time handoff code.
+   */
+  async function linkClearNumberClient(clientNumber) {
+    const { data, error } = await client().rpc('link_clearnumber_client', { p_client_number: clientNumber });
+    if (error) throw error;
+    return data;
+  }
+
   /** User-owned tables wiped by “Reset my data” (auth account kept). */
   const USER_DATA_TABLES = [
     'income_entries',
@@ -446,7 +457,7 @@ const WPDb = (() => {
     fetchAll, fetchOne, insert, insertMany, upsert, update, remove,
     getProfile, updateProfile, getIncomeByPeriod, getExpensesByDateRange,
     getAssetsByPeriod, getLiabilitiesByPeriod, getMonthlySnapshots,
-    getRefData, saveSnapshot, previewClearNumber, redeemClearNumber,
+    getRefData, saveSnapshot, previewClearNumber, redeemClearNumber, linkClearNumberClient,
     resetUserData, clearUserLocalState, seedDemoData, USER_DATA_TABLES,
   };
 })();

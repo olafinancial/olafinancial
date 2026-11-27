@@ -423,3 +423,154 @@ describe('landing after import', () => {
     expect(host.children).toEqual([]);
   });
 });
+
+describe('Client / Student ID pull', () => {
+  const { WPImport } = loadImport();
+
+  test('explains a number that is taken, missing, or not an id', () => {
+    expect(WPImport.explainRpc({ message: 'invalid_client_number' }).message).toMatch(/CN-K7M2P4QX/);
+    expect(WPImport.explainRpc({ message: 'client_number_taken' }).title).toMatch(/already linked/i);
+    expect(WPImport.explainRpc({ message: 'client_number_not_found', code: 'P0002' }).message).toMatch(/not in Pul yet/i);
+    expect(WPImport.explainRpc({ message: 'client_number_retired' }).title).toMatch(/no longer active/i);
+  });
+
+  test('a missing id function is not reported as a missing handoff', () => {
+    const missing = WPImport.explainRpc({
+      code: 'PGRST202',
+      message: 'Could not find the function public.link_clearnumber_client in the schema cache',
+    });
+    expect(missing.title).toMatch(/numbers are not switched on/i);
+    expect(missing.message).not.toMatch(/handoff/i);
+  });
+
+  test('pulling by id does not redeem a one-time handoff code', async () => {
+    const calls = [];
+    const sandbox = loadImport({
+      WPDb: {
+        redeemClearNumber(code) {
+          calls.push(code);
+          return Promise.resolve({ payload: { schema_version: 1, from: 'code' } });
+        },
+      },
+    });
+    const pulled = await sandbox.WPImport.claimPayload('client', 'CN-K7M2P4QX', { schema_version: 1, from: 'id' });
+    expect(calls).toEqual([]);
+    expect(pulled.from).toBe('id');
+
+    const redeemed = await sandbox.WPImport.claimPayload('code', 'AB12CD34EF56', null);
+    expect(calls).toEqual(['AB12CD34EF56']);
+    expect(redeemed.from).toBe('code');
+  });
+
+  test('the profile panel shows the id, a copy button, the shared-number note, and the entry button', async () => {
+    const elements = [];
+    function makeEl(tag) {
+      const el = {
+        tag,
+        className: '',
+        style: {},
+        attrs: {},
+        textContent: '',
+        type: '',
+        value: '',
+        disabled: false,
+        children: [],
+        listeners: {},
+        setAttribute(name, value) { this.attrs[name] = value; },
+        appendChild(child) { this.children.push(child); return child; },
+        addEventListener(type, fn) { this.listeners[type] = fn; },
+        querySelector(sel) {
+          const want = sel.replace('[', '').replace(']', '').split('=')[0];
+          const found = [];
+          (function walk(node) {
+            if (node.attrs && node.attrs[want] != null) found.push(node);
+            (node.children || []).forEach(walk);
+          })(el);
+          return found[0] || null;
+        },
+        focus() {},
+      };
+      elements.push(el);
+      return el;
+    }
+    const host = makeEl('div');
+    Object.defineProperty(host, 'innerHTML', {
+      configurable: true,
+      set(value) { if (value === '') host.children = []; },
+      get() { return ''; },
+    });
+    const sandbox = loadImport({
+      document: {
+        createElement: (tag) => makeEl(tag),
+        getElementById() { return null; },
+        body: { appendChild() {}, removeChild() {} },
+        execCommand() { return true; },
+      },
+      WPApp: { state: { profile: { client_number: 'cn-k7m2-p4qx' }, user: { id: 'user-1' } } },
+      WPClearNumberMap: {
+        normalizeClientNumber(value) {
+          const compact = String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+          if (!/^CN[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/.test(compact)) return null;
+          return 'CN-' + compact.slice(2);
+        },
+        mapPayload() { return { error: null, inserts: {} }; },
+      },
+      WPDb: {
+        linkClearNumberClient(number) {
+          return Promise.resolve({ client_number: number, recognized: true, linked: true, payload: null });
+        },
+      },
+    });
+
+    sandbox.WPImport.mountClearNumberEntry(host);
+    const texts = [];
+    (function walk(el) {
+      if (el.textContent) texts.push(el.textContent);
+      (el.children || []).forEach(walk);
+    })(host);
+    const joined = texts.join(' ');
+    expect(joined).toContain('CN-K7M2P4QX');
+    expect(joined).toContain('Copy');
+    expect(joined).toContain('This same number works on both Pul Planning and ClearNumber.');
+    expect(joined).toContain('Input your ClearNumber # here');
+
+    const open = elements.find(el => el.textContent === 'Input your ClearNumber # here');
+    open.listeners.click();
+    const form = elements.find(el => el.attrs['data-clearnumber-form'] != null);
+    expect(form.style.display).toBe('block');
+
+    const input = elements.find(el => el.attrs['aria-label'] === 'ClearNumber number');
+    const submit = elements.find(el => el.textContent === 'Pull into Pul Planning');
+    input.value = 'not-an-id';
+    await form.listeners.submit({ preventDefault() {} });
+    const err = elements.find(el => el.style && el.style.display === 'block' && /CN-K7M2P4QX/.test(el.textContent));
+    expect(err).toBeTruthy();
+
+    input.value = 'CN-AAAAAAA2';
+    await form.listeners.submit({ preventDefault() {} });
+    const shown = host.querySelector('[data-client-number-value]');
+    expect(shown.textContent).toBe('CN-AAAAAAA2');
+    expect(sandbox.WPApp.state.profile.client_number).toBe('CN-AAAAAAA2');
+    expect(submit.disabled).toBe(false);
+  });
+
+  test('settings and onboarding both mount that panel', () => {
+    const settings = fs.readFileSync(path.join(root, 'js/pages/settings.js'), 'utf8');
+    const onboarding = fs.readFileSync(path.join(root, 'js/pages/onboarding.js'), 'utf8');
+    expect(settings).toContain('id="settings-client-number"');
+    expect(settings).toContain('WPImport.mountClearNumberEntry');
+    expect(onboarding).toContain('id="ob-client-number"');
+    expect(onboarding).toContain('WPImport.mountClearNumberEntry');
+  });
+
+  test('the signed-out import page offers Input your ClearNumber # here', async () => {
+    const container = { innerHTML: '' };
+    const sandbox = loadImport({
+      document: { getElementById() { return null; } },
+      WPApp: { state: { user: null, profile: null }, captureClearNumberCode() {} },
+    });
+    await sandbox.WPImport.init(container);
+    expect(container.innerHTML).toContain('Input your ClearNumber # here');
+    expect(container.innerHTML).toContain('Import link missing');
+  });
+});
