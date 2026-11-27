@@ -5,19 +5,6 @@
 const WPSettings = (() => {
 
   async function init(container) {
-    if (WPApp.state.user && (!WPApp.state.profile || !WPApp.state.profile.client_number) && typeof WPDb.ensureClientNumber === 'function') {
-      try {
-        const ensured = await WPDb.ensureClientNumber();
-        if (ensured && ensured.client_number) {
-          WPApp.state.profile = Object.assign({}, WPApp.state.profile || {}, {
-            client_number: ensured.client_number,
-            client_number_source: ensured.source || (WPApp.state.profile && WPApp.state.profile.client_number_source),
-          });
-        }
-      } catch (e) {
-        console.warn('[settings] client number', e?.message || e);
-      }
-    }
     const baseCur = WPApp.state.profile?.currency || 'NGN';
     const profile = WPApp.state.profile || {};
 

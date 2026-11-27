@@ -118,6 +118,8 @@ Same origin rule. Upserts the latest workbook for that ID. Does not change who i
 
 No arguments. Returns the caller's ID, creating a profile stub and generating an ID when needed. It does not rotate an ID that is already set.
 
+Pul does not call this on page load. The profile query already returns `client_number` after this migration. Calling it before the function exists shows up as a WebKit page error.
+
 ```json
 { "client_number": "CN-K7M2PQ", "source": "generated" }
 ```
