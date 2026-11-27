@@ -86,6 +86,9 @@ const WPOnboarding = (() => {
     }
     content.innerHTML = '';
     [_step1, _step2, _step3, _step4, _step5Path, _step6Summary][_step - 1](content);
+    if (_step === 1 && typeof WPImport !== 'undefined' && typeof WPImport.mountClearNumberEntry === 'function') {
+      WPImport.mountClearNumberEntry(document.getElementById('ob-client-number'));
+    }
   }
 
   function _step1(el) {
@@ -140,7 +143,8 @@ const WPOnboarding = (() => {
           <option value="SAR" ${_data.currency==='SAR'?'selected':''}>SAR (ر.س) — Saudi Riyal</option>
           <option value="AUD" ${_data.currency==='AUD'?'selected':''}>AUD (A$) — Australian Dollar</option>
         </select>
-      </div>`;
+      </div>
+      <div id="ob-client-number" style="margin-top:1.25rem"></div>`;
   }
 
   function _step2(el) {

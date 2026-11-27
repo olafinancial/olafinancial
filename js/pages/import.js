@@ -10,6 +10,7 @@ const WPImport = (() => {
   const CODE_KEY = 'wp_clearnumber_code';
   const PENDING_KEY = 'wp_clearnumber_pending';
   const RESULT_KEY = 'wp_clearnumber_result';
+  const PULL_KEY = 'wp_clearnumber_pull';
   const FI_FIELDS = [
     'expenses', 'passive', 'dividends', 'rentals', 'pensions', 'otherPassive',
     'portfolio', 'returnRate', 'monthlySavings',
@@ -78,7 +79,42 @@ const WPImport = (() => {
         terminal: true,
       };
     }
+    if (/invalid_client_number/i.test(msg)) {
+      return {
+        title: 'Check the ClearNumber #',
+        message: 'Enter a Client / Student ID like CN-K7M2P4QX. Spaces and extra hyphens are fine.',
+        terminal: true,
+      };
+    }
+    if (/client_number_taken/i.test(msg)) {
+      return {
+        title: 'This ClearNumber # is already linked',
+        message: 'That ClearNumber # is already on another Pul account, so it stays with that account.',
+        terminal: true,
+      };
+    }
+    if (/client_number_not_found/i.test(msg)) {
+      return {
+        title: 'We do not have that ClearNumber # yet',
+        message: 'That ClearNumber # is not in Pul yet. In ClearNumber, use the same Client / Student ID, then enter it here again.',
+        terminal: true,
+      };
+    }
+    if (/client_number_retired/i.test(msg)) {
+      return {
+        title: 'This ClearNumber # is no longer active',
+        message: 'That ClearNumber # is no longer active. Use the Client / Student ID shown on your Pul profile.',
+        terminal: true,
+      };
+    }
     if (code === 'PGRST202' || /schema cache|could not find the function|does not exist|404/i.test(msg)) {
+      if (/link_clearnumber_client|lookup_client_number|client_number/i.test(msg)) {
+        return {
+          title: 'ClearNumber numbers are not switched on yet',
+          message: 'Client / Student IDs are not switched on yet. The database update still needs to be applied in Supabase.',
+          terminal: true,
+        };
+      }
       return {
         title: 'Import is not switched on yet',
         message: 'Import is not switched on yet. The ClearNumber handoff still needs to be applied in Supabase.',
@@ -395,15 +431,478 @@ const WPImport = (() => {
   }
 
   function leaveWithoutImport() {
+    clearPull();
     if (typeof WPApp.clearClearNumberPending === 'function') WPApp.clearClearNumberPending();
     const done = !!(WPApp.state.profile && WPApp.state.profile.onboarding_done);
     WPRouter.navigate(done ? '/dashboard' : '/onboarding');
+  }
+
+  function clearPull() {
+    try { sessionStorage.removeItem(PULL_KEY); } catch { /* ignore */ }
+  }
+
+  function storePull(linked) {
+    try {
+      sessionStorage.setItem(PULL_KEY, JSON.stringify({
+        client_number: linked && linked.client_number,
+        payload: linked && linked.payload,
+        recognized: !!(linked && linked.recognized),
+      }));
+    } catch { /* ignore */ }
+  }
+
+  function readStoredPull() {
+    try {
+      const raw = sessionStorage.getItem(PULL_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !parsed.payload || typeof parsed.payload !== 'object') return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function normalizedClientNumber(value) {
+    if (typeof WPClearNumberMap === 'undefined' || typeof WPClearNumberMap.normalizeClientNumber !== 'function') {
+      return null;
+    }
+    return WPClearNumberMap.normalizeClientNumber(value);
+  }
+
+  function rememberProfileNumber(linked) {
+    const number = linked && (linked.canonical_client_number || linked.client_number);
+    if (!number || typeof WPApp === 'undefined' || !WPApp.state) return;
+    if (!WPApp.state.profile) WPApp.state.profile = {};
+    WPApp.state.profile.client_number = number;
+  }
+
+  /**
+   * Code imports still redeem the one-time handoff. A Client / Student ID
+   * pull already holds the workbook, so it must not consume a handoff code.
+   */
+  async function claimPayload(mode, code, fallbackPayload) {
+    if (mode === 'client') return fallbackPayload || null;
+    const redeemed = await WPDb.redeemClearNumber(code);
+    return redeemed && redeemed.payload ? redeemed.payload : null;
+  }
+
+  async function associatePayloadClientNumber(payload) {
+    if (typeof WPClearNumberMap === 'undefined' || typeof WPClearNumberMap.clientNumberFromPayload !== 'function') return null;
+    if (typeof WPDb === 'undefined' || typeof WPDb.linkClearNumberClient !== 'function') return null;
+    const number = WPClearNumberMap.clientNumberFromPayload(payload);
+    if (!number) return null;
+    const current = WPApp.state && WPApp.state.profile && WPApp.state.profile.client_number;
+    if (normalizedClientNumber(current) === number) {
+      return { client_number: number, recognized: true, linked: true };
+    }
+    try {
+      const linked = await WPDb.linkClearNumberClient(number);
+      rememberProfileNumber(linked);
+      return linked;
+    } catch (error) {
+      const explained = explainRpc(error);
+      if (/already linked/i.test(explained.title)) return { warning: explained.message };
+      // Missing number or the id functions are not applied yet.
+      // The one-time workbook import still proceeds.
+      return null;
+    }
+  }
+
+  function copyClientNumber(value, button) {
+    const fallback = () => {
+      const field = document.createElement('textarea');
+      field.value = value;
+      field.setAttribute('readonly', 'readonly');
+      document.body.appendChild(field);
+      field.select();
+      try { document.execCommand('copy'); } catch { /* ignore */ }
+      field.remove();
+    };
+    const write = () => {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(value).catch(() => { fallback(); });
+      }
+      fallback();
+      return Promise.resolve();
+    };
+    write().then(() => {
+      if (typeof WPToast !== 'undefined' && WPToast.success) WPToast.success('Client / Student ID copied.');
+      if (!button) return;
+      const previous = button.textContent;
+      button.textContent = 'Copied';
+      setTimeout(() => { button.textContent = previous; }, 1500);
+    }).catch(() => {
+      if (typeof WPToast !== 'undefined' && WPToast.error) WPToast.error('Could not copy that number.');
+    });
+  }
+
+  /**
+   * Profile card, onboarding, and the import page share this block:
+   * the stable id, a copy button, and "Input your ClearNumber # here".
+   */
+  function mountClearNumberEntry(host, options) {
+    const opts = options || {};
+    if (!host) return;
+    const profile = (typeof WPApp !== 'undefined' && WPApp.state && WPApp.state.profile) || {};
+    const current = normalizedClientNumber(profile.client_number) || '';
+
+    host.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.setAttribute('data-client-number-panel', '1');
+
+    if (opts.showId !== false) {
+      const label = document.createElement('div');
+      label.className = 'text-sm';
+      label.style.fontWeight = '700';
+      label.style.marginBottom = '0.35rem';
+      label.textContent = 'Client / Student ID';
+
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.gap = '0.6rem';
+      row.style.flexWrap = 'wrap';
+
+      const value = document.createElement('code');
+      value.setAttribute('data-client-number-value', '1');
+      value.style.fontSize = '1.15rem';
+      value.style.letterSpacing = '0.04em';
+      value.style.fontWeight = '700';
+      value.textContent = current || 'Not assigned yet';
+
+      const copy = document.createElement('button');
+      copy.type = 'button';
+      copy.className = 'btn btn-secondary btn-sm';
+      copy.setAttribute('data-client-copy', '1');
+      copy.textContent = 'Copy';
+      copy.disabled = !current;
+      copy.addEventListener('click', () => {
+        const live = (wrap.querySelector('[data-client-number-value]') || {}).textContent || '';
+        const normalized = normalizedClientNumber(live);
+        if (normalized) copyClientNumber(normalized, copy);
+      });
+
+      row.appendChild(value);
+      row.appendChild(copy);
+
+      const note = document.createElement('p');
+      note.className = 'input-hint';
+      note.style.margin = '0.45rem 0 0.9rem';
+      note.textContent = 'This same number works on both Pul Planning and ClearNumber.';
+
+      wrap.appendChild(label);
+      wrap.appendChild(row);
+      wrap.appendChild(note);
+    }
+
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'btn btn-secondary';
+    open.textContent = 'Input your ClearNumber # here';
+    open.setAttribute('data-clearnumber-entry', '1');
+
+    const form = document.createElement('form');
+    form.setAttribute('data-clearnumber-form', '1');
+    form.style.display = 'none';
+    form.style.marginTop = '0.75rem';
+
+    const input = document.createElement('input');
+    input.className = 'input';
+    input.type = 'text';
+    input.placeholder = 'CN-K7M2P4QX';
+    input.setAttribute('autocomplete', 'off');
+    input.setAttribute('spellcheck', 'false');
+    input.setAttribute('aria-label', 'ClearNumber number');
+    input.style.marginBottom = '0.65rem';
+
+    const submit = document.createElement('button');
+    submit.type = 'submit';
+    submit.className = 'btn btn-primary';
+    submit.textContent = 'Pull into Pul Planning';
+
+    const err = document.createElement('div');
+    err.className = 'text-sm';
+    err.style.marginTop = '0.65rem';
+    err.style.display = 'none';
+
+    form.appendChild(input);
+    form.appendChild(submit);
+    form.appendChild(err);
+
+    open.addEventListener('click', () => {
+      form.style.display = 'block';
+      open.style.display = 'none';
+      try { input.focus(); } catch { /* ignore */ }
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      err.style.display = 'none';
+      const normalized = normalizedClientNumber(input.value);
+      if (!normalized) {
+        const explained = explainRpc({ message: 'invalid_client_number' });
+        err.style.color = 'var(--clr-danger)';
+        err.textContent = explained.message;
+        err.style.display = 'block';
+        return;
+      }
+      submit.disabled = true;
+      const previous = submit.textContent;
+      submit.textContent = 'Pulling…';
+      try {
+        const linked = await WPDb.linkClearNumberClient(normalized);
+        rememberProfileNumber(linked);
+        const shown = wrap.querySelector('[data-client-number-value]');
+        if (shown) shown.textContent = (linked && linked.client_number) || normalized;
+        const copyBtn = wrap.querySelector('[data-client-copy]');
+        if (copyBtn) copyBtn.disabled = false;
+        if (typeof opts.onLinked === 'function') opts.onLinked(linked);
+        if (linked && linked.payload) {
+          storePull(linked);
+          if (opts.stay && typeof opts.onPayload === 'function') {
+            opts.onPayload(linked);
+            return;
+          }
+          if (typeof WPRouter !== 'undefined' && WPRouter.navigate) WPRouter.navigate('/import');
+          return;
+        }
+        err.style.color = 'var(--clr-accent)';
+        err.textContent = linked && linked.recognized
+          ? 'This ClearNumber # is already on your Pul profile.'
+          : 'This ClearNumber # is now on your Pul profile. No workbook is stored for it yet.';
+        err.style.display = 'block';
+      } catch (error) {
+        const explained = explainRpc(error);
+        err.style.color = 'var(--clr-danger)';
+        err.textContent = explained.message;
+        err.style.display = 'block';
+      } finally {
+        submit.disabled = false;
+        submit.textContent = previous;
+      }
+    });
+
+    wrap.appendChild(open);
+    wrap.appendChild(form);
+    host.appendChild(wrap);
+  }
+
+  function renderPullLanding(container) {
+    container.innerHTML = `
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Link ClearNumber</h1>
+          <p class="page-subtitle">Enter the Client / Student ID from ClearNumber. Pul shows the workbook before anything is added.</p>
+        </div>
+      </div>
+      <div class="page-body" style="max-width:40rem">
+        <div class="card" style="padding:1.25rem" id="import-client-number"></div>
+      </div>`;
+    mountClearNumberEntry(document.getElementById('import-client-number'), {
+      stay: true,
+      onPayload(linked) {
+        presentWorkbook(container, linked.payload, {
+          mode: 'client',
+          clientNumber: linked.client_number,
+        });
+      },
+    });
+  }
+
+  function presentWorkbook(container, payload, options) {
+    const opts = options || {};
+    const mode = opts.mode === 'client' ? 'client' : 'code';
+    const code = opts.code || '';
+    const user = WPApp.state.user;
+
+    const fail = (title, message) => {
+      renderMessage(container, title, message, `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`);
+      document.getElementById('import-dismiss')?.addEventListener('click', leaveWithoutImport);
+    };
+
+    return loadExisting(user.id).then((context) => {
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const mapped = WPClearNumberMap.mapPayload(payload, {
+        existing: context.existing,
+        period: context.period,
+        today,
+      });
+      if (mapped.error) {
+        fail('Could not open this workbook', mapped.error);
+        return;
+      }
+
+      const work = hasWork(mapped);
+      const efLine = mapped.emergencyFund ? [mapped.emergencyFund] : [];
+      const fiLine = mapped.fiLocal ? [mapped.fiLocal] : [];
+      const warningBlock = mapped.warnings && mapped.warnings.length
+        ? `<div class="card" style="margin-bottom:1rem;padding:1rem 1.25rem"><div class="section-title" style="margin-bottom:0.5rem">Notes</div><ul style="margin:0;padding-left:1.1rem">${mapped.warnings.map(w => `<li class="text-sm text-muted">${esc(w)}</li>`).join('')}</ul></div>`
+        : '';
+      const subtitle = mode === 'client'
+        ? 'This ClearNumber # is on your Pul profile. Add the workbook to your plan? Nothing else is written until you confirm.'
+        : 'Add it to your plan? Nothing is written until you confirm. Names you already have are left unchanged.';
+
+      container.innerHTML = `
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">We found your ClearNumber workbook</h1>
+            <p class="page-subtitle">${esc(subtitle)}</p>
+          </div>
+        </div>
+        <div class="page-body" style="max-width:40rem">
+          ${renderItems('Profile', mapped.profileLines)}
+          ${renderItems('Income', mapped.inserts.income)}
+          ${renderItems('Expenses', mapped.inserts.expenses)}
+          ${renderItems('Assets', mapped.inserts.assets)}
+          ${renderItems('Debts', mapped.inserts.liabilities)}
+          ${renderItems('Goals', mapped.inserts.goals)}
+          ${renderItems('Emergency fund', efLine)}
+          ${renderItems('FI Calculator', fiLine)}
+          ${warningBlock}
+          <div id="import-error" class="text-sm" style="display:none;color:var(--clr-danger);margin-bottom:0.75rem"></div>
+          <div class="flex gap-2" style="flex-wrap:wrap">
+            ${work
+              ? '<button type="button" class="btn btn-primary" id="import-confirm">Add to my plan</button>'
+              : '<button type="button" class="btn btn-primary" id="import-done">Go to dashboard</button>'}
+            <button type="button" class="btn btn-secondary" id="import-cancel">Not now</button>
+          </div>
+          <div class="card" style="padding:1.25rem;margin-top:1.5rem" id="import-client-number"></div>
+        </div>`;
+
+      mountClearNumberEntry(document.getElementById('import-client-number'), {
+        stay: true,
+        onPayload(linked) {
+          presentWorkbook(container, linked.payload, {
+            mode: 'client',
+            clientNumber: linked.client_number,
+          });
+        },
+      });
+
+      document.getElementById('import-cancel')?.addEventListener('click', leaveWithoutImport);
+      document.getElementById('import-done')?.addEventListener('click', leaveWithoutImport);
+
+      let claimed = null;
+      document.getElementById('import-confirm')?.addEventListener('click', async () => {
+        const btn = document.getElementById('import-confirm');
+        const errEl = document.getElementById('import-error');
+        if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
+        if (errEl) errEl.style.display = 'none';
+        try {
+          if (!claimed) {
+            claimed = await claimPayload(mode, code, payload);
+            if (!claimed) throw new Error('Could not load the workbook.');
+          }
+          const linkedId = await associatePayloadClientNumber(claimed);
+          const fresh = await loadExisting(user.id);
+          const nowClick = new Date();
+          const todayClick = `${nowClick.getFullYear()}-${String(nowClick.getMonth() + 1).padStart(2, '0')}-${String(nowClick.getDate()).padStart(2, '0')}`;
+          const next = WPClearNumberMap.mapPayload(claimed, {
+            existing: fresh.existing,
+            period: fresh.period,
+            today: todayClick,
+          });
+          if (next.error) throw new Error(next.error);
+          await writePlan(next, user.id);
+          clearPull();
+          const message = successMessage(next) + (linkedId && linkedId.warning ? ' ' + linkedId.warning : '');
+          const fi = !!(next.fiLocal && next.fiLocal.write && next.fiLocal.payload);
+          const landed = landAfterImport(message, { fi });
+          if (!landed.landed) {
+            renderMessage(
+              container,
+              'Your ClearNumber numbers are in',
+              message,
+              `<button type="button" class="btn btn-primary" id="import-home">Go to dashboard</button>`
+            );
+            document.getElementById('import-home')?.addEventListener('click', leaveWithoutImport);
+          }
+        } catch (error) {
+          console.warn('[import] confirm', error);
+          const explained = explainRpc(error);
+          if (!claimed && explained.terminal) {
+            renderMessage(container, explained.title, explained.message, `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`);
+            document.getElementById('import-dismiss')?.addEventListener('click', leaveWithoutImport);
+            return;
+          }
+          if (errEl) {
+            errEl.textContent = claimed
+              ? (mode === 'client'
+                ? 'Some rows could not be saved. Retry to add the ones still missing.'
+                : 'Some rows could not be saved. Retry to add the ones still missing. The link itself is already used.')
+              : explained.message;
+            errEl.style.display = 'block';
+          }
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = claimed ? 'Retry adding to my plan' : 'Add to my plan';
+          }
+        }
+      });
+    }).catch((error) => {
+      console.warn('[import] load existing', error);
+      fail('Could not open this workbook', 'Your current plan could not be loaded.');
+    });
+  }
+
+  async function pullByClientNumber(container, clientNumber) {
+    container.innerHTML = `
+      <div class="page-header"><div><h1 class="page-title">Link ClearNumber</h1>
+        <p class="page-subtitle">Looking up ${esc(clientNumber)}…</p></div></div>
+      <div class="page-body"><div class="card" style="padding:1.25rem"><div class="skeleton skeleton-text" style="width:240px"></div></div></div>`;
+    try {
+      const linked = await WPDb.linkClearNumberClient(clientNumber);
+      rememberProfileNumber(linked);
+      if (linked && linked.payload) {
+        storePull(linked);
+        await presentWorkbook(container, linked.payload, {
+          mode: 'client',
+          clientNumber: linked.client_number || clientNumber,
+        });
+        return;
+      }
+      renderMessage(
+        container,
+        'ClearNumber # linked',
+        linked && linked.recognized
+          ? 'This ClearNumber # is already on your Pul profile. No workbook is stored for it yet.'
+          : 'This ClearNumber # is now on your Pul profile. No workbook is stored for it yet.',
+        `<button type="button" class="btn btn-primary" id="import-home">Go to dashboard</button>`
+      );
+      document.getElementById('import-home')?.addEventListener('click', leaveWithoutImport);
+    } catch (error) {
+      const explained = explainRpc(error);
+      renderMessage(container, explained.title, explained.message, `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`);
+      document.getElementById('import-dismiss')?.addEventListener('click', leaveWithoutImport);
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.padding = '1.25rem';
+      card.style.marginTop = '1rem';
+      card.style.maxWidth = '40rem';
+      const body = container.querySelector('.page-body');
+      if (body) {
+        body.appendChild(card);
+        mountClearNumberEntry(card, {
+          showId: false,
+          stay: true,
+          onPayload(linked) {
+            presentWorkbook(container, linked.payload, {
+              mode: 'client',
+              clientNumber: linked.client_number,
+            });
+          },
+        });
+      }
+    }
   }
 
   async function init(container) {
     if (typeof WPApp.captureClearNumberCode === 'function') WPApp.captureClearNumberCode();
     const code = readCode();
     const user = WPApp.state.user;
+    const clientNumber = normalizedClientNumber(code);
 
     if (!user) {
       if (!code) {
@@ -412,21 +911,41 @@ const WPImport = (() => {
             <div class="auth-form-pane" style="grid-column:1 / -1">
               <div class="auth-form-inner">
                 <h1 class="auth-form-title">Import link missing</h1>
-                <p class="auth-form-sub">Open Pul from ClearNumber with Continue in Pul Planning.</p>
-                <button type="button" class="btn btn-primary" id="import-back-login">Sign in</button>
+                <p class="auth-form-sub">Open Pul from ClearNumber with Continue in Pul Planning, or sign in and enter your ClearNumber #.</p>
+                <div class="flex gap-2" style="flex-wrap:wrap">
+                  <button type="button" class="btn btn-primary" id="import-back-login">Sign in</button>
+                  <button type="button" class="btn btn-secondary" id="import-enter-client-number">Input your ClearNumber # here</button>
+                </div>
               </div>
             </div>
           </div>`;
+        const openEntry = () => {
+          if (typeof WPApp.requestClearNumberEntry === 'function') WPApp.requestClearNumberEntry();
+          WPRouter.navigate('/login');
+        };
         document.getElementById('import-back-login')?.addEventListener('click', () => WPRouter.navigate('/login'));
+        document.getElementById('import-enter-client-number')?.addEventListener('click', openEntry);
         return;
       }
       renderGate(container);
       return;
     }
 
+    if (clientNumber) {
+      await pullByClientNumber(container, clientNumber);
+      return;
+    }
+
     if (!code) {
-      renderMessage(container, 'Import link missing', 'Open Pul from ClearNumber with Continue in Pul Planning.', `<button type="button" class="btn btn-primary" id="import-home">Go to dashboard</button>`);
-      document.getElementById('import-home')?.addEventListener('click', leaveWithoutImport);
+      const stored = readStoredPull();
+      if (stored && stored.payload) {
+        await presentWorkbook(container, stored.payload, {
+          mode: 'client',
+          clientNumber: stored.client_number,
+        });
+        return;
+      }
+      renderPullLanding(container);
       return;
     }
 
@@ -452,121 +971,7 @@ const WPImport = (() => {
       return;
     }
 
-    let context;
-    try {
-      context = await loadExisting(user.id);
-    } catch (error) {
-      renderMessage(container, 'Could not open this workbook', 'Your current plan could not be loaded.', `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`);
-      document.getElementById('import-dismiss')?.addEventListener('click', leaveWithoutImport);
-      console.warn('[import] load existing', error);
-      return;
-    }
-
-    const now = new Date();
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const mapped = WPClearNumberMap.mapPayload(payload, {
-      existing: context.existing,
-      period: context.period,
-      today,
-    });
-
-    if (mapped.error) {
-      renderMessage(container, 'Could not open this workbook', mapped.error, `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`);
-      document.getElementById('import-dismiss')?.addEventListener('click', leaveWithoutImport);
-      return;
-    }
-
-    const work = hasWork(mapped);
-    const efLine = mapped.emergencyFund ? [mapped.emergencyFund] : [];
-    const fiLine = mapped.fiLocal ? [mapped.fiLocal] : [];
-    const warningBlock = mapped.warnings && mapped.warnings.length
-      ? `<div class="card" style="margin-bottom:1rem;padding:1rem 1.25rem"><div class="section-title" style="margin-bottom:0.5rem">Notes</div><ul style="margin:0;padding-left:1.1rem">${mapped.warnings.map(w => `<li class="text-sm text-muted">${esc(w)}</li>`).join('')}</ul></div>`
-      : '';
-
-    container.innerHTML = `
-      <div class="page-header">
-        <div>
-          <h1 class="page-title">We found your ClearNumber workbook</h1>
-          <p class="page-subtitle">Add it to your plan? Nothing is written until you confirm. Names you already have are left unchanged.</p>
-        </div>
-      </div>
-      <div class="page-body" style="max-width:40rem">
-        ${renderItems('Profile', mapped.profileLines)}
-        ${renderItems('Income', mapped.inserts.income)}
-        ${renderItems('Expenses', mapped.inserts.expenses)}
-        ${renderItems('Assets', mapped.inserts.assets)}
-        ${renderItems('Debts', mapped.inserts.liabilities)}
-        ${renderItems('Goals', mapped.inserts.goals)}
-        ${renderItems('Emergency fund', efLine)}
-        ${renderItems('FI Calculator', fiLine)}
-        ${warningBlock}
-        <div id="import-error" class="text-sm" style="display:none;color:var(--clr-danger);margin-bottom:0.75rem"></div>
-        <div class="flex gap-2" style="flex-wrap:wrap">
-          ${work
-            ? '<button type="button" class="btn btn-primary" id="import-confirm">Add to my plan</button>'
-            : '<button type="button" class="btn btn-primary" id="import-done">Go to dashboard</button>'}
-          <button type="button" class="btn btn-secondary" id="import-cancel">Not now</button>
-        </div>
-      </div>`;
-
-    document.getElementById('import-cancel')?.addEventListener('click', leaveWithoutImport);
-    document.getElementById('import-done')?.addEventListener('click', leaveWithoutImport);
-
-    let claimed = null;
-    document.getElementById('import-confirm')?.addEventListener('click', async () => {
-      const btn = document.getElementById('import-confirm');
-      const errEl = document.getElementById('import-error');
-      if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
-      if (errEl) errEl.style.display = 'none';
-      try {
-        if (!claimed) {
-          const redeemed = await WPDb.redeemClearNumber(code);
-          claimed = redeemed && redeemed.payload ? redeemed.payload : null;
-          if (!claimed) throw new Error('Could not load the workbook.');
-        }
-        const fresh = await loadExisting(user.id);
-        const nowClick = new Date();
-        const todayClick = `${nowClick.getFullYear()}-${String(nowClick.getMonth() + 1).padStart(2, '0')}-${String(nowClick.getDate()).padStart(2, '0')}`;
-        const next = WPClearNumberMap.mapPayload(claimed, {
-          existing: fresh.existing,
-          period: fresh.period,
-          today: todayClick,
-        });
-        if (next.error) throw new Error(next.error);
-        await writePlan(next, user.id);
-        const message = successMessage(next);
-        const fi = !!(next.fiLocal && next.fiLocal.write && next.fiLocal.payload);
-        const landed = landAfterImport(message, { fi });
-        if (!landed.landed) {
-          renderMessage(
-            container,
-            'Your ClearNumber numbers are in',
-            message,
-            `<button type="button" class="btn btn-primary" id="import-home">Go to dashboard</button>`
-          );
-          document.getElementById('import-home')?.addEventListener('click', leaveWithoutImport);
-        }
-      } catch (error) {
-        console.warn('[import] confirm', error);
-        const explained = explainRpc(error);
-        if (!claimed && explained.terminal) {
-          renderMessage(container, explained.title, explained.message, `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`);
-          document.getElementById('import-dismiss')?.addEventListener('click', leaveWithoutImport);
-          return;
-        }
-        if (errEl) {
-          errEl.textContent = claimed
-            ? 'Some rows could not be saved. Retry to add the ones still missing. The link itself is already used.'
-            : explained.message;
-          errEl.style.display = 'block';
-        }
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = claimed ? 'Retry adding to my plan' : 'Add to my plan';
-        }
-      }
-    });
-
+    await presentWorkbook(container, payload, { mode: 'code', code });
   }
 
   function destroy() {}
@@ -580,6 +985,9 @@ const WPImport = (() => {
     applyImportedFi,
     landAfterImport,
     mountSuccessBanner,
+    mountClearNumberEntry,
+    claimPayload,
     RESULT_KEY,
+    PULL_KEY,
   };
 })();

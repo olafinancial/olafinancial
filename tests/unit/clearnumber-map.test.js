@@ -44,6 +44,44 @@ describe('handoff contract', () => {
   });
 });
 
+describe('Client / Student ID', () => {
+  test('accepts the canonical form and ignores spaces and extra hyphens', () => {
+    expect(map.normalizeClientNumber('CN-K7M2P4QX')).toBe('CN-K7M2P4QX');
+    expect(map.normalizeClientNumber('  cn k7m2 p4qx  ')).toBe('CN-K7M2P4QX');
+    expect(map.normalizeClientNumber('CNK7M2P4QX')).toBe('CN-K7M2P4QX');
+    expect(map.normalizeClientNumber('CN-K7M2-P4QX')).toBe('CN-K7M2P4QX');
+  });
+
+  test('rejects handoff codes, ambiguous characters, and the wrong length', () => {
+    expect(map.normalizeClientNumber('AB12CD34EF56')).toBeNull();
+    expect(map.normalizeClientNumber('CN-O7M2P4QX')).toBeNull();
+    expect(map.normalizeClientNumber('CN-07M2P4QX')).toBeNull();
+    expect(map.normalizeClientNumber('CN-I7M2P4QX')).toBeNull();
+    expect(map.normalizeClientNumber('CN-17M2P4QX')).toBeNull();
+    expect(map.normalizeClientNumber('CN-K7M2P4Q')).toBeNull();
+    expect(map.normalizeClientNumber('CN-K7M2P4QX1')).toBeNull();
+    expect(map.normalizeClientNumber('')).toBeNull();
+    expect(map.normalizeClientNumber(null)).toBeNull();
+  });
+
+  test('reads the top-level number, then the profile number', () => {
+    expect(map.clientNumberFromPayload({
+      client_number: 'CN-K7M2P4QX',
+      profile: { client_number: 'CN-AAAAAAA2' },
+    })).toBe('CN-K7M2P4QX');
+    expect(map.clientNumberFromPayload({
+      profile: { client_number: 'cn-aaaaaaa2' },
+    })).toBe('CN-AAAAAAA2');
+    expect(map.clientNumberFromPayload({ schema_version: 1 })).toBeNull();
+  });
+
+  test('uses the same alphabet as the database generator', () => {
+    const sql = fs.readFileSync(path.join(__dirname, '../../supabase/migrations/008_client_number.sql'), 'utf8');
+    expect(sql).toContain(map.CLIENT_NUMBER_ALPHABET);
+    expect(map.CLIENT_NUMBER_ALPHABET).not.toMatch(/[01IO]/);
+  });
+});
+
 describe('ClearNumber import URL', () => {
   test('carries only the code', () => {
     const url = map.importUrl('AB12CD34EF56');

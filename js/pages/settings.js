@@ -45,6 +45,8 @@ const WPSettings = (() => {
         <!-- Profile & Preferences -->
         <div class="card" style="max-width:600px;padding:2rem;margin-bottom:1.5rem;">
           <h3 style="margin-bottom:1.5rem;font-weight:700;color:#ffffff">Profile &amp; Preferences</h3>
+
+          <div id="settings-client-number" style="margin-bottom:1.25rem"></div>
           
           <div class="form-group">
             <label for="set-name">Full Name</label>
@@ -227,6 +229,10 @@ const WPSettings = (() => {
 
       </div>
     `;
+
+    if (typeof WPImport !== 'undefined' && typeof WPImport.mountClearNumberEntry === 'function') {
+      WPImport.mountClearNumberEntry(document.getElementById('settings-client-number'));
+    }
 
     // ── Getting started / replay onboarding ──────────────────
     document.getElementById('set-show-guide-btn')?.addEventListener('click', () => {
