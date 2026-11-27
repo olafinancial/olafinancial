@@ -140,7 +140,15 @@ const WPOnboarding = (() => {
           <option value="SAR" ${_data.currency==='SAR'?'selected':''}>SAR (ر.س) — Saudi Riyal</option>
           <option value="AUD" ${_data.currency==='AUD'?'selected':''}>AUD (A$) — Australian Dollar</option>
         </select>
+      </div>
+      <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--clr-border, rgba(255,255,255,0.08))">
+        <h3 style="margin:0 0 0.35rem;font-size:1rem;font-weight:700">Already use ClearNumber?</h3>
+        <p class="onboarding-step-desc" style="margin-bottom:0.75rem">Link the same Client / Student ID and pull your workbook into this plan.</p>
+        <div id="ob-cn-entry"></div>
       </div>`;
+    if (typeof WPClearNumberId !== 'undefined' && typeof WPClearNumberId.mountPullForm === 'function') {
+      WPClearNumberId.mountPullForm(document.getElementById('ob-cn-entry'));
+    }
   }
 
   function _step2(el) {

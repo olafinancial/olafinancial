@@ -60,6 +60,9 @@ const WPApp = (() => {
   async function boot() {
     try {
       captureClearNumberCode();
+      if (typeof WPClearNumberId !== 'undefined' && typeof WPClearNumberId.captureFromHash === 'function') {
+        WPClearNumberId.captureFromHash();
+      }
       WPDb.init();
       const session = await WPDb.getSession();
 
@@ -77,6 +80,11 @@ const WPApp = (() => {
 
       // ClearNumber handoff wins over the setup wizard so the code survives sign-up.
       if (clearNumberPending()) {
+        history.replaceState(null, '', '#/import');
+        WPRouter.start();
+        return;
+      }
+      if (typeof WPClearNumberId !== 'undefined' && WPClearNumberId.numberPending && WPClearNumberId.numberPending()) {
         history.replaceState(null, '', '#/import');
         WPRouter.start();
         return;

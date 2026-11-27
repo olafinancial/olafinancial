@@ -99,3 +99,5 @@ There is no Edge Function. Do not deploy one.
 After this SQL is applied, merge the pull request so <https://pul.llc> serves the `#/import` page. Merging first is safe (the page explains that import is not switched on yet) but the workbook button will fail until the SQL has been run.
 
 Optional smoke test, only after step 5, from a browser on `https://clearnumber.kaluaja.org` or localhost: call `continueInPulPlanning` with `{"schema_version":1}`. It should redirect to `https://pul.llc/#/import?code=...` with no amounts in the address bar. Signing in should show an empty preview, not an error.
+
+The shared Client / Student ID (`CN-XXXXXX`) is a separate contract. A valid `client_number` or `student_id` on this payload is stored for a later pull and does not change the code, the redirect, or the expiry. See [client-number.md](client-number.md).

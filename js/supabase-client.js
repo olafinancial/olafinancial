@@ -116,6 +116,8 @@ const WPDb = (() => {
   async function updateProfile(userId, changes = {}) {
     if (!userId) throw new Error('No user id');
     const patch = { ...changes };
+    delete patch.client_number;
+    delete patch.client_number_source;
     if (patch.risk_tolerance === 'balanced') patch.risk_tolerance = 'moderate';
     const { data, error } = await fromTable('user_profiles')
       .update(patch)
@@ -182,6 +184,18 @@ const WPDb = (() => {
 
   async function redeemClearNumber(code) {
     const { data, error } = await client().rpc('redeem_clearnumber_handoff', { p_code: code });
+    if (error) throw error;
+    return data;
+  }
+
+  async function ensureClientNumber() {
+    const { data, error } = await client().rpc('ensure_my_client_number');
+    if (error) throw error;
+    return data;
+  }
+
+  async function pullClearNumber(number) {
+    const { data, error } = await client().rpc('pull_clearnumber_number', { p_number: number });
     if (error) throw error;
     return data;
   }
@@ -447,6 +461,7 @@ const WPDb = (() => {
     getProfile, updateProfile, getIncomeByPeriod, getExpensesByDateRange,
     getAssetsByPeriod, getLiabilitiesByPeriod, getMonthlySnapshots,
     getRefData, saveSnapshot, previewClearNumber, redeemClearNumber,
+    ensureClientNumber, pullClearNumber,
     resetUserData, clearUserLocalState, seedDemoData, USER_DATA_TABLES,
   };
 })();

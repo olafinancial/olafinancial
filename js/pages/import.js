@@ -78,6 +78,47 @@ const WPImport = (() => {
         terminal: true,
       };
     }
+    if (/invalid_number/i.test(msg)) {
+      return {
+        title: 'Check the ClearNumber #',
+        message: 'Enter a Client / Student ID like CN-K7M2PQ. This is the ClearNumber #, not the one-time import link.',
+        terminal: true,
+      };
+    }
+    if (/number_not_found/i.test(msg)) {
+      return {
+        title: 'No workbook for that number',
+        message: 'No ClearNumber workbook is stored for that number yet. Check the ID, or save the workbook to this number in ClearNumber first.',
+        terminal: true,
+      };
+    }
+    if (/number_in_use/i.test(msg)) {
+      return {
+        title: 'That number is already linked',
+        message: 'That ClearNumber # is already linked to another Pul Planning profile.',
+        terminal: true,
+      };
+    }
+    if (/number_already_set/i.test(msg)) {
+      const already = (typeof WPClearNumberId !== 'undefined' && error && error.details)
+        ? (WPClearNumberId.canonical(error.details) || '')
+        : '';
+      return {
+        title: 'You already have a ClearNumber #',
+        message: already
+          ? 'Your Client / Student ID is already ' + already + '. This same number works on Pul Planning and ClearNumber.'
+          : 'Your profile already has a ClearNumber #, so this one was not linked.',
+        terminal: true,
+      };
+    }
+    if (/pull_clearnumber_number|ensure_my_client_number|register_clearnumber_record|lookup_client_number/i.test(msg)
+      && (code === 'PGRST202' || /schema cache|could not find the function|does not exist/i.test(msg))) {
+      return {
+        title: 'ClearNumber numbers are not switched on yet',
+        message: 'Client / Student IDs are not switched on yet. The database update still needs to be applied in Supabase.',
+        terminal: true,
+      };
+    }
     if (code === 'PGRST202' || /schema cache|could not find the function|does not exist|404/i.test(msg)) {
       return {
         title: 'Import is not switched on yet',
@@ -266,6 +307,12 @@ const WPImport = (() => {
     if (typeof WPApp !== 'undefined' && typeof WPApp.clearClearNumberPending === 'function') {
       WPApp.clearClearNumberPending();
     }
+    if (options && options.clearNumber) {
+      try {
+        sessionStorage.removeItem('wp_clearnumber_number');
+        sessionStorage.removeItem('wp_clearnumber_number_pending');
+      } catch { /* ignore */ }
+    }
     const routerReady = typeof WPRouter !== 'undefined'
       && typeof WPRouter.navigate === 'function'
       && (typeof WPRouter.hasRoute !== 'function' || WPRouter.hasRoute('/dashboard'));
@@ -383,105 +430,111 @@ const WPImport = (() => {
     document.getElementById('import-login')?.addEventListener('click', () => WPRouter.navigate('/login'));
   }
 
-  function renderMessage(container, title, message, actions) {
+  function renderMessage(container, title, message, actions, withEntry) {
     container.innerHTML = `
       <div class="page-header"><div><h1 class="page-title">${esc(title)}</h1></div></div>
       <div class="page-body">
         <div class="card" style="padding:1.25rem;max-width:36rem">
           <p class="text-sm" style="margin:0 0 1rem">${esc(message)}</p>
           <div class="flex gap-2" style="flex-wrap:wrap">${actions || ''}</div>
+          ${withEntry ? '<div id="import-cn-entry" style="margin-top:1.25rem"></div>' : ''}
         </div>
       </div>`;
+    if (withEntry) mountNumberEntry(container, '');
   }
 
-  function leaveWithoutImport() {
+  function leaveWithoutImport(options) {
     if (typeof WPApp.clearClearNumberPending === 'function') WPApp.clearClearNumberPending();
+    if (options && options.clearNumber) {
+      try {
+        sessionStorage.removeItem('wp_clearnumber_number');
+        sessionStorage.removeItem('wp_clearnumber_number_pending');
+      } catch { /* ignore */ }
+    }
     const done = !!(WPApp.state.profile && WPApp.state.profile.onboarding_done);
     WPRouter.navigate(done ? '/dashboard' : '/onboarding');
   }
 
-  async function init(container) {
-    if (typeof WPApp.captureClearNumberCode === 'function') WPApp.captureClearNumberCode();
-    const code = readCode();
-    const user = WPApp.state.user;
+  function mountNumberEntry(container, value) {
+    const host = container && container.querySelector ? container.querySelector('#import-cn-entry') : null;
+    if (!host || typeof WPClearNumberId === 'undefined' || typeof WPClearNumberId.mountPullForm !== 'function') return;
+    WPClearNumberId.mountPullForm(host, value ? { value: value } : undefined);
+  }
 
-    if (!user) {
-      if (!code) {
-        container.innerHTML = `
-          <div class="auth-shell">
-            <div class="auth-form-pane" style="grid-column:1 / -1">
-              <div class="auth-form-inner">
-                <h1 class="auth-form-title">Import link missing</h1>
-                <p class="auth-form-sub">Open Pul from ClearNumber with Continue in Pul Planning.</p>
-                <button type="button" class="btn btn-primary" id="import-back-login">Sign in</button>
-              </div>
-            </div>
-          </div>`;
-        document.getElementById('import-back-login')?.addEventListener('click', () => WPRouter.navigate('/login'));
-        return;
-      }
-      renderGate(container);
-      return;
-    }
-
-    if (!code) {
-      renderMessage(container, 'Import link missing', 'Open Pul from ClearNumber with Continue in Pul Planning.', `<button type="button" class="btn btn-primary" id="import-home">Go to dashboard</button>`);
-      document.getElementById('import-home')?.addEventListener('click', leaveWithoutImport);
-      return;
-    }
-
+  function renderNumberLanding(container, signedIn) {
     container.innerHTML = `
-      <div class="page-header"><div><h1 class="page-title">Add your ClearNumber workbook</h1>
-        <p class="page-subtitle">Loading the preview…</p></div></div>
-      <div class="page-body"><div class="card" style="padding:1.25rem"><div class="skeleton skeleton-text" style="width:240px"></div></div></div>`;
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Link ClearNumber</h1>
+          <p class="page-subtitle">Enter your ClearNumber #, or open Pul from ClearNumber with Continue in Pul Planning.</p>
+        </div>
+      </div>
+      <div class="page-body" style="max-width:40rem">
+        <div class="card" style="padding:1.25rem;margin-bottom:1rem">
+          <div id="import-cn-entry"></div>
+        </div>
+        ${signedIn ? '' : `
+          <div class="flex gap-2" style="flex-wrap:wrap">
+            <button type="button" class="btn btn-secondary" id="import-signup">Create an account</button>
+            <button type="button" class="btn btn-secondary" id="import-login">Sign in</button>
+          </div>`}
+      </div>`;
+    document.getElementById('import-signup')?.addEventListener('click', () => WPRouter.navigate('/signup'));
+    document.getElementById('import-login')?.addEventListener('click', () => WPRouter.navigate('/login'));
+    mountNumberEntry(container, '');
+  }
 
-    let preview;
-    try {
-      preview = await WPDb.previewClearNumber(code);
-    } catch (error) {
-      const explained = explainRpc(error);
-      renderMessage(container, explained.title, explained.message, `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`);
-      document.getElementById('import-dismiss')?.addEventListener('click', leaveWithoutImport);
-      return;
-    }
+  function makeCodeAcquirer(code) {
+    let claimed = null;
+    return async function acquireCode() {
+      if (claimed) return claimed;
+      const redeemed = await WPDb.redeemClearNumber(code);
+      claimed = redeemed && redeemed.payload ? redeemed.payload : null;
+      if (!claimed) throw new Error('Could not load the workbook.');
+      return claimed;
+    };
+  }
 
-    const payload = preview && preview.payload ? preview.payload : null;
-    if (!payload || typeof payload !== 'object') {
-      renderMessage(container, 'Could not open this workbook', 'The workbook was empty.', `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`);
-      document.getElementById('import-dismiss')?.addEventListener('click', leaveWithoutImport);
-      return;
-    }
+  function makeNumberAcquirer(number) {
+    let claimed = null;
+    return async function acquireNumber() {
+      if (claimed) return claimed;
+      const pulled = await WPDb.pullClearNumber(number);
+      if (typeof WPClearNumberId !== 'undefined' && typeof WPClearNumberId.adoptProfile === 'function') {
+        WPClearNumberId.adoptProfile(pulled);
+      }
+      claimed = pulled && pulled.payload ? pulled.payload : null;
+      if (!claimed) throw new Error('Could not load the workbook.');
+      return claimed;
+    };
+  }
 
-    let context;
-    try {
-      context = await loadExisting(user.id);
-    } catch (error) {
-      renderMessage(container, 'Could not open this workbook', 'Your current plan could not be loaded.', `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`);
-      document.getElementById('import-dismiss')?.addEventListener('click', leaveWithoutImport);
-      console.warn('[import] load existing', error);
-      return;
-    }
-
-    const now = new Date();
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const mapped = WPClearNumberMap.mapPayload(payload, {
-      existing: context.existing,
-      period: context.period,
-      today,
+  async function confirmMappedPlan(payload, userId) {
+    const fresh = await loadExisting(userId);
+    const nowClick = new Date();
+    const todayClick = `${nowClick.getFullYear()}-${String(nowClick.getMonth() + 1).padStart(2, '0')}-${String(nowClick.getDate()).padStart(2, '0')}`;
+    const next = WPClearNumberMap.mapPayload(payload, {
+      existing: fresh.existing,
+      period: fresh.period,
+      today: todayClick,
     });
+    if (next.error) throw new Error(next.error);
+    await writePlan(next, userId);
+    const message = successMessage(next);
+    const fi = !!(next.fiLocal && next.fiLocal.write && next.fiLocal.payload);
+    const landed = landAfterImport(message, { fi, clearNumber: true });
+    return { next, message, fi, landed };
+  }
 
-    if (mapped.error) {
-      renderMessage(container, 'Could not open this workbook', mapped.error, `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`);
-      document.getElementById('import-dismiss')?.addEventListener('click', leaveWithoutImport);
-      return;
-    }
-
+  function renderWorkbook(container, mapped, options) {
+    const opts = options || {};
     const work = hasWork(mapped);
     const efLine = mapped.emergencyFund ? [mapped.emergencyFund] : [];
     const fiLine = mapped.fiLocal ? [mapped.fiLocal] : [];
     const warningBlock = mapped.warnings && mapped.warnings.length
       ? `<div class="card" style="margin-bottom:1rem;padding:1rem 1.25rem"><div class="section-title" style="margin-bottom:0.5rem">Notes</div><ul style="margin:0;padding-left:1.1rem">${mapped.warnings.map(w => `<li class="text-sm text-muted">${esc(w)}</li>`).join('')}</ul></div>`
       : '';
+    const onLeave = () => leaveWithoutImport(opts.clearNumberOnLeave ? { clearNumber: true } : undefined);
 
     container.innerHTML = `
       <div class="page-header">
@@ -509,8 +562,8 @@ const WPImport = (() => {
         </div>
       </div>`;
 
-    document.getElementById('import-cancel')?.addEventListener('click', leaveWithoutImport);
-    document.getElementById('import-done')?.addEventListener('click', leaveWithoutImport);
+    document.getElementById('import-cancel')?.addEventListener('click', onLeave);
+    document.getElementById('import-done')?.addEventListener('click', onLeave);
 
     let claimed = null;
     document.getElementById('import-confirm')?.addEventListener('click', async () => {
@@ -520,43 +573,32 @@ const WPImport = (() => {
       if (errEl) errEl.style.display = 'none';
       try {
         if (!claimed) {
-          const redeemed = await WPDb.redeemClearNumber(code);
-          claimed = redeemed && redeemed.payload ? redeemed.payload : null;
+          claimed = await opts.acquire();
           if (!claimed) throw new Error('Could not load the workbook.');
         }
-        const fresh = await loadExisting(user.id);
-        const nowClick = new Date();
-        const todayClick = `${nowClick.getFullYear()}-${String(nowClick.getMonth() + 1).padStart(2, '0')}-${String(nowClick.getDate()).padStart(2, '0')}`;
-        const next = WPClearNumberMap.mapPayload(claimed, {
-          existing: fresh.existing,
-          period: fresh.period,
-          today: todayClick,
-        });
-        if (next.error) throw new Error(next.error);
-        await writePlan(next, user.id);
-        const message = successMessage(next);
-        const fi = !!(next.fiLocal && next.fiLocal.write && next.fiLocal.payload);
-        const landed = landAfterImport(message, { fi });
-        if (!landed.landed) {
+        const confirmed = await confirmMappedPlan(claimed, opts.userId);
+        if (!confirmed.landed.landed) {
           renderMessage(
             container,
             'Your ClearNumber numbers are in',
-            message,
+            confirmed.message,
             `<button type="button" class="btn btn-primary" id="import-home">Go to dashboard</button>`
           );
-          document.getElementById('import-home')?.addEventListener('click', leaveWithoutImport);
+          document.getElementById('import-home')?.addEventListener('click', onLeave);
         }
       } catch (error) {
         console.warn('[import] confirm', error);
         const explained = explainRpc(error);
         if (!claimed && explained.terminal) {
-          renderMessage(container, explained.title, explained.message, `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`);
-          document.getElementById('import-dismiss')?.addEventListener('click', leaveWithoutImport);
+          renderMessage(container, explained.title, explained.message, `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`, true);
+          document.getElementById('import-dismiss')?.addEventListener('click', onLeave);
           return;
         }
         if (errEl) {
           errEl.textContent = claimed
-            ? 'Some rows could not be saved. Retry to add the ones still missing. The link itself is already used.'
+            ? (opts.consumed
+              ? 'Some rows could not be saved. Retry to add the ones still missing. The link itself is already used.'
+              : 'Some rows could not be saved. Retry to add the ones still missing.')
             : explained.message;
           errEl.style.display = 'block';
         }
@@ -566,7 +608,141 @@ const WPImport = (() => {
         }
       }
     });
+  }
 
+  async function mapAndShow(container, user, payload, workbookOptions) {
+    let context;
+    try {
+      context = await loadExisting(user.id);
+    } catch (error) {
+      renderMessage(container, 'Could not open this workbook', 'Your current plan could not be loaded.', `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`, true);
+      document.getElementById('import-dismiss')?.addEventListener('click', () => leaveWithoutImport(workbookOptions && workbookOptions.clearNumberOnLeave ? { clearNumber: true } : undefined));
+      console.warn('[import] load existing', error);
+      return;
+    }
+
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const mapped = WPClearNumberMap.mapPayload(payload, {
+      existing: context.existing,
+      period: context.period,
+      today,
+    });
+
+    if (mapped.error) {
+      renderMessage(container, 'Could not open this workbook', mapped.error, `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`, true);
+      document.getElementById('import-dismiss')?.addEventListener('click', () => leaveWithoutImport(workbookOptions && workbookOptions.clearNumberOnLeave ? { clearNumber: true } : undefined));
+      return;
+    }
+
+    renderWorkbook(container, mapped, Object.assign({ userId: user.id }, workbookOptions || {}));
+  }
+
+  function loadingWorkbook(container) {
+    container.innerHTML = `
+      <div class="page-header"><div><h1 class="page-title">Add your ClearNumber workbook</h1>
+        <p class="page-subtitle">Loading the preview…</p></div></div>
+      <div class="page-body"><div class="card" style="padding:1.25rem"><div class="skeleton skeleton-text" style="width:240px"></div></div></div>`;
+  }
+
+  async function openStoredNumber(container, user, number) {
+    loadingWorkbook(container);
+    let pulled;
+    try {
+      pulled = await WPDb.pullClearNumber(number);
+    } catch (error) {
+      try {
+        sessionStorage.removeItem('wp_clearnumber_number');
+        sessionStorage.removeItem('wp_clearnumber_number_pending');
+      } catch { /* ignore */ }
+      const explained = explainRpc(error);
+      renderMessage(container, explained.title, explained.message, `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`, true);
+      document.getElementById('import-dismiss')?.addEventListener('click', () => leaveWithoutImport({ clearNumber: true }));
+      const input = document.getElementById('cn-number-input');
+      if (input) input.value = number;
+      return;
+    }
+
+    if (typeof WPClearNumberId !== 'undefined' && typeof WPClearNumberId.adoptProfile === 'function') {
+      WPClearNumberId.adoptProfile(pulled);
+    }
+    const payload = pulled && pulled.payload ? pulled.payload : null;
+    if (!payload) {
+      try {
+        sessionStorage.removeItem('wp_clearnumber_number');
+        sessionStorage.removeItem('wp_clearnumber_number_pending');
+      } catch { /* ignore */ }
+      const formatted = (pulled && pulled.client_number) || number;
+      const message = (typeof WPClearNumberId !== 'undefined' && WPClearNumberId.recognitionMessage)
+        ? WPClearNumberId.recognitionMessage(pulled || { client_number: formatted, status: 'already_linked', has_workbook: false })
+        : formatted + ' is your Client / Student ID. This same number works on Pul Planning and ClearNumber.';
+      renderMessage(container, 'ClearNumber # recognised', message, `<button type="button" class="btn btn-primary" id="import-home">Go to dashboard</button>`, true);
+      document.getElementById('import-home')?.addEventListener('click', () => leaveWithoutImport({ clearNumber: true }));
+      const input = document.getElementById('cn-number-input');
+      if (input) input.value = formatted;
+      return;
+    }
+
+    await mapAndShow(container, user, payload, {
+      acquire: makeNumberAcquirer(number),
+      consumed: false,
+      clearNumberOnLeave: true,
+    });
+  }
+
+  async function init(container) {
+    if (typeof WPApp.captureClearNumberCode === 'function') WPApp.captureClearNumberCode();
+    if (typeof WPClearNumberId !== 'undefined' && typeof WPClearNumberId.captureFromHash === 'function') {
+      WPClearNumberId.captureFromHash();
+    }
+    const code = readCode();
+    const user = WPApp.state.user;
+
+    if (!user) {
+      if (!code) {
+        renderNumberLanding(container, false);
+        return;
+      }
+      renderGate(container);
+      return;
+    }
+
+    if (!code) {
+      const number = (typeof WPClearNumberId !== 'undefined' && typeof WPClearNumberId.readStoredNumber === 'function')
+        ? WPClearNumberId.readStoredNumber()
+        : '';
+      if (number) {
+        if (typeof WPClearNumberId.clearPending === 'function') WPClearNumberId.clearPending();
+        await openStoredNumber(container, user, number);
+        return;
+      }
+      renderNumberLanding(container, true);
+      return;
+    }
+
+    loadingWorkbook(container);
+
+    let preview;
+    try {
+      preview = await WPDb.previewClearNumber(code);
+    } catch (error) {
+      const explained = explainRpc(error);
+      renderMessage(container, explained.title, explained.message, `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`, true);
+      document.getElementById('import-dismiss')?.addEventListener('click', leaveWithoutImport);
+      return;
+    }
+
+    const payload = preview && preview.payload ? preview.payload : null;
+    if (!payload || typeof payload !== 'object') {
+      renderMessage(container, 'Could not open this workbook', 'The workbook was empty.', `<button type="button" class="btn btn-secondary" id="import-dismiss">Not now</button>`, true);
+      document.getElementById('import-dismiss')?.addEventListener('click', leaveWithoutImport);
+      return;
+    }
+
+    await mapAndShow(container, user, payload, {
+      acquire: makeCodeAcquirer(code),
+      consumed: true,
+    });
   }
 
   function destroy() {}
@@ -580,6 +756,13 @@ const WPImport = (() => {
     applyImportedFi,
     landAfterImport,
     mountSuccessBanner,
+    confirmMappedPlan,
+    makeCodeAcquirer,
+    makeNumberAcquirer,
+    renderWorkbook,
+    renderNumberLanding,
+    mapAndShow,
+    openStoredNumber,
     RESULT_KEY,
   };
 })();

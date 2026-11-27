@@ -341,6 +341,19 @@ describe('constraint-safe normalisation', () => {
     expect(added(result.inserts.assets)[0].row.notes).toContain('[rsa_contrib_monthly:3600000]');
   });
 
+  test('leaves a shared client number out of the profile patch', () => {
+    const result = plan({
+      schema_version: 1,
+      client_number: 'CN-K7M2PQ',
+      student_id: 'CN-K7M2PQ',
+      profile: { full_name: 'Ada Okonkwo', age: 34, client_number: 'CN-K7M2PQ', student_id: 'CN-K7M2PQ' },
+    });
+    expect(result.error).toBeNull();
+    expect(result.profilePatch.full_name).toBe('Ada Okonkwo');
+    expect(result.profilePatch.client_number).toBeUndefined();
+    expect(result.profilePatch.student_id).toBeUndefined();
+  });
+
   test('caps pension at gross and leaves tax at zero when net is too high', () => {
     const result = plan({
       schema_version: 1,

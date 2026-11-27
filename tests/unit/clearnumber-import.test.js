@@ -98,6 +98,35 @@ describe('import errors', () => {
     expect(explained.terminal).toBe(false);
     expect(explained.message).toMatch(/could not load/i);
   });
+
+  test('explains a ClearNumber # that is missing, taken, or already claimed', () => {
+    const missing = WPImport.explainRpc({ message: 'number_not_found', code: 'P0001' });
+    expect(missing.terminal).toBe(true);
+    expect(missing.title).toMatch(/workbook/i);
+    expect(missing.message).not.toMatch(/number_not_found/);
+
+    const taken = WPImport.explainRpc({ message: 'number_in_use' });
+    expect(taken.message).toMatch(/another Pul Planning profile/i);
+    expect(taken.message).not.toMatch(/number_in_use/);
+
+    const invalid = WPImport.explainRpc({ message: 'invalid_number' });
+    expect(invalid.message).toMatch(/CN-K7M2PQ/);
+    expect(invalid.message).not.toMatch(/invalid_number/);
+  });
+
+  test('names the ID the profile already claimed', () => {
+    const sandbox = loadImport();
+    sandbox.WPClearNumberId = {
+      canonical(value) { return value === 'CN-K7M2PQ' ? value : null; },
+    };
+    const explained = sandbox.WPImport.explainRpc({
+      message: 'number_already_set',
+      details: 'CN-K7M2PQ',
+    });
+    expect(explained.message).toContain('CN-K7M2PQ');
+    expect(explained.message).toMatch(/Pul Planning and ClearNumber/i);
+    expect(explained.message).not.toMatch(/number_already_set/);
+  });
 });
 
 describe('success message', () => {
@@ -341,6 +370,111 @@ describe('FI calculator storage', () => {
       expenses: 450000,
       customNote: 'keep me',
     });
+  });
+});
+
+describe('ClearNumber number pull', () => {
+  test('redeems a one-time code once and reuses it on retry', async () => {
+    const calls = [];
+    const sandbox = loadImport({
+      WPDb: {
+        redeemClearNumber(code) {
+          calls.push(code);
+          return Promise.resolve({ payload: { schema_version: 1, marker: code } });
+        },
+      },
+    });
+    const acquire = sandbox.WPImport.makeCodeAcquirer('AB12CD34EF56');
+    await expect(acquire()).resolves.toEqual({ schema_version: 1, marker: 'AB12CD34EF56' });
+    await expect(acquire()).resolves.toEqual({ schema_version: 1, marker: 'AB12CD34EF56' });
+    expect(calls).toEqual(['AB12CD34EF56']);
+  });
+
+  test('pulls a stored workbook without redeeming a code', async () => {
+    const sandbox = loadImport({
+      WPDb: {
+        pullClearNumber(number) {
+          return Promise.resolve({
+            client_number: number,
+            payload: { schema_version: 1, client_number: number },
+          });
+        },
+        redeemClearNumber() { throw new Error('code path should not run'); },
+      },
+      WPClearNumberId: { adoptProfile() {} },
+    });
+    const acquire = sandbox.WPImport.makeNumberAcquirer('CN-K7M2PQ');
+    const payload = await acquire();
+    expect(payload.client_number).toBe('CN-K7M2PQ');
+    await acquire();
+  });
+
+  test('writes the mapped rows and clears the stored number', async () => {
+    const sandbox = loadImport({
+      WPDb: {
+        fetchAll: () => Promise.resolve([]),
+        insertMany: () => Promise.resolve([]),
+      },
+      WPClearNumberMap: {
+        mapPayload: () => ({
+          error: null,
+          inserts: { assets: [{ skip: false, row: { asset_name: 'Savings' } }] },
+          fiLocal: null,
+        }),
+      },
+    });
+    sandbox.sessionStorage.setItem('wp_clearnumber_number', 'CN-K7M2PQ');
+    sandbox.sessionStorage.setItem('wp_clearnumber_number_pending', '1');
+    sandbox.WPRouter.hasRoute = () => false;
+    const result = await sandbox.WPImport.confirmMappedPlan({ schema_version: 1 }, 'user-1');
+    expect(result.message).toMatch(/1 asset/);
+    expect(sandbox.sessionStorage.getItem('wp_clearnumber_number')).toBeNull();
+    expect(sandbox.sessionStorage.getItem('wp_clearnumber_number_pending')).toBeNull();
+  });
+
+  test('shows the workbook preview from a pulled payload', async () => {
+    const container = { innerHTML: '' };
+    const sandbox = loadImport({
+      WPDb: {
+        fetchAll: () => Promise.resolve([]),
+        pullClearNumber: () => Promise.resolve({
+          client_number: 'CN-K7M2PQ',
+          status: 'linked',
+          source: 'claimed',
+          has_workbook: true,
+          payload: { schema_version: 1 },
+        }),
+      },
+      WPClearNumberMap: {
+        mapPayload: () => ({
+          error: null,
+          profileLines: [],
+          inserts: {
+            income: [],
+            expenses: [],
+            assets: [{ skip: false, label: 'Savings', detail: '1200000', row: { asset_name: 'Savings' } }],
+            liabilities: [],
+            goals: [],
+          },
+          warnings: [],
+        }),
+      },
+      WPClearNumberId: { adoptProfile() {} },
+    });
+    await sandbox.WPImport.openStoredNumber(container, { id: 'user-1' }, 'CN-K7M2PQ');
+    expect(container.innerHTML).toContain('We found your ClearNumber workbook');
+    expect(container.innerHTML).toContain('Add to my plan');
+    expect(container.innerHTML).toContain('Nothing is written until you confirm');
+  });
+
+  test('the empty import page offers the ClearNumber number entry', () => {
+    const container = { innerHTML: '' };
+    const sandbox = loadImport({
+      WPClearNumberId: { mountPullForm() {} },
+    });
+    sandbox.WPImport.renderNumberLanding(container, true);
+    expect(container.innerHTML).toContain('import-cn-entry');
+    expect(container.innerHTML).toContain('Enter your ClearNumber #');
   });
 });
 
